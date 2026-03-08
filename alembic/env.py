@@ -8,13 +8,7 @@ from alembic import context
 from db.database import Base
 from db.config import settings
 
-from src.models import user_model
-from src.models import student_model
-from src.models import subject_model
-from src.models import teacher_model
-from src.models import group_model
-from src.models import mark_model
-from src.models import core_models
+import src.models
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

@@ -4,36 +4,41 @@ from typing import Optional
 from datetime import date, datetime
 
 from src.models.student_model import StudentStatus
-from src.schemas.user_schemas import UserSearchGeneral, UserSearchAdmin
+from src.schemas.user_schemas import UserCreateAdmin, UserResponseAdmin, UserResponseGeneral, UserSearchGeneral, UserSearchAdmin
 
+# Done
 class StudentBase(BaseModel):
-    primary_info_id: int = Field(ge=1)
-
     grade: str
     enrolled_at: date
-
-
-class StudentCreateGeneral(StudentBase):
-    pass
-
-class StudentCreateAdmin(StudentBase):
     status: StudentStatus
 
 
-class StudentResponseBase(BaseModel):
+# Done
+class StudentCreateAdmin(BaseModel):
+    user_data: UserCreateAdmin
+    student_advanced_data: StudentBase
+
+
+# Done
+class StudentResponseBase(StudentBase):
     id: int
 
     model_config = ConfigDict(from_attributes=True)
 
 
-class StudentResponseGeneral(StudentResponseBase):
-    pass
+# Done
+class StudentResponseGeneral(BaseModel):
+    user_data: UserResponseGeneral
+    student_advanced_data: StudentBase
 
 
-class StudentResponseAdmin(StudentResponseBase):
-    status: StudentStatus
-    created_at: datetime
-    updated_at: datetime
+# Done
+class StudentResponseAdmin(BaseModel):
+    user_data: UserResponseAdmin
+    student_advanced_data: StudentResponseBase
+
+    model_config = ConfigDict(from_attributes=True)
+
 
 
 class StudentUpdateInfoAdmin(BaseModel):

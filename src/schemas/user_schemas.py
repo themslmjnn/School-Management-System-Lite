@@ -20,7 +20,6 @@ class UserBase(BaseModel):
 
 class UserCreateAdmin(UserBase):
     password: str = Field(min_length=8)
-    role: UserRole
 
 
 class UserResponseAdmin(UserBase):
@@ -34,7 +33,7 @@ class UserResponseAdmin(UserBase):
     model_config = ConfigDict(from_attributes=True)
 
 
-class UserResponseViceDirector(UserBase):
+class UserResponseGeneral(UserBase):
     id: int
 
     role: UserRole
@@ -42,13 +41,6 @@ class UserResponseViceDirector(UserBase):
 
     model_config = ConfigDict(from_attributes=True)
 
-
-class UserResponseHeadOfClass(UserBase):
-    id: int
-
-    is_active: bool
-
-    model_config = ConfigDict(from_attributes=True)
 
 
 class UserUpdateInfoBase(BaseModel):
