@@ -27,4 +27,8 @@ class CoreRepository:
         result = db.execute(query)
 
         return result.scalars().first()
-        
+    
+
+    @staticmethod
+    def delete_item(db: Session, item):
+        db.delete(item)

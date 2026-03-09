@@ -4,34 +4,36 @@ from typing import Optional
 from datetime import date, datetime
 
 from src.models.teacher_model import TeacherStatus
+from src.schemas.user_schemas import UserCreateAdmin, UserResponseAdmin, UserResponseGeneral
 
 class TeacherBase(BaseModel):
-    primary_info_id: int = Field(ge=1)
-
     hired_at: date
-
-
-class TeacherCreateGeneral(TeacherBase):
-    pass
-
-class TeacherCreateAdmin(TeacherBase):
     status: TeacherStatus
+    
+
+class TeacherCreateAdmin(BaseModel):
+    teacher_primary_data: UserCreateAdmin
+    teacher_advanced_data: TeacherBase
 
 
-class TeacherResponseBase(BaseModel):
+class TeacherResponseBase(TeacherBase):
     id: int
 
     model_config = ConfigDict(from_attributes=True)
 
 
-class TeacherResponseGeneral(TeacherResponseBase):
-    pass
+class TeacherResponseGeneral(BaseModel):
+    teacher_primary_data: UserResponseGeneral
+    teacher_advanced_data: TeacherBase
+
+    model_config = ConfigDict(from_attributes=True)
 
 
-class TeacherResponseAdmin(TeacherResponseBase):
-    status: TeacherStatus
-    created_at: datetime
-    updated_at: datetime
+class TeacherResponseAdmin(BaseModel):
+    teacher_primary_data: UserResponseAdmin
+    teacher_advanced_data: TeacherResponseBase
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 class TeacherUpdateInfoBase(BaseModel):

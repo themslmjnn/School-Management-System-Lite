@@ -1,7 +1,7 @@
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, ConfigDict
 
 from typing import Optional
-from datetime import date, datetime
+from datetime import date
 
 from src.models.student_model import StudentStatus
 from src.schemas.user_schemas import UserCreateAdmin, UserResponseAdmin, UserResponseGeneral, UserSearchGeneral, UserSearchAdmin
@@ -30,6 +30,8 @@ class StudentResponseBase(StudentBase):
 class StudentResponseGeneral(BaseModel):
     user_data: UserResponseGeneral
     student_advanced_data: StudentBase
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 # Done

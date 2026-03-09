@@ -25,3 +25,9 @@ class MarkResponseGeneral(MarkResponseBase):
 class MarkResponseAdmin(MarkResponseBase):
     created_at: datetime
     updated_at: datetime
+
+
+class MarkUpdateInfoAdmin(BaseModel):
+    student_id: Optional[int] = None
+    teacher_id: Optional[int] = None
+    mark: Optional[int] = None

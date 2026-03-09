@@ -31,7 +31,7 @@ class SubjectResponseAdmin(SubjectResponseBase):
     updated_at: datetime
 
 
-class SubjectUpdateInfoBaseAdmin(BaseModel):
+class SubjectUpdateInfoAdmin(BaseModel):
     title: Optional[str] = Field(min_length=5, max_length=50, default=None)
     language: Optional[SubjectLanguage] = Field(default=None)
     category: Optional[SubjectCategory] = Field(default=None)
