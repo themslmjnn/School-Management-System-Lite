@@ -1,4 +1,5 @@
-from sqlalchemy import String, Enum as SQLEnum, func
+from sqlalchemy import String, func, UniqueConstraint
+from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from enum import Enum
@@ -15,6 +16,7 @@ class SubjectLanguage(str, Enum):
     russian = "russian"
     tajik = "tajik"
 
+
 class SubjectCategory(str, Enum):
     languages = "languages"
     mathematics = "mathematics"
@@ -29,7 +31,7 @@ class Subject(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
 
-    title: Mapped[str] = mapped_column(String(50), unique=True, nullable=False)
+    title: Mapped[str] = mapped_column(String(50), nullable=False)
     language: Mapped[SubjectLanguage] = mapped_column(SQLEnum(SubjectLanguage), nullable=False)
     category: Mapped[SubjectCategory] = mapped_column(SQLEnum(SubjectCategory), nullable=False)
 
@@ -38,3 +40,8 @@ class Subject(Base):
 
     student_subjects = relationship("StudentSubject", back_populates="subject")
     teacher_subjects = relationship("TeacherSubject", back_populates="subject")
+
+    __table_args__ = (
+        UniqueConstraint("title", "language", name="uix_title_language"),
+    )
+

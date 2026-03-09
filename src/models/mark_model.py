@@ -1,9 +1,18 @@
 from sqlalchemy import func, ForeignKey
+from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from enum import Enum
 from datetime import datetime
 
 from db.database import Base
+
+
+class MarkType(str, Enum):
+    regular_mark = "regular_mark"
+    regular_exam = "regular_exam"
+    midterm_exam = "midterm_exam"
+    final_exam = "final_exam"
 
 
 class Mark(Base):
@@ -13,6 +22,8 @@ class Mark(Base):
 
     student_id: Mapped[int] = mapped_column(ForeignKey("students.id"), nullable=False)
     teacher_id: Mapped[int] = mapped_column(ForeignKey("teachers.id"), nullable=False)
+
+    mark_type: Mapped[MarkType] = mapped_column(SQLEnum(MarkType), nullable=False, default=MarkType.regular_mark)
 
     mark: Mapped[int]
 

@@ -1,4 +1,5 @@
-from sqlalchemy import String, Enum as SQLEnum, func
+from sqlalchemy import String, func, UniqueConstraint
+from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from enum import Enum
@@ -26,3 +27,7 @@ class Group(Base):
 
     student_group = relationship("StudentGroup", back_populates="group", uselist=False)
     teacher_groups = relationship("TeacherGroup",  back_populates="group")
+
+    __table_args__ = (
+        UniqueConstraint('title', 'language', name='uix_title_language_group'),
+    )

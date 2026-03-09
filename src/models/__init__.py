@@ -1,4 +1,4 @@
-from src.models.core_models import StudentSubject, StudentGroup, TeacherSubject, TeacherGroup
+from models.association_models import StudentSubject, StudentGroup, TeacherSubject, TeacherGroup
 from src.models.group_model import Group
 from src.models.mark_model import Mark
 from src.models.student_model import Student

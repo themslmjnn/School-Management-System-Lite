@@ -1,8 +1,8 @@
-from sqlalchemy import String, Enum as SQLEnum, func
+from sqlalchemy import String, func
+from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from enum import Enum
-
 from typing import Annotated
 from datetime import date, datetime
 
@@ -18,6 +18,7 @@ class UserRole(str, Enum):
     vice_director = "vice_director"
     teacher = "teacher"
     student = "student"
+
 
 class User(Base):
     __tablename__ = "users"

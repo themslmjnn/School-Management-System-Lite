@@ -1,10 +1,18 @@
 
-from sqlalchemy import ForeignKey, func
+from sqlalchemy import ForeignKey, func, UniqueConstraint
+from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from enum import Enum
 from datetime import datetime
 
 from db.database import Base
+
+
+# class StudentSubjectStatus(str, Enum):
+#     finished= "finished"
+#     withdrawn = "withdrawn"
+#     studying = "studying"
 
 
 class StudentSubject(Base):
@@ -15,10 +23,18 @@ class StudentSubject(Base):
     student_id: Mapped[int] = mapped_column(ForeignKey("students.id"), nullable=False)
     subject_id: Mapped[int] = mapped_column(ForeignKey("subjects.id"), nullable=False)
 
+    # status: Mapped[StudentSubjectStatus] = mapped_column(SQLEnum(StudentSubjectStatus), nullable=False, default=StudentSubjectStatus.studying)
+
     created_at: Mapped[datetime] = mapped_column(server_default=func.now(), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(server_default=func.now(), onupdate=func.now(), nullable=False)
 
     student = relationship("Student", back_populates="student_subjects")
     subject = relationship("Subject", back_populates="student_subjects")
+
+
+    # __table_args__ = (
+    #     UniqueConstraint("student_id", "subject_id", "status", name="uix_student_subject"),
+    # )
 
 
 class StudentGroup(Base):
