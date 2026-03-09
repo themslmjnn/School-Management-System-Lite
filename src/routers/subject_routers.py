@@ -17,22 +17,22 @@ user_dependency = Annotated[dict, Depends(get_current_user)]
 
 path_param_ge1 = Annotated[int, Path(ge=1)]
 
-@router.post("/admin/subject_addition", response_model=SubjectResponseAdmin, status_code=status.HTTP_201_CREATED)
-def add_subject_admin(db: db_dependency, user: user_dependency, subject_request: SubjectCreateAdmin):
-    return SubjectService.add_subject_admin(db, user, subject_request)
+@router.post("/subjects", response_model=SubjectResponseAdmin, status_code=status.HTTP_201_CREATED)
+def add_subject(db: db_dependency, user: user_dependency, subject_request: SubjectCreateAdmin):
+    return SubjectService.add_subject(db, user, subject_request)
 
 
-@router.delete("/admin/subject_deletion/{subject_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_subject_admin(db: db_dependency, user: user_dependency, subject_id: path_param_ge1):
-    SubjectService.delete_subject_admin(db, user, subject_id)
+@router.delete("/subjects/{subject_id}/delete", status_code=status.HTTP_204_NO_CONTENT)
+def delete_subject(db: db_dependency, user: user_dependency, subject_id: path_param_ge1):
+    SubjectService.delete_subject(db, user, subject_id)
 
 
-@router.put("/admin/subject_updating_indo/{subject_id}", response_model=SubjectResponseAdmin, status_code=status.HTTP_200_OK)
-def update_subject_info_admin(db: db_dependency, user: user_dependency, subject_id: path_param_ge1, subject_update_info_request: SubjectUpdateInfoAdmin):
-    return SubjectService.update_subject_info_admin(db, user, subject_id, subject_update_info_request)
+@router.put("/subjects/{subject_id}/update", response_model=SubjectResponseAdmin, status_code=status.HTTP_200_OK)
+def update_subject_info(db: db_dependency, user: user_dependency, subject_id: path_param_ge1, subject_update_info_request: SubjectUpdateInfoAdmin):
+    return SubjectService.update_subject_info(db, user, subject_id, subject_update_info_request)
 
 
-@router.get("/admin/subjects", response_model=list[SubjectResponseAdmin], status_code=status.HTTP_200_OK)
+@router.get("/subjects", response_model=list[SubjectResponseAdmin], status_code=status.HTTP_200_OK)
 def get_subjects(db: db_dependency, user: user_dependency,):
-    return SubjectService.get_subjects_admin(db, user)
+    return SubjectService.get_subjects(db, user)
     

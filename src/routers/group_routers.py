@@ -17,22 +17,22 @@ user_dependency = Annotated[dict, Depends(get_current_user)]
 
 path_param_ge1 = Annotated[int, Path(ge=1)]
 
-@router.post("/admin/group_addition", response_model=GroupResponseAdmin, status_code=status.HTTP_201_CREATED)
-def add_group_admin(db: db_dependency, user: user_dependency, group_request: GroupCreateAdmin):
-    return GroupService.add_group_admin(db, user, group_request)
+@router.post("/groups", response_model=GroupResponseAdmin, status_code=status.HTTP_201_CREATED)
+def add_group(db: db_dependency, user: user_dependency, group_request: GroupCreateAdmin):
+    return GroupService.add_group(db, user, group_request)
 
 
-@router.delete("/admin/group_deletion/{group_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_group_admin(db: db_dependency, user: user_dependency, group_id: path_param_ge1):
-    GroupService.delete_group_admin(db, user, group_id)
+@router.delete("/groups/{group_id}/delete", status_code=status.HTTP_204_NO_CONTENT)
+def delete_group(db: db_dependency, user: user_dependency, group_id: path_param_ge1):
+    GroupService.delete_group(db, user, group_id)
 
 
-@router.put("/admin/group_updating_indo/{group_id}", response_model=GroupResponseAdmin, status_code=status.HTTP_200_OK)
-def update_group_info_admin(db: db_dependency, user: user_dependency, group_id: path_param_ge1, group_update_info_request: GroupUpdateInfoAdmin):
-    return GroupService.update_group_info_admin(db, user, group_id, group_update_info_request)
+@router.put("/groups/{group_id}/update", response_model=GroupResponseAdmin, status_code=status.HTTP_200_OK)
+def update_group_info(db: db_dependency, user: user_dependency, group_id: path_param_ge1, group_update_info_request: GroupUpdateInfoAdmin):
+    return GroupService.update_group_info(db, user, group_id, group_update_info_request)
 
 
-@router.get("/admin/groups", response_model=list[GroupResponseAdmin], status_code=status.HTTP_200_OK)
+@router.get("/groups", response_model=list[GroupResponseAdmin], status_code=status.HTTP_200_OK)
 def get_groups(db: db_dependency, user: user_dependency,):
-    return GroupService.get_groups_admin(db, user)
+    return GroupService.get_groups(db, user)
     
