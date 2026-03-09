@@ -1,21 +1,14 @@
-from fastapi import APIRouter, status, Depends, Path
+from fastapi import APIRouter, status, Depends
 
 from src.schemas.subject_schemas import SubjectResponseAdmin, SubjectCreateAdmin, SubjectUpdateInfoAdmin
 
 from typing import Annotated
-from sqlalchemy.orm import Session
-from db.database import get_db
+from db.database import db_dependency
 from src.services.subject_services import SubjectService
-from core.security import get_current_user
-router = APIRouter(
-    tags=["Subjects"]
-)
+from core.security import user_dependency
 
-db_dependency = Annotated[Session, Depends(get_db)]
+router = APIRouter(tags=["Subjects"])
 
-user_dependency = Annotated[dict, Depends(get_current_user)]
-
-path_param_ge1 = Annotated[int, Path(ge=1)]
 
 @router.post("/subjects", response_model=SubjectResponseAdmin, status_code=status.HTTP_201_CREATED)
 def add_subject(db: db_dependency, user: user_dependency, subject_request: SubjectCreateAdmin):
@@ -23,12 +16,12 @@ def add_subject(db: db_dependency, user: user_dependency, subject_request: Subje
 
 
 @router.delete("/subjects/{subject_id}/delete", status_code=status.HTTP_204_NO_CONTENT)
-def delete_subject(db: db_dependency, user: user_dependency, subject_id: path_param_ge1):
+def delete_subject(db: db_dependency, user: user_dependency, subject_id: int):
     SubjectService.delete_subject(db, user, subject_id)
 
 
 @router.put("/subjects/{subject_id}/update", response_model=SubjectResponseAdmin, status_code=status.HTTP_200_OK)
-def update_subject_info(db: db_dependency, user: user_dependency, subject_id: path_param_ge1, subject_update_info_request: SubjectUpdateInfoAdmin):
+def update_subject_info(db: db_dependency, user: user_dependency, subject_id: int, subject_update_info_request: SubjectUpdateInfoAdmin):
     return SubjectService.update_subject_info(db, user, subject_id, subject_update_info_request)
 
 

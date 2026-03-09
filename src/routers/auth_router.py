@@ -1,26 +1,21 @@
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 
-from sqlalchemy.orm import Session
-
-from passlib.context import CryptContext
 from starlette import status
 from typing import Annotated
 from datetime import timedelta
 
-from db.database import get_db
+from db.database import db_dependency
 from src.schemas.token_schemas import Token
 from src.services.auth_services import AuthService
 from src.services.token_services import create_access_token
+from core.security import bcrypt_context
 
 
 router = APIRouter(
     tags=["Auth"]
 )
 
-db_dependency = Annotated[Session, Depends(get_db)]
-
-bcrypt_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 oauth2_bearer = OAuth2PasswordBearer(tokenUrl="/auth/token")
 

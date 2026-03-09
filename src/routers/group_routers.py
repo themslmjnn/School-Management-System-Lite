@@ -3,19 +3,12 @@ from fastapi import APIRouter, status, Depends, Path
 from src.schemas.group_schemas import GroupResponseAdmin, GroupCreateAdmin, GroupUpdateInfoAdmin
 
 from typing import Annotated
-from sqlalchemy.orm import Session
-from db.database import get_db
+from db.database import db_dependency
 from src.services.group_services import GroupService
-from core.security import get_current_user
-router = APIRouter(
-    tags=["Groups"]
-)
+from core.security import user_dependency
 
-db_dependency = Annotated[Session, Depends(get_db)]
 
-user_dependency = Annotated[dict, Depends(get_current_user)]
-
-path_param_ge1 = Annotated[int, Path(ge=1)]
+router = APIRouter(tags=["Groups"])
 
 @router.post("/groups", response_model=GroupResponseAdmin, status_code=status.HTTP_201_CREATED)
 def add_group(db: db_dependency, user: user_dependency, group_request: GroupCreateAdmin):
@@ -23,12 +16,12 @@ def add_group(db: db_dependency, user: user_dependency, group_request: GroupCrea
 
 
 @router.delete("/groups/{group_id}/delete", status_code=status.HTTP_204_NO_CONTENT)
-def delete_group(db: db_dependency, user: user_dependency, group_id: path_param_ge1):
+def delete_group(db: db_dependency, user: user_dependency, group_id: int):
     GroupService.delete_group(db, user, group_id)
 
 
 @router.put("/groups/{group_id}/update", response_model=GroupResponseAdmin, status_code=status.HTTP_200_OK)
-def update_group_info(db: db_dependency, user: user_dependency, group_id: path_param_ge1, group_update_info_request: GroupUpdateInfoAdmin):
+def update_group_info(db: db_dependency, user: user_dependency, group_id: int, group_update_info_request: GroupUpdateInfoAdmin):
     return GroupService.update_group_info(db, user, group_id, group_update_info_request)
 
 

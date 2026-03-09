@@ -3,21 +3,13 @@ from fastapi import APIRouter, status, Depends, Path
 from src.schemas.mark_schemas import MarkCreateGeneral, MarkResponseAdmin, MarkResponseGeneral, MarkUpdateInfoAdmin
 
 from typing import Annotated
-from sqlalchemy.orm import Session
-from db.database import get_db
+from db.database import db_dependency
 from src.services.group_services import GroupService
-from core.security import get_current_user
-from core.core_services import CoreService
+from core.security import user_dependency
 from src.models.mark_model import Mark
-router = APIRouter(
-    tags=["Marks"]
-)
 
-db_dependency = Annotated[Session, Depends(get_db)]
 
-user_dependency = Annotated[dict, Depends(get_current_user)]
-
-path_param_ge1 = Annotated[int, Path(ge=1)]
+router = APIRouter(tags=["Marks"])
 
 @router.post("/marks", response_model=MarkResponseGeneral, status_code=status.HTTP_201_CREATED)
 def put_mark(db: db_dependency, user: user_dependency, mark_request: MarkCreateGeneral):
@@ -25,12 +17,12 @@ def put_mark(db: db_dependency, user: user_dependency, mark_request: MarkCreateG
 
 
 @router.delete("/marks/{mark_id}/delete", status_code=status.HTTP_204_NO_CONTENT)
-def delete_mark(db: db_dependency, user: user_dependency, mark_id: path_param_ge1):
+def delete_mark(db: db_dependency, user: user_dependency, mark_id: int):
     CoreService.delete(db, user, mark_id)
 
 
 @router.put("/mark/{mark_id}/update", response_model=MarkResponseGeneral, status_code=status.HTTP_200_OK)
-def update_mark_info(db: db_dependency, user: user_dependency, mark_id: path_param_ge1, mark_update_info_request: MarkUpdateInfoAdmin):
+def update_mark_info(db: db_dependency, user: user_dependency, mark_id: int, mark_update_info_request: MarkUpdateInfoAdmin):
     return CoreService.update(db, user, mark_id, mark_update_info_request)
 
 
