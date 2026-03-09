@@ -1,57 +1,49 @@
 from fastapi import HTTPException
 
-from sqlalchemy.exc import IntegrityError
-
 from src.models.user_model import User
 from src.repositories.user_repositories import UserRepository
+from core.core_repositories import CoreRepository
+from core.core_services import CoreService
 
 
+MESSAGE_403 = "Accessing denied"
 MESSAGE_404 = "User not found"
-MESSAGE_409 = "Duplicate values are not accepted"
 
 
 class UserService:
     @staticmethod
-    def register_user(db, new_user, bcrypt_context):
-        user = User(
-            username=new_user.username,
-            first_name=new_user.first_name,
-            last_name=new_user.last_name,
-            date_of_birth=new_user.date_of_birth,
-            address=new_user.address,
-            email=new_user.email,
-            phone_number=new_user.phone_number,
-            password_hash=bcrypt_context.hash(new_user.password),
-            role=new_user.role
-        )
-
-        try:
-            UserRepository.register_user(db, user)
-
-            db.commit()
-            db.refresh(user)
-
-            return user
+    def get_users_admin(db, user):
+        CoreService.is_admin(user)
         
-        except IntegrityError:
-            db.rollback()
-
-            raise HTTPException(status_code=409, detail=MESSAGE_409)
-        
-
-    @staticmethod
-    def get_all_users(db):
-        return UserRepository.get_all_users(db)
+        return CoreRepository.get_items(db, User)
     
 
     @staticmethod
-    def search_users(db, users_request):
+    def search_users_admin(db, user, users_request):
+        CoreService.is_admin(user)
+
         return UserRepository.search_users(db, users_request)
     
 
     @staticmethod
-    def update_user_info(db, user_id, user_request):
-        user = UserRepository.get_user_by_id(db, user_id)
+    def get_users_general(db, user):
+        CoreService.does_have_access(user)
+        
+        return CoreRepository.get_items(db, User)
+    
+
+    @staticmethod
+    def search_users_general(db, user, users_request):
+        CoreService.does_have_access(user)
+
+        return UserRepository.search_users(db, users_request)
+    
+
+    @staticmethod
+    def update_user_info(db, user, user_id, user_request):
+        CoreService.is_admin(user)
+
+        user = CoreRepository.get_item_by_id(db, user_id, User)
 
         if user is None:
             raise HTTPException(status_code=404, detail=MESSAGE_404)
@@ -65,8 +57,11 @@ class UserService:
     
 
     @staticmethod
-    def update_user_password(db, user_id, user_password_request, bcrypt_context):
-        user = UserRepository.get_user_by_id(db, user_id)
+    def update_user_password(db, user, user_id, user_password_request, bcrypt_context):
+        if user["role"] != "admin" and user["id"] != user_id:
+            raise HTTPException(status_code=403, detail=MESSAGE_403)
+
+        user = CoreRepository.get_item_by_id(db, user_id, User)
 
         if user is None:
             raise HTTPException(status_code=404, detail=MESSAGE_404)

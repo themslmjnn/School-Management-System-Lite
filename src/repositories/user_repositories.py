@@ -1,26 +1,10 @@
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-
 from src.models.user_model import User
 
+
 class UserRepository:
-    @staticmethod
-    def register_user(db: Session, new_user):
-        db.add(new_user)
-
-        return new_user
-    
-
-    @staticmethod
-    def get_all_users(db: Session):
-        query = select(User)
-
-        result = db.execute(query)
-
-        return result.scalars().all()
-    
-
     @staticmethod
     def search_users(db: Session, users_request):
         query = select(User)
@@ -46,16 +30,4 @@ class UserRepository:
         result = db.execute(query)
 
         return result.scalars().all()
-    
-
-    @staticmethod
-    def get_user_by_id(db: Session, user_id: int):
-        query = (
-            select(User)
-            .filter(User.id == user_id)
-        )
-
-        result = db.execute(query)
-
-        return result.scalars().first()
         

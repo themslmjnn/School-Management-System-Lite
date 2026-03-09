@@ -55,10 +55,6 @@ class UserUpdateInfoBase(BaseModel):
     phone_number: Optional[str] = Field(min_length=6, max_length=30, default=None)
 
 
-class UserUpdateInfoGeneral(UserUpdateInfoBase):
-    pass
-
-
 class UserUpdateInfoAdmin(UserUpdateInfoBase):
     role: UserRole = Field(default=None)
 
