@@ -14,6 +14,9 @@ router = APIRouter(
 )
 
 
+# Working with Users endpoints
+
+# Register user
 @router.get("/users", response_model=list[Union[UserResponseAdmin, UserResponsePublic]], status_code=status.HTTP_200_OK)
 def get_users(
         db: db_dependency,
@@ -22,6 +25,7 @@ def get_users(
     return UserService.get_users(db, user)
 
 
+# Search users
 @router.get("/users/search", response_model=list[UserResponseAdmin], status_code=status.HTTP_200_OK)
 def search_users(
         db: db_dependency,
@@ -31,6 +35,7 @@ def search_users(
     return UserService.search_users(db, user, users_request)
 
 
+# Update user info
 @router.put("/users/{user_id}/update_info", response_model=UserResponseAdmin, status_code=status.HTTP_200_OK)
 def update_user_info(
         db: db_dependency,
@@ -41,7 +46,7 @@ def update_user_info(
     return UserService.update_user_info(db, user, user_id, user_request)
 
 
-
+# Update user password
 @router.put("/users/{user_id}/update_password", status_code=status.HTTP_204_NO_CONTENT)
 def update_user_password(
         db: db_dependency,

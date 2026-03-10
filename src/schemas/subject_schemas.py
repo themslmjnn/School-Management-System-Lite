@@ -1,9 +1,10 @@
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field
 
 from typing import Optional
 from datetime import datetime
 
 from src.models.subject_model import SubjectCategory, SubjectLanguage
+from src.schemas.base_schema import BaseSchema
 
 
 class SubjectBase(BaseModel):
@@ -16,17 +17,15 @@ class SubjectCreateAdmin(SubjectBase):
     pass
 
 
-class SubjectResponsePublic(SubjectBase):
-    model_config = ConfigDict(from_attributes=True)
+class SubjectResponsePublic(SubjectBase, BaseSchema):
+    pass
 
 
-class SubjectResponseAdmin(SubjectBase):
+class SubjectResponseAdmin(SubjectBase, BaseSchema):
     id: int
 
     created_at: datetime
     updated_at: datetime
-
-    model_config = ConfigDict(from_attributes=True)
 
 
 class SubjectUpdateInfoAdmin(BaseModel):

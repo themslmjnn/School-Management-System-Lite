@@ -1,4 +1,6 @@
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field
+
+from src.schemas.base_schema import BaseSchema
 
 from typing import Optional
 from datetime import datetime
@@ -15,17 +17,15 @@ class GroupCreateAdmin(GroupBase):
     pass
 
 
-class GroupResponsePublic(GroupBase):
-    model_config = ConfigDict(from_attributes=True)
+class GroupResponsePublic(GroupBase, BaseSchema):
+    pass
 
 
-class GroupResponseAdmin(GroupBase):
+class GroupResponseAdmin(GroupBase, BaseSchema):
     id: int
 
     created_at: datetime
     updated_at: datetime
-
-    model_config = ConfigDict(from_attributes=True)
 
 
 class GroupUpdateInfoAdmin(BaseModel):

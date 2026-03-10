@@ -1,9 +1,10 @@
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field
 
 from typing import Optional
 from datetime import date, datetime
 
 from src.models.user_model import UserRole
+from src.schemas.base_schema import BaseSchema
 
 
 class UserBase(BaseModel):
@@ -22,7 +23,7 @@ class UserCreateAdmin(UserBase):
     password: str = Field(min_length=8)
 
 
-class UserResponseAdmin(UserCreateAdmin):
+class UserResponseAdmin(UserCreateAdmin, BaseSchema):
     id: int
 
     role: UserRole
@@ -30,14 +31,10 @@ class UserResponseAdmin(UserCreateAdmin):
     created_at: datetime
     updated_at: datetime
 
-    model_config = ConfigDict(from_attributes=True)
 
-
-class UserResponsePublic(UserBase):
+class UserResponsePublic(UserBase, BaseSchema):
     role: UserRole
     is_active: bool
-
-    model_config = ConfigDict(from_attributes=True)
 
 
 class UserUpdateInfoBase(BaseModel):

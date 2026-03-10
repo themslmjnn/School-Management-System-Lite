@@ -1,10 +1,11 @@
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, Field
 
 from typing import Optional
 from datetime import date
 
 from src.models.teacher_model import TeacherStatus
 from src.schemas.user_schemas import UserCreateAdmin, UserResponseAdmin, UserResponsePublic
+from src.schemas.base_schema import BaseSchema
 
 
 class TeacherBase(BaseModel):
@@ -17,26 +18,20 @@ class TeacherCreateAdmin(BaseModel):
     teacher: TeacherBase
 
 
-class TeacherResponseBase(TeacherBase):
+class TeacherResponseBase(TeacherBase, BaseSchema):
     id: int
 
-    model_config = ConfigDict(from_attributes=True)
 
-
-class TeacherResponsePublic(BaseModel):
+class TeacherResponsePublic(BaseModel, BaseSchema):
     user: UserResponsePublic
     teacher: TeacherBase
 
-    model_config = ConfigDict(from_attributes=True)
 
-
-class TeacherResponseAdmin(BaseModel):
+class TeacherResponseAdmin(BaseModel, BaseSchema):
     id: int
 
     user: UserResponseAdmin
     teacher: TeacherResponseBase
-
-    model_config = ConfigDict(from_attributes=True)
 
 
 class TeacherUpdateInfoAdmin(BaseModel):
@@ -53,10 +48,8 @@ class TeacherSubjectCreateAdmin(TeacherSubjectBase):
     pass
 
 
-class TeacherSubjectResponseAdmin(TeacherSubjectBase):
+class TeacherSubjectResponseAdmin(TeacherSubjectBase, BaseSchema):
     id: int
-
-    model_config = ConfigDict(from_attributes=True)
 
 
 class TeacherSubjectUpdateInfoAdmin(BaseModel):
@@ -73,10 +66,8 @@ class TeacherGroupCreateAdmin(TeacherSubjectBase):
     pass
 
 
-class TeacherGroupResponseAdmin(TeacherSubjectBase):
+class TeacherGroupResponseAdmin(TeacherSubjectBase, BaseSchema):
     id: int
-
-    model_config = ConfigDict(from_attributes=True)
 
 
 class TeacherGroupUpdateInfoAdmin(BaseModel):

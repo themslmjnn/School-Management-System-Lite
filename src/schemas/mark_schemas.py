@@ -1,4 +1,6 @@
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field
+
+from src.schemas.base_schema import BaseSchema
 
 from typing import Optional
 from datetime import datetime
@@ -14,8 +16,8 @@ class MarkCreateTeacher(MarkBase):
     pass
 
 
-class MarkResponseBase(MarkBase):
-    model_config = ConfigDict(from_attributes=True)
+class MarkResponseBase(MarkBase, BaseSchema):
+    pass
 
 
 class MarkResponsePublic(MarkResponseBase):

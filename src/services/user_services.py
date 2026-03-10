@@ -1,11 +1,8 @@
-from fastapi import HTTPException
-
 from src.models.user_model import User
 from src.repositories.user_repositories import UserRepository
 from utils.helpers import require_admin, require_director, require_existence, update_object, verify_password, hash_password
 
 
-MESSAGE_403 = "Accessing denied"
 MESSAGE_404 = "User not found"
 
 

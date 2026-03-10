@@ -18,8 +18,8 @@ def require_director(user) -> None:
     
 
 def require_existence(object, message) -> None:
-     if object is None:
-            raise HTTPException(status_code=404, detail=message)
+    if object is None:
+        raise HTTPException(status_code=404, detail=message)
      
 
 def update_object(instance, request):

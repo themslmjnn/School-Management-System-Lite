@@ -1,46 +1,37 @@
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field
 
 from typing import Optional
 from datetime import date
 
 from src.models.student_model import StudentStatus
 from src.schemas.user_schemas import UserCreateAdmin, UserResponseAdmin, UserResponsePublic, UserSearchPublic, UserSearchAdmin
+from src.schemas.base_schema import BaseSchema
 
-# Done
+
 class StudentBase(BaseModel):
     grade: str
     enrolled_at: date
     status: StudentStatus
 
 
-# Done
+
 class StudentCreateAdmin(BaseModel):
     user: UserCreateAdmin
     student: StudentBase
 
 
-# Done
-class StudentResponseBase(StudentBase):
+class StudentResponseBase(StudentBase, BaseSchema):
     id: int
 
-    model_config = ConfigDict(from_attributes=True)
 
-
-# Done
-class StudentResponsePublic(BaseModel):
+class StudentResponsePublic(BaseModel, BaseSchema):
     user: UserResponsePublic
     student: StudentBase
 
-    model_config = ConfigDict(from_attributes=True)
 
-
-# Done
-class StudentResponseAdmin(BaseModel):
+class StudentResponseAdmin(BaseModel, BaseSchema):
     user: UserResponseAdmin
     student: StudentResponseBase
-
-    model_config = ConfigDict(from_attributes=True)
-
 
 
 class StudentUpdateInfoAdmin(BaseModel):
@@ -72,10 +63,8 @@ class StudentSubjectCreateAdmin(StudentSubjectBase):
     pass
 
 
-class StudentSubjectResponseAdmin(StudentSubjectBase):
+class StudentSubjectResponseAdmin(StudentSubjectBase, BaseSchema):
     id: int
-
-    model_config = ConfigDict(from_attributes=True)
 
 
 class StudentSubjectUpdateInfoAdmin(BaseModel):
@@ -92,10 +81,8 @@ class StudentGroupCreateAdmin(StudentGroupBase):
     pass
 
 
-class StudentGroupResponseAdmin(StudentGroupBase):
+class StudentGroupResponseAdmin(StudentGroupBase, BaseSchema):
     id: int
-
-    model_config = ConfigDict(from_attributes=True)
 
 
 class StudentGroupUpdateInfoAdmin(BaseModel):

@@ -6,6 +6,11 @@ from src.models.user_model import User
 
 class UserRepository:
     @staticmethod
+    def register_user(db: Session, new_user):
+        db.add(new_user)
+
+
+    @staticmethod
     def get_users_admin(db: Session):
         query = select(User)
 
@@ -17,7 +22,14 @@ class UserRepository:
     @staticmethod
     def get_users_public(db: Session):
         query = (
-            select(User.first_name, User.last_name, User.date_of_birth, User.address, User.phone_number, User.role, User.is_active)
+            select(
+                User.first_name, 
+                User.last_name, 
+                User.date_of_birth, 
+                User.address, 
+                User.phone_number, 
+                User.role, 
+                User.is_active)
         )
 
         result = db.execute(query)
