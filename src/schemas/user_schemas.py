@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, EmailStr, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict
 
 from typing import Optional
 from datetime import date, datetime
@@ -7,22 +7,22 @@ from src.models.user_model import UserRole
 
 
 class UserBase(BaseModel):
-    username: str = Field(min_length=6, max_length=20)
     first_name: str = Field(max_length=30)
     last_name: str = Field(max_length=30)
 
     date_of_birth: date
     address: str = Field(max_length=100)
 
-    email: EmailStr
     phone_number: str = Field(min_length=6, max_length=30)
 
 
 class UserCreateAdmin(UserBase):
+    username: str = Field(min_length=6, max_length=20)
+    email: str
     password: str = Field(min_length=8)
 
 
-class UserResponseAdmin(UserBase):
+class UserResponseAdmin(UserCreateAdmin):
     id: int
 
     role: UserRole
@@ -33,14 +33,11 @@ class UserResponseAdmin(UserBase):
     model_config = ConfigDict(from_attributes=True)
 
 
-class UserResponseGeneral(UserBase):
-    id: int
-
+class UserResponsePublic(UserBase):
     role: UserRole
     is_active: bool
 
     model_config = ConfigDict(from_attributes=True)
-
 
 
 class UserUpdateInfoBase(BaseModel):
@@ -51,7 +48,7 @@ class UserUpdateInfoBase(BaseModel):
     date_of_birth: Optional[date] = Field(default=None)
     address: Optional[str] = Field(max_length=100, default=None)
 
-    email: Optional[EmailStr] = Field(default=None)
+    email: Optional[str] = Field(default=None)
     phone_number: Optional[str] = Field(min_length=6, max_length=30, default=None)
 
 
@@ -64,7 +61,7 @@ class UserUpdatePasswordBase(BaseModel):
     new_password: str = Field(min_length=8)
 
 
-class UserUpdatePasswordGeneral(UserUpdatePasswordBase):
+class UserUpdatePasswordPublic(UserUpdatePasswordBase):
     pass
 
 
@@ -73,7 +70,6 @@ class UserUpdatePasswordAdmin(UserUpdatePasswordBase):
     
 
 class UserSearchBase(BaseModel):
-    username: Optional[str] = None
     first_name: Optional[str] = None
     last_name: Optional[str] = None
 
@@ -84,9 +80,15 @@ class UserSearchBase(BaseModel):
     is_active: Optional[bool] = None
 
 
-class UserSearchGeneral(UserSearchBase):
+class UserSearchPublic(UserSearchBase):
     pass
 
 
 class UserSearchAdmin(UserSearchBase):
-    pass
+    username: Optional[str] = None
+
+
+class CurrentUserResponse(BaseModel):
+   username: str = Field(min_length=6, max_length=20)
+   id: int
+   role: UserRole

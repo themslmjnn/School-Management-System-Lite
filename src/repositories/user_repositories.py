@@ -6,6 +6,38 @@ from src.models.user_model import User
 
 class UserRepository:
     @staticmethod
+    def get_users_admin(db: Session):
+        query = select(User)
+
+        result = db.execute(query)
+
+        return result.scalars().all()
+    
+
+    @staticmethod
+    def get_users_public(db: Session):
+        query = (
+            select(User.first_name, User.last_name, User.date_of_birth, User.address, User.phone_number, User.role, User.is_active)
+        )
+
+        result = db.execute(query)
+
+        return result.scalars().all()
+    
+
+    @staticmethod
+    def get_user_by_id(db: Session, user_id):
+        query = (
+            select(User)
+            .filter(User.id == user_id)
+        )
+
+        result = db.execute(query)
+
+        return result.scalars().first()
+
+
+    @staticmethod
     def search_users(db: Session, users_request):
         query = select(User)
 
@@ -30,4 +62,3 @@ class UserRepository:
         result = db.execute(query)
 
         return result.scalars().all()
-        

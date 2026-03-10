@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 
-from routers import student_routers, user_routers
+from src.routers import student_routers, user_routers
 from src.routers import auth_router, teacher_routers, subject_routers, group_routers, mark_routers
 
 app = FastAPI()

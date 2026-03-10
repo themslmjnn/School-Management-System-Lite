@@ -1,10 +1,10 @@
 from src.models.subject_model import Subject
-from core.core_repositories import CoreRepository
+
 from sqlalchemy.exc import IntegrityError
 from fastapi import HTTPException
 from src.models.subject_model import Subject
 from src.repositories.subject_repositories import SubjectRepository
-from core.core_services import CoreService
+
 class SubjectService:
     @staticmethod
     def add_subject_admin(db, user, subject_request):

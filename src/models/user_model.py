@@ -11,7 +11,7 @@ from db.database import Base
 
 str_30 = Annotated[str, mapped_column(String(30), nullable=False)]
 
-
+# Done
 class UserRole(str, Enum):
     admin = "admin"
     director = "director"
@@ -20,6 +20,7 @@ class UserRole(str, Enum):
     student = "student"
 
 
+# Done
 class User(Base):
     __tablename__ = "users"
 

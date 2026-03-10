@@ -1,10 +1,11 @@
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from typing import Optional
-from datetime import date, datetime
+from datetime import date
 
 from src.models.teacher_model import TeacherStatus
-from src.schemas.user_schemas import UserCreateAdmin, UserResponseAdmin, UserResponseGeneral
+from src.schemas.user_schemas import UserCreateAdmin, UserResponseAdmin, UserResponsePublic
+
 
 class TeacherBase(BaseModel):
     hired_at: date
@@ -12,8 +13,8 @@ class TeacherBase(BaseModel):
     
 
 class TeacherCreateAdmin(BaseModel):
-    teacher_primary_data: UserCreateAdmin
-    teacher_advanced_data: TeacherBase
+    user: UserCreateAdmin
+    teacher: TeacherBase
 
 
 class TeacherResponseBase(TeacherBase):
@@ -22,20 +23,62 @@ class TeacherResponseBase(TeacherBase):
     model_config = ConfigDict(from_attributes=True)
 
 
-class TeacherResponseGeneral(BaseModel):
-    teacher_primary_data: UserResponseGeneral
-    teacher_advanced_data: TeacherBase
+class TeacherResponsePublic(BaseModel):
+    user: UserResponsePublic
+    teacher: TeacherBase
 
     model_config = ConfigDict(from_attributes=True)
 
 
 class TeacherResponseAdmin(BaseModel):
-    teacher_primary_data: UserResponseAdmin
-    teacher_advanced_data: TeacherResponseBase
+    id: int
+
+    user: UserResponseAdmin
+    teacher: TeacherResponseBase
 
     model_config = ConfigDict(from_attributes=True)
 
 
-class TeacherUpdateInfoBase(BaseModel):
+class TeacherUpdateInfoAdmin(BaseModel):
     hired_at: Optional[date] = None
     status: Optional[TeacherStatus] = None
+
+
+class TeacherSubjectBase(BaseModel):
+    teacher_id: int = Field(ge=1)
+    subject_id: int = Field(ge=1)
+
+
+class TeacherSubjectCreateAdmin(TeacherSubjectBase):
+    pass
+
+
+class TeacherSubjectResponseAdmin(TeacherSubjectBase):
+    id: int
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class TeacherSubjectUpdateInfoAdmin(BaseModel):
+    teacher_id: Optional[int] = None
+    subject_id: Optional[int] = None
+
+
+class TeacherGroupBase(BaseModel):
+    student_id: int = Field(ge=1)
+    subject_id: int = Field(ge=1)
+
+
+class TeacherGroupCreateAdmin(TeacherSubjectBase):
+    pass
+
+
+class TeacherGroupResponseAdmin(TeacherSubjectBase):
+    id: int
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class TeacherGroupUpdateInfoAdmin(BaseModel):
+    teacher_id: Optional[int] = None
+    group_id: Optional[int] = None

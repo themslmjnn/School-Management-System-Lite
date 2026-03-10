@@ -1,18 +1,20 @@
 from fastapi import APIRouter, Depends, status
 
-from typing import Annotated
+from typing import Annotated, Union
 
 from db.database import db_dependency
 
 from core.security import user_dependency, bcrypt_context
-from src.schemas.user_schemas import UserResponseAdmin, UserResponseGeneral, UserSearchAdmin, UserSearchGeneral, UserUpdateInfoAdmin, UserUpdatePasswordAdmin
+from src.schemas.user_schemas import UserResponseAdmin, UserResponsePublic, UserSearchAdmin, UserUpdateInfoAdmin, UserUpdatePasswordAdmin
 from src.services.user_services import UserService
 
 
-router = APIRouter(tags=["Users"])
+router = APIRouter(
+    tags=["Users"]
+)
 
 
-@router.get("/users", response_model=list[UserResponseAdmin], status_code=status.HTTP_200_OK)
+@router.get("/users", response_model=list[Union[UserResponseAdmin, UserResponsePublic]], status_code=status.HTTP_200_OK)
 def get_users(
         db: db_dependency,
         user: user_dependency):
@@ -20,15 +22,13 @@ def get_users(
     return UserService.get_users(db, user)
 
 
-
-@router.get("/users_search", response_model=list[UserResponseAdmin], status_code=status.HTTP_200_OK)
+@router.get("/users/search", response_model=list[UserResponseAdmin], status_code=status.HTTP_200_OK)
 def search_users(
         db: db_dependency,
         user: user_dependency,
         users_request: Annotated[UserSearchAdmin, Depends()]):
     
     return UserService.search_users(db, user, users_request)
-
 
 
 @router.put("/users/{user_id}/update_info", response_model=UserResponseAdmin, status_code=status.HTTP_200_OK)

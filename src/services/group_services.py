@@ -1,10 +1,10 @@
 from src.models.subject_model import Subject
-from core.core_repositories import CoreRepository
+
 from sqlalchemy.exc import IntegrityError
 from fastapi import HTTPException
 from src.models.group_model import Group
 from src.repositories.subject_repositories import SubjectRepository
-from core.core_services import CoreService
+
 class GroupService:
     @staticmethod
     def add_group_admin(db, user, group_request):

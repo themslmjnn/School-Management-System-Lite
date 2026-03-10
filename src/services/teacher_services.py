@@ -4,8 +4,6 @@ from sqlalchemy.exc import IntegrityError
 
 from src.models.user_model import User
 from src.models.teacher_model import Teacher, TeacherStatus
-from core.core_repositories import CoreRepository
-from core.core_services import CoreService
 
 
 MESSAGE_404 = "Teacher not found"

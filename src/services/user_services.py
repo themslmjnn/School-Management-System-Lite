@@ -2,8 +2,7 @@ from fastapi import HTTPException
 
 from src.models.user_model import User
 from src.repositories.user_repositories import UserRepository
-from core.core_repositories import CoreRepository
-from core.core_services import CoreService
+from utils.helpers import require_admin, require_director, require_existence, update_object, verify_password, hash_password
 
 
 MESSAGE_403 = "Accessing denied"
@@ -12,44 +11,33 @@ MESSAGE_404 = "User not found"
 
 class UserService:
     @staticmethod
-    def get_users_admin(db, user):
-        CoreService.is_admin(user)
-        
-        return CoreRepository.get_items(db, User)
+    def get_users(db, user):
+        if require_admin(user) is None:
+            return UserRepository.get_users_admin(db)
+        elif require_director(user) is None:
+            return UserRepository.get_users_public(db)
     
 
     @staticmethod
-    def search_users_admin(db, user, users_request):
-        CoreService.is_admin(user)
+    def search_users(db, user, users_request):
+        try:
+            require_admin(user)
 
-        return UserRepository.search_users(db, users_request)
-    
-
-    @staticmethod
-    def get_users_general(db, user):
-        CoreService.does_have_access(user)
-        
-        return CoreRepository.get_items(db, User)
-    
-
-    @staticmethod
-    def search_users_general(db, user, users_request):
-        CoreService.does_have_access(user)
+        finally:
+            require_director(user)
 
         return UserRepository.search_users(db, users_request)
     
 
     @staticmethod
     def update_user_info(db, user, user_id, user_request):
-        CoreService.is_admin(user)
+        require_admin(user)
 
-        user = CoreRepository.get_item_by_id(db, user_id, User)
+        user = UserRepository.get_user_by_id(db, user_id)
 
-        if user is None:
-            raise HTTPException(status_code=404, detail=MESSAGE_404)
-        
-        for field, value in user_request.model_dump(exclude_unset=True).items():
-            setattr(user, field, value)
+        require_existence(user, MESSAGE_404)
+
+        update_object(user, user_request)
 
         db.commit()
 
@@ -58,17 +46,18 @@ class UserService:
 
     @staticmethod
     def update_user_password(db, user, user_id, user_password_request, bcrypt_context):
-        if user["role"] != "admin" and user["id"] != user_id:
-            raise HTTPException(status_code=403, detail=MESSAGE_403)
+        try:
+            require_admin(user)
 
-        user = CoreRepository.get_item_by_id(db, user_id, User)
+        finally:
+            require_director(user)
 
-        if user is None:
-            raise HTTPException(status_code=404, detail=MESSAGE_404)
+        user = UserRepository.get_user_by_id(db, user_id, User)
+
+        require_existence(user, MESSAGE_404)
         
-        if not bcrypt_context.verify(user_password_request.old_password, user.password_hash):
-            raise HTTPException(status_code=400, detail="Invalid old password")
+        verify_password(user, user_password_request, bcrypt_context)
         
-        user.password_hash = bcrypt_context.hash(user_password_request.new_password)
+        user.password_hash = hash_password(user_password_request, bcrypt_context)
 
         db.commit()

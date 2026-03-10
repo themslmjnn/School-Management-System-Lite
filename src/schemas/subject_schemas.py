@@ -16,19 +16,17 @@ class SubjectCreateAdmin(SubjectBase):
     pass
 
 
-class SubjectResponseBase(SubjectBase):
-    id: int
-
+class SubjectResponsePublic(SubjectBase):
     model_config = ConfigDict(from_attributes=True)
 
 
-class SubjectResponseGeneral(SubjectResponseBase):
-    pass
+class SubjectResponseAdmin(SubjectBase):
+    id: int
 
-
-class SubjectResponseAdmin(SubjectResponseBase):
     created_at: datetime
     updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 class SubjectUpdateInfoAdmin(BaseModel):
@@ -43,7 +41,7 @@ class SubjectSearchBase(BaseModel):
     category: Optional[SubjectCategory] = None
 
 
-class SubjectSearchGeneral(SubjectSearchBase):
+class SubjectSearchPublic(SubjectSearchBase):
     pass
 
 

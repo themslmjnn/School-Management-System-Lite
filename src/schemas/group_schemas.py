@@ -1,9 +1,10 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 
 from typing import Optional
 from datetime import datetime
 
 from src.models.group_model import GroupLanguage
+
 
 class GroupBase(BaseModel):
     title: str = Field(min_length=2, max_length=10)
@@ -14,13 +15,17 @@ class GroupCreateAdmin(GroupBase):
     pass
 
 
-class GroupResponseGeneral(GroupBase):
-    pass
+class GroupResponsePublic(GroupBase):
+    model_config = ConfigDict(from_attributes=True)
 
 
 class GroupResponseAdmin(GroupBase):
+    id: int
+
     created_at: datetime
     updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 class GroupUpdateInfoAdmin(BaseModel):
@@ -33,9 +38,9 @@ class GroupSearchBase(BaseModel):
     language: Optional[GroupLanguage] = None
 
 
-class GroupSearchGeneral(GroupSearchBase):
+class GroupSearchPublic(GroupSearchBase):
     pass
 
 
 class GruopSearchAdmin(GroupSearchBase):
-    created_at: Optional[datetime] = None
+    pass

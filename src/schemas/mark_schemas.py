@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 
 from typing import Optional
 from datetime import datetime
@@ -10,19 +10,21 @@ class MarkBase(BaseModel):
     mark: int = Field(ge=1)
 
 
-class MarkCreateGeneral(MarkBase):
+class MarkCreateTeacher(MarkBase):
     pass
 
 
 class MarkResponseBase(MarkBase):
-    pass
+    model_config = ConfigDict(from_attributes=True)
 
 
-class MarkResponseGeneral(MarkResponseBase):
+class MarkResponsePublic(MarkResponseBase):
     pass
 
 
 class MarkResponseAdmin(MarkResponseBase):
+    id: int
+
     created_at: datetime
     updated_at: datetime
 

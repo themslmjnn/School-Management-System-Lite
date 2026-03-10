@@ -5,8 +5,7 @@ from sqlalchemy.exc import IntegrityError
 from src.models.student_model import Student, StudentStatus
 from src.models.user_model import User
 from src.repositories.student_repositories import StudentRepository
-from core.core_repositories import CoreRepository
-from core.core_services import CoreService
+
 
 
 MESSAGE_404 = "Student not found"
