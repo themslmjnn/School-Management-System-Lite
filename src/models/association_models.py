@@ -14,6 +14,7 @@ class StudentSubjectStatus(str, Enum):
     withdrawn = "withdrawn"
     studying = "studying"
 
+
 # Done
 class StudentSubject(Base):
     __tablename__ = "student_subject"
@@ -81,7 +82,6 @@ class TeacherSubject(Base):
 
     teacher = relationship("Teacher", back_populates="teacher_subjects")
     subject = relationship("Subject", back_populates="teacher_subjects")
-
 
 
 class TeacherGroup(Base):

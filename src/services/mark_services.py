@@ -1,12 +1,10 @@
-from fastapi import HTTPException
-from sqlalchemy.exc import IntegrityError
-
-
 from src.models.mark_model import Mark
 from src.repositories.mark_repositories import MarkRepository
 from utils.helpers import require_teacher, require_admin, require_existence, update_object
 
+
 MESSAGE_404 = "Mark not found"
+
 
 class MarkService:
     @staticmethod

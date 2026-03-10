@@ -45,4 +45,3 @@ def get_groups(
         user: user_dependency):
     
     return GroupService.get_groups(db, user)
-    

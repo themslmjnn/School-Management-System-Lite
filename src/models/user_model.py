@@ -11,6 +11,7 @@ from db.database import Base
 
 str_30 = Annotated[str, mapped_column(String(30), nullable=False)]
 
+
 # Done
 class UserRole(str, Enum):
     admin = "admin"

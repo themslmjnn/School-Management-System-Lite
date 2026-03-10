@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 
 from src.models.mark_model import Mark
 
+
 class MarkRepository:
     @staticmethod
     def put_mark(db: Session, new_mark):
@@ -33,4 +34,3 @@ class MarkRepository:
         result = db.execute(query)
 
         return result.scalars().all()
-

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, status, Depends
+from fastapi import APIRouter, status
 
 from src.schemas.subject_schemas import SubjectResponseAdmin, SubjectCreateAdmin, SubjectUpdateInfoAdmin
 

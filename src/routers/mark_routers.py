@@ -4,7 +4,7 @@ from starlette import status
 
 from db.database import db_dependency
 from core.security import user_dependency
-from src.schemas.mark_schemas import MarkCreateTeacher, MarkResponseAdmin, MarkResponsePublic, MarkUpdateInfoAdmin
+from src.schemas.mark_schemas import MarkCreateTeacher, MarkResponsePublic, MarkUpdateInfoAdmin
 from src.services.mark_services import MarkService
 
 
@@ -47,4 +47,3 @@ def get_groups(
         user: user_dependency):
     
     return MarkService.get_marks(db, user)
-    

@@ -1,12 +1,14 @@
-from src.models.subject_model import Subject
+from fastapi import HTTPException
 
 from sqlalchemy.exc import IntegrityError
-from fastapi import HTTPException
+
 from src.models.subject_model import Subject
 from src.repositories.subject_repositories import SubjectRepository
 from utils.helpers import require_admin, require_existence, update_object, require_director
 
+
 MESSAGE_404 = "Subject not found"
+
 
 class SubjectService:
     @staticmethod

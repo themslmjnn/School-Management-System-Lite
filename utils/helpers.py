@@ -1,6 +1,8 @@
 from fastapi import HTTPException
 
+
 MESSAGE_403 = "Access denied"
+
 
 def require_admin(user) -> None:
     if user["role"] != "admin":
@@ -27,15 +29,15 @@ def require_existence(object, message) -> None:
         raise HTTPException(status_code=404, detail=message)
      
 
-def update_object(instance, request):
+def update_object(instance, request) -> None:
     for field, value in request.model_dump(exclude_unset=True).items():
         setattr(instance, field, value)
 
 
-def hash_password(user_password_request, bcrypt_context):
+def hash_password(user_password_request, bcrypt_context) -> None:
     return bcrypt_context.hash(user_password_request.new_password)
 
 
-def verify_password(user, user_password_request, bcrypt_context):
+def verify_password(user, user_password_request, bcrypt_context) -> None:
     if not bcrypt_context.verify(user_password_request.old_password, user.password_hash):
-            raise HTTPException(status_code=400, detail="Invalid old password")
+        raise HTTPException(status_code=400, detail="Invalid old password")

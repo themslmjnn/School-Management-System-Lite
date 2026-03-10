@@ -1,13 +1,14 @@
-from src.models.subject_model import Subject
+from fastapi import HTTPException
 
 from sqlalchemy.exc import IntegrityError
-from fastapi import HTTPException
+
 from src.models.group_model import Group
 from src.repositories.group_repositories import GroupRepository
-
 from utils.helpers import require_admin, require_director, require_existence, update_object
 
+
 MESSAGE_404 = "Group not found"
+
 
 class GroupService:
     @staticmethod

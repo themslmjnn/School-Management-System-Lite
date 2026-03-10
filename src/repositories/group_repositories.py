@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 
 from src.models.group_model import Group
 
+
 class GroupRepository:
     @staticmethod
     def add_group(db: Session, new_group):

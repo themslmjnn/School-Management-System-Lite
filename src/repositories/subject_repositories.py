@@ -3,10 +3,12 @@ from sqlalchemy.orm import Session
 
 from src.models.subject_model import Subject
 
+
 class SubjectRepository:
     @staticmethod
     def add_subject(db: Session, new_subject):
         db.add(new_subject)
+
 
     @staticmethod
     def remove_subject(db: Session, subject):

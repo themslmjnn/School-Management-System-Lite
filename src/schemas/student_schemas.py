@@ -14,7 +14,6 @@ class StudentBase(BaseModel):
     status: StudentStatus
 
 
-
 class StudentCreateAdmin(BaseModel):
     user: UserCreateAdmin
     student: StudentBase

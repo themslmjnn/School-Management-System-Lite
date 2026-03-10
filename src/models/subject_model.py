@@ -44,4 +44,3 @@ class Subject(Base):
     __table_args__ = (
         UniqueConstraint("title", "language", name="uix_title_language"),
     )
-
