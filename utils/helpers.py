@@ -17,6 +17,11 @@ def require_director(user) -> None:
         raise HTTPException(status_code=403, detail=MESSAGE_403)
     
 
+def require_teacher(user) -> None:
+    if user["role"] != "teacher":
+        raise HTTPException(status_code=403, detail=MESSAGE_403)
+    
+
 def require_existence(object, message) -> None:
     if object is None:
         raise HTTPException(status_code=404, detail=message)

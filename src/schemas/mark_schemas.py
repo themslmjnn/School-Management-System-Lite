@@ -1,14 +1,16 @@
 from pydantic import BaseModel, Field
 
-from src.schemas.base_schema import BaseSchema
-
 from typing import Optional
 from datetime import datetime
+
+from src.models.mark_model import MarkType
+from src.schemas.base_schema import BaseSchema
 
 
 class MarkBase(BaseModel):
     student_id: int = Field(ge=1)
     teacher_id: int = Field(ge=1)
+    mark_type: MarkType
     mark: int = Field(ge=1)
 
 
@@ -34,4 +36,5 @@ class MarkResponseAdmin(MarkResponseBase):
 class MarkUpdateInfoAdmin(BaseModel):
     student_id: Optional[int] = None
     teacher_id: Optional[int] = None
+    mark_type: Optional[MarkType] = None
     mark: Optional[int] = None

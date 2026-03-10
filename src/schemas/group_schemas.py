@@ -1,11 +1,10 @@
 from pydantic import BaseModel, Field
 
-from src.schemas.base_schema import BaseSchema
-
 from typing import Optional
 from datetime import datetime
 
 from src.models.group_model import GroupLanguage
+from src.schemas.base_schema import BaseSchema
 
 
 class GroupBase(BaseModel):
