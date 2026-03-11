@@ -1,34 +1,38 @@
 from pydantic import BaseModel, Field
 
 from typing import Optional
-from datetime import date
+from datetime import date, datetime
 
 from src.models.student_model import StudentStatus
+from src.models.association_models import StudentSubjectStatus, StudentGroupStatus
 from src.schemas.user_schemas import UserCreateAdmin, UserResponseAdmin, UserResponsePublic, UserSearchPublic, UserSearchAdmin
 from src.schemas.base_schema import BaseSchema
 
 
-class StudentBase(BaseModel):
+class StudentBase1(BaseModel):
     grade: str
     enrolled_at: date
+
+
+class StudentBase2(StudentBase1):
     status: StudentStatus
 
 
 class StudentCreateAdmin(BaseModel):
     user: UserCreateAdmin
-    student: StudentBase
+    student: StudentBase1
 
 
-class StudentResponseBase(StudentBase, BaseSchema):
+class StudentResponseBase(StudentBase2, BaseSchema):
     id: int
 
 
-class StudentResponsePublic(BaseModel, BaseSchema):
+class StudentResponsePublic(BaseSchema):
     user: UserResponsePublic
-    student: StudentBase
+    student: StudentBase2
 
 
-class StudentResponseAdmin(BaseModel, BaseSchema):
+class StudentResponseAdmin(BaseSchema):
     user: UserResponseAdmin
     student: StudentResponseBase
 
@@ -38,6 +42,9 @@ class StudentUpdateInfoAdmin(BaseModel):
     enrolled_at: Optional[date] = None  
     status: Optional[StudentStatus] = None
 
+
+class StudentUpdateInfoResponseAdmin(StudentResponseBase):
+    pass
 
 class StudentSearchBase(StudentUpdateInfoAdmin):
     pass
@@ -65,10 +72,17 @@ class StudentSubjectCreateAdmin(StudentSubjectBase):
 class StudentSubjectResponseAdmin(StudentSubjectBase, BaseSchema):
     id: int
 
+    status: StudentSubjectStatus
+
+    created_at: datetime
+    updated_at: datetime
+
 
 class StudentSubjectUpdateInfoAdmin(BaseModel):
     student_id: Optional[int] = None
     subject_id: Optional[int] = None
+
+    status: Optional[StudentSubjectStatus] = None
 
 
 class StudentGroupBase(BaseModel):
@@ -82,6 +96,11 @@ class StudentGroupCreateAdmin(StudentGroupBase):
 
 class StudentGroupResponseAdmin(StudentGroupBase, BaseSchema):
     id: int
+
+    status: StudentGroupStatus
+
+    created_at: datetime
+    updated_at: datetime
 
 
 class StudentGroupUpdateInfoAdmin(BaseModel):

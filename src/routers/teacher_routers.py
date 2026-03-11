@@ -42,17 +42,17 @@ def update_teacher_info(
     return TeacherService.update_teacher_info(db, user, teacher_id, teacher_update_info_request)
 
 
-@router.put("/teachers/{teacher_id}/drop", status_code=status.HTTP_204_NO_CONTENT)
-def drop_teacher(
-    db: db_dependency, user: user_dependency, teacher_id: int):
+# @router.put("/teachers/{teacher_id}/drop", status_code=status.HTTP_204_NO_CONTENT)
+# def drop_teacher(
+#     db: db_dependency, user: user_dependency, teacher_id: int):
 
-    TeacherService.drop_teacher(db, user, teacher_id)
+#     TeacherService.drop_teacher(db, user, teacher_id)
 
 
-@router.put("/teachers/{teacher_id}/fire", status_code=status.HTTP_204_NO_CONTENT)
-def fire_teacher(db: db_dependency, user: user_dependency, teacher_id: int):
+# @router.put("/teachers/{teacher_id}/fire", status_code=status.HTTP_204_NO_CONTENT)
+# def fire_teacher(db: db_dependency, user: user_dependency, teacher_id: int):
 
-    TeacherService.fire_teacher(db, user, teacher_id)
+#     TeacherService.fire_teacher(db, user, teacher_id)
 
 
 
@@ -65,13 +65,13 @@ def assign_teacher_to_subject(
     return TeacherService.assign_teacher_to_subject(db, user, teacher_subject_request)
 
 
-@router.put("/teachers/subjects/{assignment_id}/withdraw", status_code=status.HTTP_204_NO_CONTENT)
-def withdraw_teacher_subject(
-        db: db_dependency,
-        user: user_dependency, 
-        assignment_id: int):
+# @router.put("/teachers/subjects/{assignment_id}/withdraw", status_code=status.HTTP_204_NO_CONTENT)
+# def withdraw_teacher_subject(
+#         db: db_dependency,
+#         user: user_dependency, 
+#         assignment_id: int):
     
-    TeacherService.withdraw_teacher_subject(db, user, assignment_id)
+#     TeacherService.withdraw_teacher_subject(db, user, assignment_id)
 
 
 @router.put("/teachers/subjects/{assignment_id}/update", response_model=TeacherSubjectResponseAdmin, status_code=status.HTTP_200_OK)
@@ -101,13 +101,13 @@ def assign_head_of_class(
     return TeacherService.assign_head_of_class(db, user, teacher_group_request)
 
 
-@router.put("/teachers/groups/{assignment_id}/withdraw", status_code=status.HTTP_204_NO_CONTENT)
-def withdraw_teacher_group(
-        db: db_dependency, 
-        user: user_dependency, 
-        assignment_id: int):
+# @router.put("/teachers/groups/{assignment_id}/withdraw", status_code=status.HTTP_204_NO_CONTENT)
+# def withdraw_teacher_group(
+#         db: db_dependency, 
+#         user: user_dependency, 
+#         assignment_id: int):
     
-    TeacherService.withdraw_teacher_group(db, user, assignment_id)
+#     TeacherService.withdraw_teacher_group(db, user, assignment_id)
 
 
 @router.put("/teachers/groups/{assignment_id}/update", response_model=TeacherGroupResponseAdmin, status_code=status.HTTP_200_OK)

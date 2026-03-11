@@ -34,7 +34,7 @@ class UserRepository:
 
         result = db.execute(query)
 
-        return result.scalars().all()
+        return result.mappings().all()
     
 
     @staticmethod

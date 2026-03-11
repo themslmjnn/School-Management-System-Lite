@@ -23,7 +23,8 @@ class MarkResponseBase(MarkBase, BaseSchema):
 
 
 class MarkResponsePublic(MarkResponseBase):
-    pass
+    created_at: datetime
+    updated_at: datetime
 
 
 class MarkResponseAdmin(MarkResponseBase):

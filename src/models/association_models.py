@@ -60,6 +60,11 @@ class StudentGroup(Base):
     student = relationship("Student", back_populates="student_group")
     group = relationship("Group", back_populates="student_group")
 
+    __table_args__ = (
+        UniqueConstraint("student_id", "group_id", "status", name="uix_student_group"),
+    )
+
+
 
 class TeacherSubjectStatus(str, Enum):
     finished = "finished"
@@ -83,6 +88,10 @@ class TeacherSubject(Base):
     teacher = relationship("Teacher", back_populates="teacher_subjects")
     subject = relationship("Subject", back_populates="teacher_subjects")
 
+    __table_args__ = (
+        UniqueConstraint("teacher_id", "subject_id", "status", name="uix_teacher_subject"),
+    )
+
 
 class TeacherGroup(Base):
     __tablename__ = "teacher_group"
@@ -99,3 +108,7 @@ class TeacherGroup(Base):
 
     teacher = relationship("Teacher", back_populates="teacher_groups")
     group = relationship("Group", back_populates="teacher_groups")
+
+    __table_args__ = (
+        UniqueConstraint("teacher_id", "group_id", "status", name="uix_teacher_group"),
+    )

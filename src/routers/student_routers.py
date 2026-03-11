@@ -5,7 +5,7 @@ from typing import Union
 
 from db.database import db_dependency
 from core.security import user_dependency, bcrypt_context
-from src.schemas.student_schemas import StudentCreateAdmin, StudentResponseAdmin, StudentResponsePublic, StudentUpdateInfoAdmin
+from src.schemas.student_schemas import StudentCreateAdmin, StudentResponseAdmin, StudentResponsePublic, StudentUpdateInfoAdmin, StudentUpdateInfoResponseAdmin
 from src.schemas.student_schemas import StudentSubjectCreateAdmin, StudentSubjectResponseAdmin, StudentSubjectUpdateInfoAdmin
 from src.schemas.student_schemas import StudentGroupCreateAdmin, StudentGroupUpdateInfoAdmin, StudentGroupResponseAdmin
 from src.services.student_services import StudentService
@@ -38,7 +38,7 @@ def get_students(
 
 
 # Update student info
-@router.put("/students/{student_id}/update", response_model=StudentResponseAdmin, status_code=status.HTTP_200_OK)
+@router.put("/students/{student_id}/update", response_model=StudentUpdateInfoResponseAdmin, status_code=status.HTTP_200_OK)
 def update_student_info(
         db: db_dependency,
         user: user_dependency,
@@ -49,23 +49,23 @@ def update_student_info(
 
 
 # Updating student status to graduated
-@router.put("/students/{student_id}/graduate", status_code=status.HTTP_204_NO_CONTENT)
-def graduate_student(
-        db: db_dependency,
-        user: user_dependency,
-        student_id: int):
+# @router.put("/students/{student_id}/graduate", status_code=status.HTTP_204_NO_CONTENT)
+# def graduate_student(
+#         db: db_dependency,
+#         user: user_dependency,
+#         student_id: int):
     
-    StudentService.graduate_student(db, user, student_id)
+#     StudentService.graduate_student(db, user, student_id)
 
 
 # Updating student status to dropped
-@router.put("/students/{student_id}/drop", status_code=status.HTTP_204_NO_CONTENT)
-def drop_student(
-        db: db_dependency,
-        user: user_dependency,
-        student_id: int):
+# @router.put("/students/{student_id}/drop", status_code=status.HTTP_204_NO_CONTENT)
+# def drop_student(
+#         db: db_dependency,
+#         user: user_dependency,
+#         student_id: int):
     
-    StudentService.drop_student(db, user, student_id)
+#     StudentService.drop_student(db, user, student_id)
 
 
 # Working with Students and Subjects endpoints
@@ -81,13 +81,13 @@ def enroll_student_in_subject(
 
 
 # Withdraw student from subject
-@router.put("/students/subjects/{enrollment_id}/withdraw", status_code=status.HTTP_204_NO_CONTENT)
-def withdraw_student_subject(
-        db: db_dependency, 
-        user: user_dependency, 
-        enrollment_id: int):
+# @router.put("/students/subjects/{enrollment_id}/withdraw", status_code=status.HTTP_204_NO_CONTENT)
+# def withdraw_student_subject(
+#         db: db_dependency, 
+#         user: user_dependency, 
+#         enrollment_id: int):
 
-    StudentService.withdraw_student_subject_enrollment(db, user, enrollment_id)
+#     StudentService.withdraw_student_subject_enrollment(db, user, enrollment_id)
 
 
 # Update student subject enrollments info
@@ -122,14 +122,14 @@ def add_student_to_group(
     return StudentService.add_student_to_group(db, user, student_group_request)
 
 
-# Removing student from group
-@router.put("/students/groups/{enrollment_id}/remove", status_code=status.HTTP_204_NO_CONTENT)
-def remove_student_from_group(
-        db: db_dependency, 
-        user: user_dependency, 
-        enrollment_id: int):
+# # Removing student from group
+# @router.put("/students/groups/{enrollment_id}/remove", status_code=status.HTTP_204_NO_CONTENT)
+# def remove_student_from_group(
+#         db: db_dependency, 
+#         user: user_dependency, 
+#         enrollment_id: int):
     
-    StudentService.remove_student_from_group(db, user, enrollment_id)
+#     StudentService.remove_student_from_group(db, user, enrollment_id)
 
 
 # Updating student group enrollment info

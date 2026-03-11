@@ -19,7 +19,7 @@ class Group(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
 
-    title: Mapped[str] = mapped_column(String(10), unique=True, nullable=False)
+    title: Mapped[str] = mapped_column(String(10), nullable=False)
     language: Mapped[GroupLanguage] = mapped_column(SQLEnum(GroupLanguage), nullable=False)
 
     created_at: Mapped[datetime] = mapped_column(server_default=func.now(), nullable=False)

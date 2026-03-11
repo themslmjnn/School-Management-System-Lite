@@ -1,6 +1,7 @@
+from fastapi import HTTPException
 from src.models.user_model import User
 from src.repositories.user_repositories import UserRepository
-from utils.helpers import require_admin, require_director, require_existence, update_object, verify_password, hash_password
+from utils.helpers import require_admin, require_director, require_existence, update_object, verify_password, hash_password, require_user
 
 
 MESSAGE_404 = "User not found"
@@ -9,18 +10,23 @@ MESSAGE_404 = "User not found"
 class UserService:
     @staticmethod
     def get_users(db, user):
-        if require_admin(user) is None:
-            return UserRepository.get_users_admin(db)
-        elif require_director(user) is None:
-            return UserRepository.get_users_public(db)
+        try:
+            require_admin(user)
+            result = UserRepository.get_users_admin(db)
+            
+        except HTTPException:
+            require_director(user)
+            result = UserRepository.get_users_public(db)
+    
+        return result
     
 
     @staticmethod
     def search_users(db, user, users_request):
         try:
             require_admin(user)
-
-        finally:
+            
+        except HTTPException:
             require_director(user)
 
         return UserRepository.search_users(db, users_request)
@@ -46,15 +52,15 @@ class UserService:
         try:
             require_admin(user)
 
-        finally:
-            require_director(user)
+        except HTTPException:
+            require_user(user, user_id)
 
-        user = UserRepository.get_user_by_id(db, user_id, User)
+        user = UserRepository.get_user_by_id(db, user_id)
 
         require_existence(user, MESSAGE_404)
         
         verify_password(user, user_password_request, bcrypt_context)
         
-        user.password_hash = hash_password(user_password_request, bcrypt_context)
+        user.password_hash = hash_password(user_password_request.new_password, bcrypt_context)
 
         db.commit()

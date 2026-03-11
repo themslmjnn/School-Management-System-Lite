@@ -64,7 +64,7 @@ class SubjectService:
         try:
             require_admin(user)
 
-        finally:
+        except HTTPException:
             require_director(user)
 
         return SubjectRepository.get_subjects(db)

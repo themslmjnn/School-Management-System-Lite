@@ -1,3 +1,5 @@
+from fastapi import HTTPException
+
 from src.models.mark_model import Mark
 from src.repositories.mark_repositories import MarkRepository
 from utils.helpers import require_teacher, require_admin, require_existence, update_object
@@ -11,7 +13,7 @@ class MarkService:
     def put_mark(db, user, mark_request):
         require_teacher(user)
 
-        mark = Mark(**mark_request.model_dum())
+        mark = Mark(**mark_request.model_dump())
 
         MarkRepository.put_mark(db, mark)
 
@@ -26,7 +28,7 @@ class MarkService:
         try:
             require_admin(user)
 
-        finally:
+        except HTTPException:
             require_teacher(user)
 
         
@@ -59,7 +61,7 @@ class MarkService:
         try:
             require_admin(user)
 
-        finally:
+        except HTTPException:
             require_teacher(user)
 
         return MarkRepository.get_marks(db)

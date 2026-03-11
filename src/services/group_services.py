@@ -64,7 +64,7 @@ class GroupService:
         try:
             require_admin(user)
 
-        finally:
+        except HTTPException:
             require_director(user)
 
         return GroupRepository.get_groups(db)

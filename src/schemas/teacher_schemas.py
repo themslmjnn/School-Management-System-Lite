@@ -1,35 +1,36 @@
 from pydantic import BaseModel, Field
 
 from typing import Optional
-from datetime import date
+from datetime import date, datetime
 
 from src.models.teacher_model import TeacherStatus
+from src.models.association_models import TeacherSubjectStatus
 from src.schemas.user_schemas import UserCreateAdmin, UserResponseAdmin, UserResponsePublic
 from src.schemas.base_schema import BaseSchema
 
 
-class TeacherBase(BaseModel):
+class TeacherBase1(BaseModel):
     hired_at: date
+
+class TeacherBase2(TeacherBase1):
     status: TeacherStatus
     
 
 class TeacherCreateAdmin(BaseModel):
     user: UserCreateAdmin
-    teacher: TeacherBase
+    teacher: TeacherBase1
 
 
-class TeacherResponseBase(TeacherBase, BaseSchema):
+class TeacherResponseBase(TeacherBase2, BaseSchema):
     id: int
 
 
-class TeacherResponsePublic(BaseModel, BaseSchema):
+class TeacherResponsePublic(BaseSchema):
     user: UserResponsePublic
-    teacher: TeacherBase
+    teacher: TeacherBase2
 
 
-class TeacherResponseAdmin(BaseModel, BaseSchema):
-    id: int
-
+class TeacherResponseAdmin(BaseSchema):
     user: UserResponseAdmin
     teacher: TeacherResponseBase
 
@@ -51,25 +52,38 @@ class TeacherSubjectCreateAdmin(TeacherSubjectBase):
 class TeacherSubjectResponseAdmin(TeacherSubjectBase, BaseSchema):
     id: int
 
+    status: TeacherSubjectStatus
+
+    created_at: datetime
+    updated_at: datetime
+
 
 class TeacherSubjectUpdateInfoAdmin(BaseModel):
     teacher_id: Optional[int] = None
     subject_id: Optional[int] = None
 
+    status: Optional[TeacherSubjectStatus] = None
+
 
 class TeacherGroupBase(BaseModel):
-    student_id: int = Field(ge=1)
-    subject_id: int = Field(ge=1)
+    teacher_id: int = Field(ge=1)
+    group_id: int = Field(ge=1)
 
 
-class TeacherGroupCreateAdmin(TeacherSubjectBase):
+class TeacherGroupCreateAdmin(TeacherGroupBase):
     pass
 
 
-class TeacherGroupResponseAdmin(TeacherSubjectBase, BaseSchema):
+class TeacherGroupResponseAdmin(TeacherGroupBase, BaseSchema):
     id: int
 
+    status: bool
+
+    created_at: datetime
+    updated_at: datetime
 
 class TeacherGroupUpdateInfoAdmin(BaseModel):
     teacher_id: Optional[int] = None
     group_id: Optional[int] = None
+
+    status: Optional[bool] = None

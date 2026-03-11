@@ -13,7 +13,7 @@ class TeacherRepository:
 
 
     @staticmethod
-    def get_teachers_admin(db: Session):
+    def get_teachers(db: Session):
         query = (
             select(Teacher)
             .options(selectinload(Teacher.user))
@@ -24,26 +24,26 @@ class TeacherRepository:
         return result.scalars().all()
     
 
-    @staticmethod
-    def get_teachers_public(db: Session):
-        query = (
-            select(
-                User.first_name, 
-                User.last_name, 
-                User.date_of_birth, 
-                User.address,
-                User.phone_number,
-                User.role,
-                User.is_active,
-                Teacher.hired_at,
-                Teacher.status
-            )
-            .options(selectinload(Teacher.user))
-        )
+    # @staticmethod
+    # def get_teachers_public(db: Session):
+    #     query = (
+    #         select(
+    #             User.first_name, 
+    #             User.last_name, 
+    #             User.date_of_birth, 
+    #             User.address,
+    #             User.phone_number,
+    #             User.role,
+    #             User.is_active,
+    #             Teacher.hired_at,
+    #             Teacher.status
+    #         )
+    #         .options(selectinload(Teacher.user))
+    #     )
 
-        result = db.execute(query)
+    #     result = db.execute(query)
 
-        return result.scalars().all()
+    #     return result.scalars().all()
     
 
     @staticmethod

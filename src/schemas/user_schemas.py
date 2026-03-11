@@ -23,9 +23,10 @@ class UserCreateAdmin(UserBase):
     password: str = Field(min_length=8)
 
 
-class UserResponseAdmin(UserCreateAdmin, BaseSchema):
+class UserResponseAdmin(UserBase, BaseSchema):
     id: int
-
+    username: str = Field(min_length=6, max_length=20)
+    email: str
     role: UserRole
     is_active: bool
     created_at: datetime
@@ -47,6 +48,8 @@ class UserUpdateInfoBase(BaseModel):
 
     email: Optional[str] = Field(default=None)
     phone_number: Optional[str] = Field(min_length=6, max_length=30, default=None)
+
+    is_active: Optional[bool] = Field(default=None)
 
 
 class UserUpdateInfoAdmin(UserUpdateInfoBase):

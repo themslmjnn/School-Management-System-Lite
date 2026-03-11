@@ -4,14 +4,18 @@ from sqlalchemy.exc import IntegrityError
 
 from src.models.user_model import User
 from src.models.teacher_model import Teacher, TeacherStatus
-from src.models.association_models import TeacherSubject, TeacherGroup, TeacherSubjectStatus
+from src.models.association_models import TeacherSubject, TeacherGroup
 from src.repositories.teacher_repositories import TeacherRepository
 from src.repositories.user_repositories import UserRepository
+from src.repositories.subject_repositories import SubjectRepository
+from src.repositories.group_repositories import GroupRepository
 from utils.helpers import require_admin, require_director, require_existence, update_object
 
 
-MESSAGE_404_1 = "Teacher not found"
-MESSAGE_404_2 = "Assignment not found"
+MESSAGE_404_1 = "Assignment not found"
+MESSAGE_404_2 = "Teacher not found"
+MESSAGE_404_3 = "Subject not found"
+MESSAGE_404_4 = "Group not found"
 MESSAGE_409 = "Assignment already exists"
 
 
@@ -22,7 +26,7 @@ class TeacherService:
         require_admin(user)
 
         try:
-            user_data = teacher_request.teacher_primary_data
+            user_data = teacher_request.user
 
             user = User(
                 username=user_data.username,
@@ -40,7 +44,7 @@ class TeacherService:
 
             db.flush()
 
-            teacher = Teacher(primary_info_id=user.id, **teacher_request.teacher.model_dump())
+            teacher = Teacher(primary_info_id=user.id, **teacher_request.teacher.model_dump(), status="working")
 
             TeacherRepository.register_teacher(db, teacher)
 
@@ -57,10 +61,13 @@ class TeacherService:
 
     @staticmethod
     def get_teachers(db, user):
-        if require_admin(user) is None:
-            teachers = TeacherRepository.get_teachers_admin(db)
-        elif require_director(user) is None:
-            teachers = TeacherRepository.get_teachers_public(db)
+        try:
+            require_admin(user)
+            
+        except HTTPException:
+            require_director(user)
+
+        teachers = TeacherRepository.get_teachers(db)
 
         return [
             {"user": teacher.user, "teacher": teacher}
@@ -76,54 +83,65 @@ class TeacherService:
 
         require_existence(teacher, MESSAGE_404_1)
         
-        update_object(teacher)
+        update_object(teacher, teacher_update_info_request)
 
         db.commit()
 
         return teacher
 
 
-    @staticmethod
-    def drop_teacher(db, user, teacher_id):
-        require_admin(user)
+    # @staticmethod
+    # def drop_teacher(db, user, teacher_id):
+    #     require_admin(user)
 
-        teacher = TeacherRepository.get_teacher_by_id(db, teacher_id)
+    #     teacher = TeacherRepository.get_teacher_by_id(db, teacher_id)
 
-        require_existence(teacher, MESSAGE_404_1)
+    #     require_existence(teacher, MESSAGE_404_1)
         
-        teacher.status = TeacherStatus.dropped
-        teacher.user.is_active = False
+    #     teacher.status = TeacherStatus.dropped
+    #     teacher.user.is_active = False
 
-        db.commit()
+    #     db.commit()
 
 
-    @staticmethod
-    def fire_teacher(db, user, teacher_id):
-        require_admin(user)
+    # @staticmethod
+    # def fire_teacher(db, user, teacher_id):
+    #     require_admin(user)
 
-        teacher = TeacherRepository.get_teacher_by_id(db, teacher_id)
+    #     teacher = TeacherRepository.get_teacher_by_id(db, teacher_id)
 
-        require_existence(teacher, MESSAGE_404_1)
+    #     require_existence(teacher, MESSAGE_404_1)
         
-        teacher.status = TeacherStatus.fired
-        teacher.user.is_active = False
+    #     teacher.status = TeacherStatus.fired
+    #     teacher.user.is_active = False
 
-        db.commit()
+    #     db.commit()
 
 
     @staticmethod
     def assign_teacher_to_subject(db, user, teacher_subject_request):
         require_admin(user)
 
-        assingment = TeacherSubject(**teacher_subject_request.model_dump())
+        assignment = TeacherSubject(**teacher_subject_request.model_dump())
 
         try:
-            TeacherRepository.assign_teacher_to_subject(db, assingment)
+            teacher = TeacherRepository.get_teacher_by_id(db, assignment.teacher_id)
+            require_existence(teacher, MESSAGE_404_2)
+
+            if teacher.status in (TeacherStatus.fired, TeacherStatus.dropped):
+                MESSAGE_400 = f"Teacher is {teacher.status.value}"
+
+                raise HTTPException(status_code=400, detail=MESSAGE_400)
+
+            subject = SubjectRepository.get_subject_by_id(db, assignment.subject_id)
+            require_existence(subject, MESSAGE_404_3)
+
+            TeacherRepository.assign_teacher_to_subject(db, assignment)
 
             db.commit()
-            db.refresh(assingment)
+            db.refresh(assignment)
 
-            return assingment
+            return assignment
         
         except IntegrityError:
             db.rollback()
@@ -131,17 +149,17 @@ class TeacherService:
             raise HTTPException(status_code=409, detail=MESSAGE_409)
 
 
-    @staticmethod
-    def withdraw_teacher_subject(db, user, assignment_id):
-        require_admin(user)
+    # @staticmethod
+    # def withdraw_teacher_subject(db, user, assignment_id):
+    #     require_admin(user)
 
-        enrollment = TeacherRepository.get_teacher_subject_by_id(db, assignment_id)
+    #     enrollment = TeacherRepository.get_teacher_subject_by_id(db, assignment_id)
 
-        require_existence(enrollment, MESSAGE_404_2)
+    #     require_existence(enrollment, MESSAGE_404_2)
 
-        enrollment.status = TeacherSubjectStatus.withdrawn
+    #     enrollment.status = TeacherSubjectStatus.withdrawn
 
-        db.commit()
+    #     db.commit()
     
 
     @staticmethod
@@ -150,13 +168,36 @@ class TeacherService:
 
         assignment = TeacherRepository.get_teacher_subject_by_id(db, assignment_id)
 
-        require_existence(assignment, MESSAGE_404_2)
+        require_existence(assignment, MESSAGE_404_1)
 
-        update_object(assignment, teacher_subject_update_info_request)
+        if teacher_subject_update_info_request.teacher_id is not None:
+            teacher = TeacherRepository.get_teacher_by_id(db, teacher_subject_update_info_request.teacher_id)
+            require_existence(teacher, MESSAGE_404_2)
 
-        db.commit()
+            if teacher.status in (TeacherStatus.dropped, TeacherStatus.fired):
+                MESSAGE_400 = f"Teacher is {teacher.status.value}"
 
-        return assignment
+                raise HTTPException(status_code=400, detail=MESSAGE_400)
+            
+        if teacher_subject_update_info_request.subject_id is not None:
+            try:
+                subject = SubjectRepository.get_subject_by_id(db, teacher_subject_update_info_request.subject_id)
+                require_existence(subject, MESSAGE_404_3)
+
+            except IntegrityError:
+                raise HTTPException(status_code=404, detail=MESSAGE_404_3)
+            
+        try:
+            update_object(assignment, teacher_subject_update_info_request)
+
+            db.commit()
+
+            return assignment
+        
+        except IntegrityError:
+            db.rollback()
+
+            raise HTTPException(status_code=409, detail=MESSAGE_409)
     
 
     @staticmethod
@@ -164,7 +205,7 @@ class TeacherService:
         try:
             require_admin(user)
 
-        finally:
+        except HTTPException:
             require_director(user)
 
         return TeacherRepository.get_teachers_subjects(db)
@@ -177,6 +218,17 @@ class TeacherService:
         assignment = TeacherGroup(**teacher_group_request.model_dump())
 
         try:
+            teacher = TeacherRepository.get_teacher_by_id(db, assignment.teacher_id)
+            require_existence(teacher, MESSAGE_404_2)
+
+            if teacher.status in (TeacherStatus.fired, TeacherStatus.dropped):
+                MESSAGE_400 = f"Teacher is {teacher.status.value}"
+
+                raise HTTPException(status_code=400, detail=MESSAGE_400)
+            
+            group = GroupRepository.get_group_by_id(db, assignment.group_id)
+            require_existence(group, MESSAGE_404_4)
+            
             TeacherRepository.assign_head_of_class(db, assignment)
 
             db.commit()
@@ -190,17 +242,17 @@ class TeacherService:
             raise HTTPException(status_code=409, detail=MESSAGE_409)
 
 
-    @staticmethod
-    def withdraw_teacher_group(db, user, assignment_id):
-        require_admin(user)
+    # @staticmethod
+    # def withdraw_teacher_group(db, user, assignment_id):
+    #     require_admin(user)
 
-        assignment = TeacherRepository.get_teacher_group_by_id(db, assignment_id)
+    #     assignment = TeacherRepository.get_teacher_group_by_id(db, assignment_id)
 
-        require_existence(assignment, MESSAGE_404_1)
+    #     require_existence(assignment, MESSAGE_404_1)
 
-        assignment.status = False
+    #     assignment.status = False
 
-        db.commit()
+    #     db.commit()
     
 
     @staticmethod
@@ -211,11 +263,34 @@ class TeacherService:
 
         require_existence(assignment, MESSAGE_404_1)
 
-        update_object(assignment, teacher_group_update_info_request)
+        if teacher_group_update_info_request.teacher_id is not None:
+            teacher = TeacherRepository.get_teacher_by_id(db, teacher_group_update_info_request.teacher_id)
+            require_existence(teacher, MESSAGE_404_2)
 
-        db.commit()
+            if teacher.status in (TeacherStatus.dropped, TeacherStatus.fired):
+                MESSAGE_400 = f"Teacher is {teacher.status.value}"
 
-        return assignment
+                raise HTTPException(status_code=400, detail=MESSAGE_400)
+
+        if teacher_group_update_info_request.group_id is not None:
+            try:
+                group = GroupRepository.get_group_by_id(db, teacher_group_update_info_request.group_id)
+                require_existence(group, MESSAGE_404_4)
+
+            except IntegrityError:
+                raise HTTPException(status_code=404, detail=MESSAGE_404_4)
+
+        try:
+            update_object(assignment, teacher_group_update_info_request)
+
+            db.commit()
+
+            return assignment
+        
+        except IntegrityError:
+            db.rollback()
+
+            raise HTTPException(status_code=409, detail=MESSAGE_409)
     
 
     @staticmethod
@@ -223,7 +298,7 @@ class TeacherService:
         try:
             require_admin(user)
 
-        finally:
+        except HTTPException:
             require_director(user)
 
         return TeacherRepository.get_teachers_groups(db)

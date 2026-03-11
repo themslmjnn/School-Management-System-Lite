@@ -4,14 +4,19 @@ from sqlalchemy.exc import IntegrityError
 
 from src.models.student_model import Student, StudentStatus
 from src.models.user_model import User
-from src.models.association_models import StudentSubject, StudentSubjectStatus
-from src.models.association_models import StudentGroup, StudentGroupStatus
+from src.models.association_models import StudentSubject
+from src.models.association_models import StudentGroup
 from src.repositories.student_repositories import StudentRepository
 from src.repositories.user_repositories import UserRepository
+from src.repositories.subject_repositories import SubjectRepository
+from src.repositories.group_repositories import GroupRepository
 from utils.helpers import require_admin, require_director, require_existence, hash_password, update_object
 
 
-MESSAGE_404 = "Enrollment not found"
+MESSAGE_404_1 = "Enrollment not found"
+MESSAGE_404_2 = "Student not found"
+MESSAGE_404_3 = "Subject not found"
+MESSAGE_404_4 = "Group not found"
 MESSAGE_409 = "Enrollment already exists"
 
 
@@ -21,7 +26,7 @@ class StudentService:
         require_admin(user)
 
         try:
-            user_data = student_request.user_data
+            user_data = student_request.user
 
             user = User(
                 username=user_data.username,
@@ -31,14 +36,19 @@ class StudentService:
                 address=user_data.address,
                 email=user_data.email,
                 phone_number=user_data.phone_number,
-                password_hash=hash_password(user_data.password, bcrypt_context)
+                password_hash=hash_password(user_data.password, bcrypt_context),
+                role="student"
             )
 
             UserRepository.register_user(db, user)
 
             db.flush()
 
-            student = Student(primary_info_id=user.id, **student_request.student.model_dump())
+            student = Student(
+                primary_info_id=user.id, 
+                **student_request.student.model_dump(),
+                status="enrolled"
+            )
 
             StudentRepository.register_student(db, student)
 
@@ -55,10 +65,13 @@ class StudentService:
 
     @staticmethod
     def get_students(db, user):
-        if require_admin(user) is None:
-            students = StudentRepository.get_students_admin(db)
-        elif require_director(user) is None:
-            students = StudentRepository.get_students_public(db)
+        try:
+            require_admin(user)
+            
+        except HTTPException:
+            require_director(user)
+        
+        students = StudentRepository.get_students(db)
 
         return [
             {"user": student.user, "student": student}
@@ -72,41 +85,44 @@ class StudentService:
 
         student = StudentRepository.get_student_by_id(db, student_id)
 
-        require_existence(student)
+        require_existence(student, MESSAGE_404_2)
         
         update_object(student, student_update_info_request)
+
+        if student.status in (StudentStatus.dropped, StudentStatus.graduated):
+            student.user.is_active = False
 
         db.commit()
 
         return student
 
 
-    @staticmethod
-    def graduate_student(db, user, student_id):
-        require_admin(user)
+    # @staticmethod
+    # def graduate_student(db, user, student_id):
+    #     require_admin(user)
 
-        student = StudentRepository.get_student_by_id(db, student_id)
+    #     student = StudentRepository.get_student_by_id(db, student_id)
 
-        require_existence(student)
+    #     require_existence(student, MESSAGE_404_2)
         
-        student.status = StudentStatus.graduated
-        student.user.is_active = False
+    #     student.status = StudentStatus.graduated
+    #     student.user.is_active = False
 
-        db.commit()
+    #     db.commit()
 
 
-    @staticmethod
-    def drop_student(db, user, student_id):
-        require_admin(user)
+    # @staticmethod
+    # def drop_student(db, user, student_id):
+    #     require_admin(user)
 
-        student = StudentRepository.get_student_by_id(db, student_id)
+    #     student = StudentRepository.get_student_by_id(db, student_id)
 
-        require_existence(student)
+    #     require_existence(student, MESSAGE_404_2)
         
-        student.status = StudentStatus.dropped
-        student.user.is_active = False
+    #     student.status = StudentStatus.dropped
+    #     student.user.is_active = False
 
-        db.commit()
+    #     db.commit()
 
 
     @staticmethod
@@ -116,6 +132,17 @@ class StudentService:
         enrollment = StudentSubject(**enrollment_request.model_dump())
 
         try:
+            student = StudentRepository.get_student_by_id(db, enrollment.student_id)
+            require_existence(student, MESSAGE_404_2)
+
+            if student.status in (StudentStatus.dropped, StudentStatus.graduated):
+                MESSAGE_400 = f"Student is {student.status.value}"
+
+                raise HTTPException(status_code=400, detail=MESSAGE_400)
+
+            subject = SubjectRepository.get_subject_by_id(db, enrollment.subject_id)
+            require_existence(subject, MESSAGE_404_3)
+
             StudentRepository.enroll_student_in_subject(db, enrollment)
 
             db.commit()
@@ -129,17 +156,17 @@ class StudentService:
             raise HTTPException(status_code=409, detail=MESSAGE_409)
 
 
-    @staticmethod
-    def withdraw_student_subject_enrollment(db, user, enrollment_id):
-        require_admin(user)
+    # @staticmethod
+    # def withdraw_student_subject_enrollment(db, user, enrollment_id):
+    #     require_admin(user)
 
-        enrollment = StudentRepository.get_student_subject_by_id(db, enrollment_id)
+    #     enrollment = StudentRepository.get_student_subject_by_id(db, enrollment_id)
 
-        require_existence(enrollment, MESSAGE_404)
+    #     require_existence(enrollment, MESSAGE_404_1)
 
-        enrollment.status = StudentSubjectStatus.withdrawn
+    #     enrollment.status = StudentSubjectStatus.withdrawn
 
-        db.commit()
+    #     db.commit()
     
 
     @staticmethod
@@ -148,13 +175,36 @@ class StudentService:
 
         enrollment = StudentRepository.get_student_subject_by_id(db, enrollment_id)
 
-        require_existence(enrollment, MESSAGE_404)
+        require_existence(enrollment, MESSAGE_404_1)
 
-        update_object(enrollment, enrollment_update_info_request)
+        if enrollment_update_info_request.student_id is not None:
+            student = StudentRepository.get_student_by_id(db, enrollment_update_info_request.student_id)
+            require_existence(student, MESSAGE_404_2)
 
-        db.commit()
+            if student.status in (StudentStatus.dropped, StudentStatus.graduated):
+                MESSAGE_400 = f"Student is {student.status.value}"
 
-        return enrollment
+                raise HTTPException(status_code=400, detail=MESSAGE_400)
+            
+        if enrollment_update_info_request.subject_id is not None:
+            try:
+                subject = SubjectRepository.get_subject_by_id(db, enrollment_update_info_request.subject_id)
+                require_existence(subject, MESSAGE_404_3)
+
+            except IntegrityError:
+                raise HTTPException(status_code=404, detail=MESSAGE_404_3)
+
+        try:
+            update_object(enrollment, enrollment_update_info_request)
+
+            db.commit()
+
+            return enrollment
+        
+        except IntegrityError:
+            db.rollback()
+
+            raise HTTPException(status_code=409, detail=MESSAGE_409)
     
 
     @staticmethod
@@ -162,7 +212,7 @@ class StudentService:
         try:
             require_admin(user)
 
-        finally:
+        except HTTPException:
             require_director(user)
 
         return StudentRepository.get_students_subjects(db)
@@ -175,6 +225,17 @@ class StudentService:
         enrollment = StudentGroup(**enrollment_request.model_dump())
 
         try:
+            student = StudentRepository.get_student_by_id(db, enrollment.student_id)
+            require_existence(student, MESSAGE_404_2)
+
+            if student.status in (StudentStatus.dropped, StudentStatus.graduated):
+                MESSAGE_400 = f"Student is {student.status.value}"
+
+                raise HTTPException(status_code=400, detail=MESSAGE_400)
+
+            subject = GroupRepository.get_group_by_id(db, enrollment.group_id)
+            require_existence(subject, MESSAGE_404_4)
+
             StudentRepository.add_student_to_group(db, enrollment)
 
             db.commit()
@@ -188,40 +249,63 @@ class StudentService:
             raise HTTPException(status_code=409, detail=MESSAGE_409)
 
 
-    @staticmethod
-    def remove_student_from_group(db, user, enrollment_id):
-        require_admin(user)
+    # @staticmethod
+    # def remove_student_from_group(db, user, enrollment_id):
+    #     require_admin(user)
 
-        enrollment = StudentRepository.get_student_group_by_id(db, enrollment_id)
+    #     enrollment = StudentRepository.get_student_group_by_id(db, enrollment_id)
 
-        require_existence(enrollment, MESSAGE_404)
+    #     require_existence(enrollment, MESSAGE_404_1)
 
-        enrollment.status = StudentGroupStatus.dropped
+    #     enrollment.status = StudentGroupStatus.dropped
 
-        db.commit()
+    #     db.commit()
     
 
     @staticmethod
     def update_student_group(db, user, enrollment_id, student_group_update_info_request):
         require_admin(user)
 
-        enrollment = StudentRepository.get_student_subject_by_id(db, enrollment_id)
+        enrollment = StudentRepository.get_student_group_by_id(db, enrollment_id)
 
-        require_existence(enrollment, MESSAGE_404)
+        require_existence(enrollment, MESSAGE_404_1)
 
-        update_object(enrollment, student_group_update_info_request)
+        if student_group_update_info_request.student_id is not None:
+            student = StudentRepository.get_student_by_id(db, student_group_update_info_request.student_id)
+            require_existence(student, MESSAGE_404_2)
 
-        db.commit()
+            if student.status in (StudentStatus.dropped, StudentStatus.graduated):
+                MESSAGE_400 = f"Student is {student.status.value}"
 
-        return enrollment
-    
+                raise HTTPException(status_code=400, detail=MESSAGE_400)
+
+        if student_group_update_info_request.group_id is not None:
+            try:
+                group = SubjectRepository.get_subject_by_id(db, student_group_update_info_request.group_id)
+                require_existence(group, MESSAGE_404_4)
+
+            except IntegrityError:
+                raise HTTPException(status_code=404, detail=MESSAGE_404_4)
+
+        try:
+            update_object(enrollment, student_group_update_info_request)
+
+            db.commit()
+
+            return enrollment
+        
+        except IntegrityError:
+            db.rollback()
+
+            raise HTTPException(status_code=409, detail=MESSAGE_409)
+
 
     @staticmethod
     def get_students_groups(db, user):
         try:
             require_admin(user)
 
-        finally:
+        except HTTPException:
             require_director(user)
 
         return StudentRepository.get_students_groups(db)

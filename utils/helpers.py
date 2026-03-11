@@ -34,8 +34,8 @@ def update_object(instance, request) -> None:
         setattr(instance, field, value)
 
 
-def hash_password(user_password_request, bcrypt_context) -> None:
-    return bcrypt_context.hash(user_password_request.new_password)
+def hash_password(password, bcrypt_context):
+    return bcrypt_context.hash(password)
 
 
 def verify_password(user, user_password_request, bcrypt_context) -> None:
