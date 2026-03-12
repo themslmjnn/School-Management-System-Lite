@@ -4,7 +4,7 @@ from sqlalchemy.exc import IntegrityError
 
 from src.models.subject_model import Subject
 from src.repositories.subject_repositories import SubjectRepository
-from utils.helpers import require_admin, require_existence, update_object, require_director
+from utils.helpers import require_admin, ensure_exists, update_object, require_director
 
 
 MESSAGE_404 = "Subject not found"
@@ -37,7 +37,7 @@ class SubjectService:
 
         subject = SubjectRepository.get_subject_by_id(db, subject_id)
 
-        require_existence(subject, MESSAGE_404)
+        ensure_exists(subject, MESSAGE_404)
         
         SubjectRepository.remove_subject(db, subject)
 
@@ -50,7 +50,7 @@ class SubjectService:
 
         subject = SubjectRepository.get_subject_by_id(db, subject_id)
 
-        require_existence(subject, MESSAGE_404)
+        ensure_exists(subject, MESSAGE_404)
 
         update_object(subject, subject_update_info_request)
 

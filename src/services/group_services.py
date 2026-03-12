@@ -4,7 +4,7 @@ from sqlalchemy.exc import IntegrityError
 
 from src.models.group_model import Group
 from src.repositories.group_repositories import GroupRepository
-from utils.helpers import require_admin, require_director, require_existence, update_object
+from utils.helpers import require_admin, require_director, ensure_exists, update_object
 
 
 MESSAGE_404 = "Group not found"
@@ -37,7 +37,7 @@ class GroupService:
         
         group = GroupRepository.get_group_by_id(db, group_id)
 
-        require_existence(group, MESSAGE_404)
+        ensure_exists(group, MESSAGE_404)
 
         GroupRepository.delete_group(db, group)
 
@@ -50,7 +50,7 @@ class GroupService:
 
         group = GroupRepository.get_group_by_id(db, group_id)
 
-        require_existence(group, MESSAGE_404)
+        ensure_exists(group, MESSAGE_404)
 
         update_object(group, group_update_info_request)
         

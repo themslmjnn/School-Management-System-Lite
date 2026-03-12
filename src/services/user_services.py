@@ -1,7 +1,7 @@
 from fastapi import HTTPException
-from src.models.user_model import User
+
 from src.repositories.user_repositories import UserRepository
-from utils.helpers import require_admin, require_director, require_existence, update_object, verify_password, hash_password, require_user
+from utils.helpers import require_admin, require_director, ensure_exists, update_object, verify_password, hash_password, require_user
 
 
 MESSAGE_404 = "User not found"
@@ -38,7 +38,7 @@ class UserService:
 
         user = UserRepository.get_user_by_id(db, user_id)
 
-        require_existence(user, MESSAGE_404)
+        ensure_exists(user, MESSAGE_404)
 
         update_object(user, user_request)
 
@@ -57,9 +57,9 @@ class UserService:
 
         user = UserRepository.get_user_by_id(db, user_id)
 
-        require_existence(user, MESSAGE_404)
+        ensure_exists(user, MESSAGE_404)
         
-        verify_password(user, user_password_request, bcrypt_context)
+        verify_password(user_password_request.old_password, user.password_hash, bcrypt_context)
         
         user.password_hash = hash_password(user_password_request.new_password, bcrypt_context)
 

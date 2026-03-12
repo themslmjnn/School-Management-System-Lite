@@ -2,7 +2,7 @@ from fastapi import HTTPException
 
 from src.models.mark_model import Mark
 from src.repositories.mark_repositories import MarkRepository
-from utils.helpers import require_teacher, require_admin, require_existence, update_object
+from utils.helpers import require_teacher, require_admin, ensure_exists, update_object
 
 
 MESSAGE_404 = "Mark not found"
@@ -34,7 +34,7 @@ class MarkService:
         
         mark = MarkRepository.get_mark_by_id(db, mark_id)
 
-        require_existence(mark, MESSAGE_404)
+        ensure_exists(mark, MESSAGE_404)
 
         MarkRepository.delete_mark(db, mark)
 
@@ -47,7 +47,7 @@ class MarkService:
 
         mark = MarkRepository.get_mark_by_id(db, mark_id)
 
-        require_existence(mark, MESSAGE_404)
+        ensure_exists(mark, MESSAGE_404)
 
         update_object(mark, mark_update_info_request)
 
