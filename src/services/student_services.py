@@ -3,7 +3,7 @@ from fastapi import HTTPException
 from sqlalchemy.exc import IntegrityError
 
 from src.models.student_model import Student, StudentStatus
-from src.models.user_model import User
+from models.user import User
 from src.models.association_models import StudentSubject
 from src.models.association_models import StudentGroup
 from src.repositories.student_repositories import StudentRepository

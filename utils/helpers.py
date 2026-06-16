@@ -1,6 +1,6 @@
 from fastapi import HTTPException
 
-from src.models.user_model import UserRole
+from models.user import UserRole
 
 
 MESSAGE_403 = "Access denied"

@@ -2,7 +2,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from src.models.teacher_model import Teacher
-from src.models.user_model import User
+from models.user import User
 from src.models.association_models import TeacherSubject, TeacherGroup
 
 

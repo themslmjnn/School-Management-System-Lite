@@ -3,7 +3,7 @@ from pydantic import BaseModel, Field
 from typing import Optional
 from datetime import date, datetime
 
-from src.models.user_model import UserRole
+from models.user import UserRole
 from src.schemas.base_schema import BaseSchema
 
 
