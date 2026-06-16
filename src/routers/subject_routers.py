@@ -2,7 +2,7 @@ from fastapi import APIRouter, status
 
 from src.schemas.subject_schemas import SubjectResponseAdmin, SubjectCreateAdmin, SubjectUpdateInfoAdmin
 
-from db.database import db_dependency
+from database import db_dependency
 from core.security import user_dependency
 from src.services.subject_services import SubjectService
 

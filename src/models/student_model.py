@@ -5,7 +5,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from enum import Enum
 from datetime import date, datetime
 
-from db.database import Base
+from database import Base
 
 
 class StudentStatus(str, Enum):

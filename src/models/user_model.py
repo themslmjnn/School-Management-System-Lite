@@ -6,7 +6,7 @@ from enum import Enum
 from typing import Annotated
 from datetime import date, datetime
 
-from db.database import Base
+from database import Base
 
 
 str_30 = Annotated[str, mapped_column(String(30), nullable=False)]

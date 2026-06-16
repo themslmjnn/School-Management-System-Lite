@@ -3,7 +3,7 @@ from fastapi import APIRouter
 from starlette import status
 from typing import Union
 
-from db.database import db_dependency
+from database import db_dependency
 from core.security import user_dependency, bcrypt_context
 from src.schemas.student_schemas import StudentCreateAdmin, StudentResponseAdmin, StudentResponsePublic, StudentUpdateInfoAdmin, StudentUpdateInfoResponseAdmin
 from src.schemas.student_schemas import StudentSubjectCreateAdmin, StudentSubjectResponseAdmin, StudentSubjectUpdateInfoAdmin

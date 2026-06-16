@@ -2,7 +2,7 @@ from fastapi import APIRouter
 
 from starlette import status
 
-from db.database import db_dependency
+from database import db_dependency
 from core.security import user_dependency
 from src.schemas.mark_schemas import MarkCreateTeacher, MarkResponsePublic, MarkUpdateInfoAdmin
 from src.services.mark_services import MarkService

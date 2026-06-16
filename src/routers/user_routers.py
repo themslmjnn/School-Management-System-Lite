@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, status
 
 from typing import Annotated, Union
 
-from db.database import db_dependency
+from database import db_dependency
 
 from core.security import user_dependency, bcrypt_context
 from src.schemas.user_schemas import UserResponseAdmin, UserResponsePublic, UserSearchAdmin, UserUpdateInfoAdmin, UserUpdatePasswordAdmin

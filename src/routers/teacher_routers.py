@@ -3,7 +3,7 @@ from fastapi import APIRouter
 from starlette import status
 
 from core.security import user_dependency, bcrypt_context
-from db.database import db_dependency
+from database import db_dependency
 from src.schemas.teacher_schemas import TeacherCreateAdmin, TeacherResponseAdmin, TeacherUpdateInfoAdmin
 from src.schemas.teacher_schemas import TeacherSubjectResponseAdmin, TeacherSubjectCreateAdmin, TeacherSubjectUpdateInfoAdmin
 from src.schemas.teacher_schemas import TeacherGroupCreateAdmin, TeacherGroupResponseAdmin, TeacherGroupUpdateInfoAdmin

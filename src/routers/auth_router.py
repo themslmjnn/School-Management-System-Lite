@@ -6,7 +6,7 @@ from typing import Annotated
 from datetime import timedelta
 
 from core.security import bcrypt_context
-from db.database import db_dependency
+from database import db_dependency
 from src.schemas.token_schemas import Token
 from src.services.auth_services import AuthService
 from src.services.token_services import create_access_token

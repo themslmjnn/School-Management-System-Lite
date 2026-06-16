@@ -1,7 +1,7 @@
 from fastapi import APIRouter, status
 
 from core.security import user_dependency
-from db.database import db_dependency
+from database import db_dependency
 from src.schemas.group_schemas import GroupResponseAdmin, GroupCreateAdmin, GroupUpdateInfoAdmin
 from src.services.group_services import GroupService
 
