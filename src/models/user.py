@@ -36,6 +36,13 @@ class User(Base):
         cascade="all, delete-orphan",
     )
 
+    activation: Mapped["UserActivation"] = relationship(
+        "UserActivation",
+        back_populates="user",
+        uselist=False,
+        cascade="all, delete-orphan",
+    )
+
 
 class UserSession(Base):
     __tablename__ = "users_sessions"
@@ -71,3 +78,20 @@ class UserSession(Base):
     )
 
     user: Mapped["User"] = relationship("User", back_populates="session")
+
+
+class UserActivation(Base):
+    __tablename__ = "users_activations"
+
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        unique=True,
+    )
+
+    invite_token_hash: Mapped[str | None] = mapped_column(nullable=True)
+    invite_token_expires_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
+    user: Mapped["User"] = relationship("User", back_populates="activation")
