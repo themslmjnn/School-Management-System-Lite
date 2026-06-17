@@ -1,35 +1,43 @@
-from fastapi import Depends, HTTPException
-from fastapi.security import OAuth2PasswordBearer
+from datetime import datetime, timedelta, timezone
 
-from jose import jwt, JWTError
+from jose import ExpiredSignatureError, JWTError, jwt
 
-from passlib.context import CryptContext
-
-from typing import Annotated
-
-from core.config import settings
+from src.core.config import ALGORITHM, settings
+from src.schemas.auth import CreateAccessTokenRequest
+from utils.custom_exceptions import ExpiredAccessTokenError, InvalidAccessTokenError
+from utils.exception_constants import HTTP401
 
 
-oauth2_bearer = OAuth2PasswordBearer(tokenUrl="/auth/token")
+def create_access_token(payload: CreateAccessTokenRequest) -> str:
+    payload = {
+        "sub": str(payload.user_id),
+        "role": payload.role,
+        "version": payload.access_token_version,
+        "type": "access",
+        "exp": datetime.now(timezone.utc)
+        + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRES_MINUTES),
+    }
+
+    return jwt.encode(
+        payload,
+        settings.JWT_SECRET_KEY,
+        algorithm=ALGORITHM,
+    )
 
 
-def get_current_user(token: Annotated[str, Depends(oauth2_bearer)]):
+def decode_access_token(access_token: str) -> dict:
     try:
-        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        payload = jwt.decode(
+            access_token,
+            settings.JWT_SECRET_KEY,
+            algorithms=[ALGORITHM],
+        )
 
-        username: str = payload.get('sub')
-        user_id: str = payload.get('id')
-        user_role: str = payload.get('role')
+        if payload.get("type") != "access":
+            raise ValueError(HTTP401.INVALID_TOKEN_TYPE)
 
-        if username is None or user_id is None:
-            raise HTTPException(status_code=401, detail=MESSAGE_401)
-        
-        return {"username": username, "id": user_id, "role": user_role}
-        
+        return payload
+    except ExpiredSignatureError:
+        raise ExpiredAccessTokenError(HTTP401.EXPIRED_ACCESS_TOKEN)
     except JWTError:
-        raise HTTPException(status_code=401, detail="Could not validate user")
-    
-
-user_dependency = Annotated[dict, Depends(get_current_user)]
-        
-bcrypt_context = CryptContext(schemes=['bcrypt'], deprecated="auto")
+        raise InvalidAccessTokenError(HTTP401.INVALID_ACCESS_TOKEN)

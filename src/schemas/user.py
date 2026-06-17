@@ -1,32 +1,55 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, EmailStr, field_validator
 
 from typing import Optional
 from datetime import date, datetime
 
 from models.user import UserRole
 from src.schemas.base_schema import BaseSchema
+from src.utils import validators as field_validators
 
 
 class UserBase(BaseModel):
-    first_name: str = Field(max_length=30)
-    last_name: str = Field(max_length=30)
-
+    username: str = Field(min_length=6, max_length=20)
+    first_name: str = Field(min_length=2, max_length=30)
+    last_name: str = Field(min_length=2, max_length=30)
+    email: EmailStr
+    phone_number: str
     date_of_birth: date
+    citizenship: str
     address: str = Field(max_length=100)
 
-    phone_number: str = Field(min_length=6, max_length=30)
+    @field_validator("username")
+    @classmethod
+    def validate_username(cls, username: str) -> str:
+        return field_validators.validate_username(username)
+
+    @field_validator("first_name")
+    @classmethod
+    def validate_first_name(cls, field: str) -> str:
+        return field_validators.validate_first_name(field)
+
+    @field_validator("last_name")
+    @classmethod
+    def validate_last_name(cls, field: str) -> str:
+        return field_validators.validate_last_name(field)
+
+    @field_validator("date_of_birth")
+    @classmethod
+    def validate_date_of_birth(cls, field: date) -> date:
+        return field_validators.validate_date_of_birth(field)
+
+    @field_validator("phone_number")
+    @classmethod
+    def validate_phone_number(cls, field: str) -> str:
+        return field_validators.validate_phone_number(field)
 
 
-class UserCreateAdmin(UserBase):
-    username: str = Field(min_length=6, max_length=20)
-    email: str
-    password: str = Field(min_length=8)
+class CreateUserAdmin(UserBase):
+    role: UserRole
 
 
 class UserResponseAdmin(UserBase, BaseSchema):
     id: int
-    username: str = Field(min_length=6, max_length=20)
-    email: str
     role: UserRole
     is_active: bool
     created_at: datetime
@@ -67,7 +90,7 @@ class UserUpdatePasswordPublic(UserUpdatePasswordBase):
 
 class UserUpdatePasswordAdmin(UserUpdatePasswordBase):
     pass
-    
+
 
 class UserSearchBase(BaseModel):
     first_name: Optional[str] = None
@@ -76,7 +99,7 @@ class UserSearchBase(BaseModel):
     date_of_birth: Optional[date] = None
 
     role: Optional[UserRole] = None
-    
+
     is_active: Optional[bool] = None
 
 
@@ -89,6 +112,6 @@ class UserSearchAdmin(UserSearchBase):
 
 
 class CurrentUserResponse(BaseModel):
-   username: str = Field(min_length=6, max_length=20)
-   id: int
-   role: UserRole
+    username: str = Field(min_length=6, max_length=20)
+    id: int
+    role: UserRole
