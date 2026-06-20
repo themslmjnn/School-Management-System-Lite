@@ -2,13 +2,13 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session, joinedload
 
-from models.user import User
+from models.users import User
 from utils.enums import UserRole
 
 
 class UserRepositoryBase:
     @staticmethod
-    def register_user(db: Session, new_user):
+    def add_user(db: AsyncSession, new_user: User) -> None:
         db.add(new_user)
 
     @staticmethod

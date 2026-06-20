@@ -5,16 +5,21 @@ from datetime import date, datetime
 
 from src.models.teacher_model import TeacherStatus
 from src.models.association_models import TeacherSubjectStatus
-from src.schemas.user_schemas import UserCreateAdmin, UserResponseAdmin, UserResponsePublic
+from schemas.user import (
+    UserCreateAdmin,
+    UserResponseAdmin,
+    UserResponsePublic,
+)
 from src.schemas.base_schema import BaseSchema
 
 
 class TeacherBase1(BaseModel):
     hired_at: date
 
+
 class TeacherBase2(TeacherBase1):
     status: TeacherStatus
-    
+
 
 class TeacherCreateAdmin(BaseModel):
     user: UserCreateAdmin
@@ -81,6 +86,7 @@ class TeacherGroupResponseAdmin(TeacherGroupBase, BaseSchema):
 
     created_at: datetime
     updated_at: datetime
+
 
 class TeacherGroupUpdateInfoAdmin(BaseModel):
     teacher_id: Optional[int] = None

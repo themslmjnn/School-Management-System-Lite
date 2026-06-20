@@ -19,9 +19,8 @@ class MarkService:
 
         db.commit()
         db.refresh(mark)
-        
+
         return mark
-    
 
     @staticmethod
     def delete_mark(db, user, mark_id):
@@ -31,7 +30,6 @@ class MarkService:
         except HTTPException:
             require_teacher(user)
 
-        
         mark = MarkRepository.get_mark_by_id(db, mark_id)
 
         ensure_exists(mark, MESSAGE_404)
@@ -39,7 +37,6 @@ class MarkService:
         MarkRepository.delete_mark(db, mark)
 
         db.commit()
-
 
     @staticmethod
     def update_mark_info(db, user, mark_id, mark_update_info_request):
@@ -54,7 +51,6 @@ class MarkService:
         db.commit()
 
         return mark
-    
 
     @staticmethod
     def get_marks(db, user):

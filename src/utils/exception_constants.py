@@ -11,3 +11,8 @@ class HTTP401:
 class HTTP403:
     ACCESS_DENIED = "Access denied"
     ACCOUNT_DEACTIVATED = "Your account has been deactivated"
+
+class HTTP409:
+    USERNAME = "Username already taken"
+    EMAIL = "Email already taken"
+    PHONE_NUMBER = "Phone number already taken"

@@ -24,17 +24,16 @@ class GroupService:
             db.refresh(group)
 
             return group
-        
+
         except IntegrityError:
             db.rollback()
 
             raise HTTPException(status_code=409, detail="Group already exists")
-        
 
     @staticmethod
     def delete_group(db, user, group_id):
         require_admin(user)
-        
+
         group = GroupRepository.get_group_by_id(db, group_id)
 
         ensure_exists(group, MESSAGE_404)
@@ -42,7 +41,6 @@ class GroupService:
         GroupRepository.delete_group(db, group)
 
         db.commit()
-
 
     @staticmethod
     def update_group_info(db, user, group_id, group_update_info_request):
@@ -53,11 +51,10 @@ class GroupService:
         ensure_exists(group, MESSAGE_404)
 
         update_object(group, group_update_info_request)
-        
+
         db.commit()
 
         return group
-    
 
     @staticmethod
     def get_groups(db, user):

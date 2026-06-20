@@ -1,46 +1,52 @@
-from sqlalchemy import String, func, UniqueConstraint
-from sqlalchemy import Enum as SQLEnum
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+# from sqlalchemy import String, func, UniqueConstraint
+# from sqlalchemy import Enum as SQLEnum
+# from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from enum import Enum
-from datetime import datetime
+# from enum import Enum
+# from datetime import datetime
 
-from database import Base
-
-
-class SubjectLanguage(str, Enum):
-    english = "english"
-    french = "french"
-    german = "german"
-    arabic = "arabic"
-    russian = "russian"
-    tajik = "tajik"
+# from database import Base
 
 
-class SubjectCategory(str, Enum):
-    languages = "languages"
-    mathematics = "mathematics"
-    history = "history"
-    science = "science"
-    humanitarian = "humanitarian"
-    sport = "sport"
+# class SubjectLanguage(str, Enum):
+#     english = "english"
+#     french = "french"
+#     german = "german"
+#     arabic = "arabic"
+#     russian = "russian"
+#     tajik = "tajik"
 
 
-class Subject(Base):
-    __tablename__ = "subjects"
+# class SubjectCategory(str, Enum):
+#     languages = "languages"
+#     mathematics = "mathematics"
+#     history = "history"
+#     science = "science"
+#     humanitarian = "humanitarian"
+#     sport = "sport"
 
-    id: Mapped[int] = mapped_column(primary_key=True)
 
-    title: Mapped[str] = mapped_column(String(50), nullable=False)
-    language: Mapped[SubjectLanguage] = mapped_column(SQLEnum(SubjectLanguage), nullable=False)
-    category: Mapped[SubjectCategory] = mapped_column(SQLEnum(SubjectCategory), nullable=False)
+# class Subject(Base):
+#     __tablename__ = "subjects"
 
-    created_at: Mapped[datetime] = mapped_column(server_default=func.now(), nullable=False)
-    updated_at: Mapped[datetime] = mapped_column(server_default=func.now(), onupdate=func.now(), nullable=False)
+#     id: Mapped[int] = mapped_column(primary_key=True)
 
-    student_subjects = relationship("StudentSubject", back_populates="subject")
-    teacher_subjects = relationship("TeacherSubject", back_populates="subject")
+#     title: Mapped[str] = mapped_column(String(50), nullable=False)
+#     language: Mapped[SubjectLanguage] = mapped_column(
+#         SQLEnum(SubjectLanguage), nullable=False
+#     )
+#     category: Mapped[SubjectCategory] = mapped_column(
+#         SQLEnum(SubjectCategory), nullable=False
+#     )
 
-    __table_args__ = (
-        UniqueConstraint("title", "language", name="uix_title_language"),
-    )
+#     created_at: Mapped[datetime] = mapped_column(
+#         server_default=func.now(), nullable=False
+#     )
+#     updated_at: Mapped[datetime] = mapped_column(
+#         server_default=func.now(), onupdate=func.now(), nullable=False
+#     )
+
+#     student_subjects = relationship("StudentSubject", back_populates="subject")
+#     teacher_subjects = relationship("TeacherSubject", back_populates="subject")
+
+#     __table_args__ = (UniqueConstraint("title", "language", name="uix_title_language"),)

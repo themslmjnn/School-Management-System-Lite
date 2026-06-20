@@ -1,4 +1,7 @@
 from datetime import datetime, timedelta, timezone
+import hashlib
+import hmac
+import secrets
 
 from jose import ExpiredSignatureError, JWTError, jwt
 
@@ -41,3 +44,16 @@ def decode_access_token(access_token: str) -> dict:
         raise ExpiredAccessTokenError(HTTP401.EXPIRED_ACCESS_TOKEN)
     except JWTError:
         raise InvalidAccessTokenError(HTTP401.INVALID_ACCESS_TOKEN)
+
+
+def generate_invite_token() -> tuple[str, str]:
+    raw_invite_token = secrets.token_urlsafe(32)
+    hashed_invite_token = hashlib.sha256(raw_invite_token.encode()).hexdigest()
+
+    return raw_invite_token, hashed_invite_token
+
+def verify_invite_token(raw_invite_token: str, hashed_invite_token: str) -> bool:
+    return hmac.compare_digest(
+        hashlib.sha256(raw_invite_token.encode()).hexdigest(),
+        hashed_invite_token,
+    )

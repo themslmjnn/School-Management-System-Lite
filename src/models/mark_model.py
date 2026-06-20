@@ -1,34 +1,40 @@
-from sqlalchemy import func, ForeignKey
-from sqlalchemy import Enum as SQLEnum
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+# from sqlalchemy import func, ForeignKey
+# from sqlalchemy import Enum as SQLEnum
+# from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from enum import Enum
-from datetime import datetime
+# from enum import Enum
+# from datetime import datetime
 
-from database import Base
-
-
-class MarkType(str, Enum):
-    regular_mark = "regular_mark"
-    regular_exam = "regular_exam"
-    midterm_exam = "midterm_exam"
-    final_exam = "final_exam"
+# from database import Base
 
 
-class Mark(Base):
-    __tablename__ = "marks"
+# class MarkType(str, Enum):
+#     regular_mark = "regular_mark"
+#     regular_exam = "regular_exam"
+#     midterm_exam = "midterm_exam"
+#     final_exam = "final_exam"
 
-    id: Mapped[int] = mapped_column(primary_key=True)
 
-    student_id: Mapped[int] = mapped_column(ForeignKey("students.id"), nullable=False)
-    teacher_id: Mapped[int] = mapped_column(ForeignKey("teachers.id"), nullable=False)
+# class Mark(Base):
+#     __tablename__ = "marks"
 
-    mark_type: Mapped[MarkType] = mapped_column(SQLEnum(MarkType), nullable=False, default=MarkType.regular_mark)
+#     id: Mapped[int] = mapped_column(primary_key=True)
 
-    mark: Mapped[int]
+#     student_id: Mapped[int] = mapped_column(ForeignKey("students.id"), nullable=False)
+#     teacher_id: Mapped[int] = mapped_column(ForeignKey("teachers.id"), nullable=False)
 
-    created_at: Mapped[datetime] = mapped_column(server_default=func.now(), nullable=False)
-    updated_at: Mapped[datetime] = mapped_column(server_default=func.now(), onupdate=func.now(), nullable=False)
+#     mark_type: Mapped[MarkType] = mapped_column(
+#         SQLEnum(MarkType), nullable=False, default=MarkType.regular_mark
+#     )
 
-    student = relationship("Student", back_populates="student_marks")
-    teacher = relationship("Teacher", back_populates="student_marks")
+#     mark: Mapped[int]
+
+#     created_at: Mapped[datetime] = mapped_column(
+#         server_default=func.now(), nullable=False
+#     )
+#     updated_at: Mapped[datetime] = mapped_column(
+#         server_default=func.now(), onupdate=func.now(), nullable=False
+#     )
+
+#     student = relationship("Student", back_populates="student_marks")
+#     teacher = relationship("Teacher", back_populates="student_marks")

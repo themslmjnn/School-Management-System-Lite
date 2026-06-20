@@ -4,10 +4,10 @@ from fastapi import APIRouter, Depends, status
 
 from src.core.dependencies import async_db_dependency, require_system_admin
 from src.core.security import bcrypt_context, user_dependency
-from src.models.user import User
+from models.users import User
 from src.schemas.user import (
     CreateUserAdmin,
-    UserResponseAdmin,
+    UserResponseDetailedAdmin,
     UserResponsePublic,
     UserSearchAdmin,
     UserUpdateInfoAdmin,
@@ -18,13 +18,13 @@ from src.services.user import UserService, UserServiceAdmin
 router = APIRouter(tags=["Users"])
 
 
-@router.post("", response_model=UserResponseAdmin, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=UserResponseDetailedAdmin, status_code=status.HTTP_201_CREATED)
 async def create_user(
     db: async_db_dependency,
-    _: Annotated[User, Depends(require_system_admin)],
+    current_user: Annotated[User, Depends(require_system_admin)],
     create_request: CreateUserAdmin,
 ):
-    return UserServiceAdmin.create_user(db, create_request)
+    return UserServiceAdmin.create_user(db, current_user.id, create_request)
 
 
 # @router.get(

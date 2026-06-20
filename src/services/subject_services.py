@@ -24,12 +24,11 @@ class SubjectService:
             db.refresh(subject)
 
             return subject
-        
+
         except IntegrityError:
             db.rollback()
 
             raise HTTPException(status_code=409, detail="Subject already exists")
-        
 
     @staticmethod
     def remove_subject(db, user, subject_id):
@@ -38,11 +37,10 @@ class SubjectService:
         subject = SubjectRepository.get_subject_by_id(db, subject_id)
 
         ensure_exists(subject, MESSAGE_404)
-        
+
         SubjectRepository.remove_subject(db, subject)
 
         db.commit()
-
 
     @staticmethod
     def update_subject_info(db, user, subject_id, subject_update_info_request):
@@ -57,7 +55,6 @@ class SubjectService:
         db.commit()
 
         return subject
-    
 
     @staticmethod
     def get_subjects(db, user):

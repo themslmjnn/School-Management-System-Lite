@@ -5,7 +5,13 @@ from datetime import date, datetime
 
 from src.models.student_model import StudentStatus
 from src.models.association_models import StudentSubjectStatus, StudentGroupStatus
-from src.schemas.user_schemas import UserCreateAdmin, UserResponseAdmin, UserResponsePublic, UserSearchPublic, UserSearchAdmin
+from schemas.user import (
+    UserCreateAdmin,
+    UserResponseAdmin,
+    UserResponsePublic,
+    UserSearchPublic,
+    UserSearchAdmin,
+)
 from src.schemas.base_schema import BaseSchema
 
 
@@ -39,12 +45,13 @@ class StudentResponseAdmin(BaseSchema):
 
 class StudentUpdateInfoAdmin(BaseModel):
     grade: Optional[str] = None
-    enrolled_at: Optional[date] = None  
+    enrolled_at: Optional[date] = None
     status: Optional[StudentStatus] = None
 
 
 class StudentUpdateInfoResponseAdmin(StudentResponseBase):
     pass
+
 
 class StudentSearchBase(StudentUpdateInfoAdmin):
     pass

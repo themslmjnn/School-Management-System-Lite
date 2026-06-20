@@ -6,7 +6,7 @@ from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.cache import get_cache, set_cache
-from repositories.user import UserRepositoryBase
+from repositories.users import UserRepositoryBase
 from src.core.security import decode_access_token
 from src.database import AsyncSessionLocal
 from src.utils.custom_exceptions import (

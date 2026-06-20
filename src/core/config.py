@@ -17,6 +17,7 @@ class Settings(BaseSettings):
 
     ACCESS_TOKEN_EXPIRES_MINUTES: int = 15
     REFRESH_TOKEN_EXPIRES_DAYS: int = 7
+    INVITE_TOKEN_EXPIRES_HOURS: int = 24
 
     @field_validator("JWT_SECRET_KEY")
     @classmethod

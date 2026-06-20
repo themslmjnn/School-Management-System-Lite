@@ -3,25 +3,16 @@ from pydantic import BaseModel, Field, EmailStr, field_validator
 from typing import Optional
 from datetime import date, datetime
 
-from models.user import UserRole
+from models.users import UserRole
 from src.schemas.base_schema import BaseSchema
 from src.utils import validators as field_validators
 
 
 class UserBase(BaseModel):
-    username: str = Field(min_length=6, max_length=20)
     first_name: str = Field(min_length=2, max_length=30)
     last_name: str = Field(min_length=2, max_length=30)
-    email: EmailStr
     phone_number: str
     date_of_birth: date
-    citizenship: str
-    address: str = Field(max_length=100)
-
-    @field_validator("username")
-    @classmethod
-    def validate_username(cls, username: str) -> str:
-        return field_validators.validate_username(username)
 
     @field_validator("first_name")
     @classmethod
@@ -45,11 +36,19 @@ class UserBase(BaseModel):
 
 
 class CreateUserAdmin(UserBase):
+    username: str = Field(min_length=6, max_length=20)
+    email: EmailStr
+    citizenship: str
+    address: str = Field(max_length=100)
     role: UserRole
 
 
-class UserResponseAdmin(UserBase, BaseSchema):
+class UserResponseDetailedAdmin(UserBase, BaseSchema):
     id: int
+    username: str
+    email: EmailStr
+    citizenship: str
+    address: str
     role: UserRole
     is_active: bool
     created_at: datetime
