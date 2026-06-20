@@ -1,3 +1,5 @@
 .env
 .DS_Store
 __pycache__/
+pyproject.toml
+.ruff_cache
