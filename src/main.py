@@ -6,6 +6,7 @@ from src.api.health import router as health_router
 from src.core.caching import redis_client
 from src.core.config import settings
 from src.core.logging import get_logger, setup_logging
+from src.users.routers import system_admin as user_system_admin_router
 
 setup_logging()
 
@@ -41,3 +42,4 @@ app = FastAPI(
 )
 
 app.include_router(health_router)
+app.include_router(user_system_admin_router.router)

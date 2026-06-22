@@ -1,6 +1,8 @@
 from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+ALGORITHM = "HS256"
+
 
 class Settings(BaseSettings):
     ENVIRONMENT: str = "development"
@@ -15,6 +17,13 @@ class Settings(BaseSettings):
     REDIS_PORT: int = 6379
     REDIS_PASSWORD: str = ""
     REDIS_DB: int = 0
+
+    JWT_SECRET_KEY: str
+
+    ACCESS_TOKEN_EXPIRES_MINUTES: int = 15
+    REFRESH_TOKEN_EXPIRES_DAYS: int = 7
+
+    INVITE_TOKEN_EXPIRES_HOURS: int = 24
 
     @field_validator("ENVIRONMENT")
     @classmethod
@@ -61,6 +70,31 @@ class Settings(BaseSettings):
     def validate_redis_port(cls, v: int) -> int:
         if not (1 <= v <= 65535):
             raise ValueError(f"REDIS_PORT must be between 1 and 65535, got {v}")
+        return v
+
+    @field_validator("JWT_SECRET_KEY")
+    @classmethod
+    def validate_jwt_secret_key(cls, v: str) -> str:
+        if len(v) < 32:
+            raise ValueError("JWT_SECRET_KEY must be at least 32 characters")
+        return v
+
+    @field_validator("ACCESS_TOKEN_EXPIRES_MINUTES")
+    @classmethod
+    def validate_access_token_expiry(cls, v: int) -> int:
+        if v < 1:
+            raise ValueError("ACCESS_TOKEN_EXPIRES_MINUTES must be at least 1")
+        if v > 15:
+            raise ValueError("ACCESS_TOKEN_EXPIRES_MINUTES should not exceed 15")
+        return v
+
+    @field_validator("REFRESH_TOKEN_EXPIRES_DAYS")
+    @classmethod
+    def validate_refresh_token_expiry(cls, v: int) -> int:
+        if v < 1:
+            raise ValueError("REFRESH_TOKEN_EXPIRES_DAYS must be at least 1")
+        if v > 90:
+            raise ValueError("REFRESH_TOKEN_EXPIRES_DAYS should not exceed 90")
         return v
 
     @property
