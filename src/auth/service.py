@@ -12,16 +12,20 @@ from core.security import (
     create_access_token,
     create_refresh_token,
     decode_refresh_token,
+    generate_reset_password_token,
     hash_password,
     verify_invite_token,
     verify_password,
     verify_refresh_token,
+    verify_reset_password_token,
 )
 from src.auth.schemas import (
     ActivateAccountWithToken,
     CreateAccessToken,
     CreateRefreshToken,
+    ForgotPasswordPublicRequest,
     LoginResponse,
+    ResetPassword,
 )
 from src.core.caching import delete_cache
 from src.core.config import settings
@@ -36,10 +40,14 @@ from utils.exceptions import (
     EmptyCredentialsError,
     ExpiredInviteTokenError,
     ExpiredRefreshTokenError,
+    ExpiredResetPasswordTokenError,
     InvalidCredentialsError,
     InvalidInviteTokenError,
     InvalidRefreshTokenError,
+    InvalidResetPasswordTokenError,
 )
+from utils.response_messages import PublicMessages
+from utils.response_schema import MessageResponse
 
 logger = get_logger(__name__)
 
@@ -112,7 +120,6 @@ class AuthService:
             reason="explicit_invalidation",
         )
 
-    
     @staticmethod
     async def login(
         db: AsyncSession, response: Response, form_data: OAuth2PasswordRequestForm
@@ -121,7 +128,10 @@ class AuthService:
             raise EmptyCredentialsError("Username and password is required")
 
         user = await AuthRepository.get_user_by_username(
-            db, form_data.username, load_session=True, load_login_lockout=True,
+            db,
+            form_data.username,
+            load_session=True,
+            load_login_lockout=True,
         )
 
         if user is None:
@@ -161,7 +171,9 @@ class AuthService:
             user.session.failed_login_attempts += 1
 
             if user.session.failed_login_attempts >= MAX_FAILED_ATTEMPTS:
-                user.session.locked_until = datetime.now(UTC) + timedelta(minutes=LOCKOUT_MINUTES)
+                user.session.locked_until = datetime.now(UTC) + timedelta(
+                    minutes=LOCKOUT_MINUTES
+                )
 
                 logger.warning(
                     "account_locked",
@@ -203,7 +215,9 @@ class AuthService:
                 access_token_version=user.session.access_token_version,
             )
         )
-        raw_refresh_token, hashed_refresh_token = create_refresh_token(CreateRefreshToken(user_id=user.id))
+        raw_refresh_token, hashed_refresh_token = create_refresh_token(
+            CreateRefreshToken(user_id=user.id)
+        )
 
         user.session.refresh_token_hash = hashed_refresh_token
         user.session.refresh_token_expires_at = datetime.now(UTC) + timedelta(
@@ -226,7 +240,7 @@ class AuthService:
             "access_token": access_token,
             "token_type": "bearer",
         }
-    
+
     @staticmethod
     async def logout(
         response: Response, db: AsyncSession, current_user_id: int
@@ -241,8 +255,6 @@ class AuthService:
             user_id=current_user_id,
         )
 
-
-    
     @staticmethod
     async def activate_account_with_token(
         db: AsyncSession, activation_request: ActivateAccountWithToken
@@ -297,7 +309,6 @@ class AuthService:
             method="invite_token",
         )
 
-    
     @staticmethod
     async def refresh_token(
         db: AsyncSession,
@@ -400,3 +411,91 @@ class AuthService:
             "access_token": access_token,
             "token_type": "bearer",
         }
+
+    @staticmethod
+    async def reset_password(db: AsyncSession, update_request: ResetPassword):
+        user = await AuthRepository.get_user_by_username(
+            db, update_request.username, load_session=True
+        )
+
+        if user is None:
+            logger.warning(
+                "password_reset_failed",
+                reason="user_not_found",
+                targeted_user_identifier=update_request.username,
+            )
+
+            raise InvalidCredentialsError(HTTP401.INVALID_CREDENTIALS)
+
+        if (
+            user.session.reset_password_token_expires_at is None
+            or datetime.now(UTC) > user.session.reset_password_token_expires_at
+        ):
+            logger.warning(
+                "reset_password_failed",
+                reason="reset_password_token_expired",
+                user_id=user.id,
+            )
+
+            raise ExpiredResetPasswordTokenError(HTTP400.EXPIRED_RESET_PASSWORD_TOKEN)
+
+        if not verify_reset_password_token(
+            update_request.reset_token, user.session.reset_password_token_hash
+        ):
+            logger.warning(
+                "reset_password_failed",
+                reason="invalid_reset_password_token",
+                targeted_user_identifier=update_request.identifier,
+            )
+
+            raise InvalidResetPasswordTokenError(HTTP400.INVALID_RESET_PASSWORD_TOKEN)
+
+        user.password_hash = hash_password(update_request.new_password)
+        user.session.reset_password_token_hash = None
+        user.session.reset_password_token_expires_at = None
+        user.session.access_token_version += 1
+        user.session.refresh_token_hash = None
+        user.session.refresh_token_expires_at = None
+        user.session.refresh_token_family = None
+
+        await db.commit()
+        await db.refresh(user)
+
+        await delete_cache(SessionCacheKey.access_token_version_key(user.id))
+
+        logger.info(
+            "password_changed",
+            user_id=user.id,
+        )
+
+    @staticmethod
+    async def create_forgot_passsword_request(
+        db: AsyncSession,
+        forgot_password_request: ForgotPasswordPublicRequest,
+    ) -> MessageResponse:
+        user = await AuthRepository.get_user_by_username(
+            db, forgot_password_request.username, load_session=True
+        )
+
+        if user is not None and user.session is not None:
+            raw_reset_password_token, hashed_reset_password_token = (
+                generate_reset_password_token()
+            )
+
+            user.session.reset_password_token_hash = hashed_reset_password_token
+            user.session.reset_password_token_expires_at = datetime.now(
+                UTC
+            ) + timedelta(minutes=settings.RESET_PASSWORD_EXPIRES_MINUTES)
+
+            await db.commit()
+
+            # asyncio.create_task(
+            #     send_safe(
+            #         send_forgot_password_email(user.email, raw_reset_password_token),
+            #         email_type="forgot_password",
+            #     )
+            # )
+
+            logger.info("forgot_password_request_processed")
+
+        return MessageResponse(detail=PublicMessages.FORGOT_PASSWORD)

@@ -65,6 +65,7 @@ EXCEPTION_STATUS_MAP = {
     exc.InvalidRefreshTokenError: 401,
 }
 
+
 @app.exception_handler(exc.AppException)
 async def app_exception_handler(
     request: Request, exc: exc.AppException

@@ -62,8 +62,12 @@ def verify_invite_token(raw_invite_token: str, hashed_invite_token: str) -> bool
         hashed_invite_token,
     )
 
+
 async def hash_password(password: str) -> str:
-    return await run_in_threadpool(bcrypt_context.hashpw, password.encode(), bcrypt_context.gensalt())
+    return await run_in_threadpool(
+        bcrypt_context.hashpw, password.encode(), bcrypt_context.gensalt()
+    )
+
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     return bcrypt_context.verify(plain_password, hashed_password)
@@ -111,3 +115,16 @@ def verify_refresh_token(raw_refresh_token: str, hashed_refresh_token: str) -> b
         hashed_refresh_token,
     )
 
+
+def generate_reset_password_token() -> tuple[str, str]:
+    raw_reset_token = secrets.token_urlsafe(32)
+    hashed_reset_token = hashlib.sha256(raw_reset_token.encode()).hexdigest()
+
+    return raw_reset_token, hashed_reset_token
+
+
+def verify_reset_password_token(raw_reset_token: str, hashed_reset_token: str) -> bool:
+    return hmac.compare_digest(
+        hashlib.sha256(raw_reset_token.encode()).hexdigest(),
+        hashed_reset_token,
+    )

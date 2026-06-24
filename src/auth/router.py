@@ -3,11 +3,17 @@ from typing import Annotated
 from fastapi import APIRouter, Cookie, Depends, HTTPException, Request, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
 
-from src.auth.schemas import ActivateAccountWithToken, LoginResponse
+from src.auth.schemas import (
+    ActivateAccountWithToken,
+    ForgotPasswordPublicRequest,
+    LoginResponse,
+    ResetPassword,
+)
 from src.auth.service import AuthService
 from src.core.dependencies import async_db_dependency, current_user_dependency
 from src.core.limiter import ip_limiter
 from utils.constants import HTTP401
+from utils.response_schema import MessageResponse
 
 router = APIRouter(
     prefix="/auth",
@@ -34,6 +40,7 @@ async def logout(
 ):
     await AuthService.logout(response, db, current_user.id)
 
+
 @router.post("/activate_with_token", status_code=status.HTTP_204_NO_CONTENT)
 @ip_limiter.limit("3/minute")
 async def activate_with_token(
@@ -42,6 +49,7 @@ async def activate_with_token(
     activation_request: ActivateAccountWithToken,
 ):
     await AuthService.activate_account_with_token(db, activation_request)
+
 
 @router.post(
     "/refresh_token", response_model=LoginResponse, status_code=status.HTTP_200_OK
@@ -62,4 +70,28 @@ async def refresh(
 
     return await AuthService.refresh_token(
         db, response, refresh_token, refresh_token_family
+    )
+
+
+@router.post("/reset_password", status_code=status.HTTP_204_NO_CONTENT)
+@ip_limiter.limit("5/minute")
+async def reset_password(
+    request: Request,
+    db: async_db_dependency,
+    update_request: ResetPassword,
+):
+    return await AuthService.reset_password(db, update_request)
+
+
+@router.post(
+    "/forgot_password", response_model=MessageResponse, status_code=status.HTTP_200_OK
+)
+@ip_limiter.limit("5/minute")
+async def create_forgot_password_request(
+    request: Request,
+    db: async_db_dependency,
+    forgot_password_request: ForgotPasswordPublicRequest,
+):
+    return await AuthService.create_forgot_passsword_request(
+        db, forgot_password_request
     )

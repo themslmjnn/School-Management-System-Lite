@@ -27,6 +27,7 @@ class CannotCreateDirectorError(AppException):
 class MaxNumberOfIdenticalCredentialsError(AppException):
     pass
 
+
 class EmptyCredentialsError(AppException):
     pass
 
@@ -34,8 +35,10 @@ class EmptyCredentialsError(AppException):
 class InvalidCredentialsError(AppException):
     pass
 
+
 class AccountLockedError(AppException):
     pass
+
 
 class InvalidRefreshTokenError(AppException):
     pass
@@ -44,9 +47,18 @@ class InvalidRefreshTokenError(AppException):
 class ExpiredRefreshTokenError(AppException):
     pass
 
+
 class InvalidInviteTokenError(AppException):
     pass
 
 
 class ExpiredInviteTokenError(AppException):
+    pass
+
+
+class InvalidResetPasswordTokenError(AppException):
+    pass
+
+
+class ExpiredResetPasswordTokenError(AppException):
     pass
