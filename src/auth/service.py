@@ -207,3 +207,17 @@ class AuthService:
             "access_token": access_token,
             "token_type": "bearer",
         }
+    
+    @staticmethod
+    async def logout(
+        response: Response, db: AsyncSession, current_user_id: int
+    ) -> None:
+        await AuthService._invalidate_all_tokens(db, current_user_id)
+
+        AuthService._clear_refresh_token_cookie(response)
+        AuthService._clear_refresh_family_cookie(response)
+
+        logger.info(
+            "logout",
+            user_id=current_user_id,
+        )

@@ -2,10 +2,14 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
+from slowapi.errors import RateLimitExceeded
+from slowapi.extension import _rate_limit_exceeded_handler
+from slowapi.middleware import SlowAPIMiddleware
 
 from src.api.health import router as health_router
 from src.core.caching import redis_client
 from src.core.config import settings
+from src.core.limiter import ip_limiter
 from src.core.logging import get_logger, setup_logging
 from src.users.routers import system_admin as user_system_admin_router
 from src.utils import exceptions as exc
@@ -43,6 +47,10 @@ app = FastAPI(
     redoc_url=None if settings.ENVIRONMENT == "production" else "/redoc",
 )
 
+app.state.limiter = ip_limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_middleware(SlowAPIMiddleware)
+
 app.include_router(health_router)
 app.include_router(user_system_admin_router.router)
 
@@ -53,6 +61,8 @@ EXCEPTION_STATUS_MAP = {
     exc.CannotCreateSystemAdminError: 403,
     exc.EmptyCredentialsError: 400,
     exc.InvalidAccessTokenError: 401,
+    exc.ExpiredRefreshTokenError: 401,
+    exc.InvalidRefreshTokenError: 401,
 }
 
 @app.exception_handler(exc.AppException)
