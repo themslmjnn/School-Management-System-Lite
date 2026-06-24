@@ -1,4 +1,5 @@
 from datetime import UTC, datetime, timedelta
+from typing import Literal
 
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -17,6 +18,39 @@ from src.utils.exceptions import (
 )
 
 logger = get_logger(__name__)
+
+STUDENT_MAX_SHARED_CONTACT = 3
+PARENT_MAX_SHARED_CONTACT = 1
+
+
+async def _check_contact_limit(
+    db: AsyncSession,
+    current_user_id: int,
+    create_request: CreateUserAdmin,
+    *,
+    role: UserRole,
+    match_mode: Literal["all", "any"],
+    max_allowed: int,
+) -> None:
+    existing_count = await UserRepositoryBase.count_users_with_contact(
+        db,
+        role,
+        phone_number=create_request.phone_number,
+        email=create_request.email,
+        match_mode=match_mode,
+    )
+
+    if existing_count >= max_allowed:
+        logger.warning(
+            "user_creation_denied",
+            actor_user_id=current_user_id,
+            target_email=create_request.email,
+            requested_role=role.value,
+            denial_reason="maximum_number_of_identical_contact_reached",
+        )
+        raise MaxNumberOfIdenticalCredentialsError(
+            f"Maximum number of {role.value}s with identical contact details reached"
+        )
 
 
 class UserServiceAdmin:
@@ -48,44 +82,23 @@ class UserServiceAdmin:
 
             raise CannotCreateDirectorError("Director creation via API is forbidden")
 
-        students_with_identical_credentials = (
-            await UserRepositoryBase.get_student_with_identical_credentials(
-                db, create_request.phone_number, create_request.email
+        if create_request.role == UserRole.STUDENT:
+            await _check_contact_limit(
+                db,
+                current_user_id,
+                create_request,
+                role=UserRole.STUDENT,
+                match_mode="all",
+                max_allowed=STUDENT_MAX_SHARED_CONTACT,
             )
-        )
-        if (
-            students_with_identical_credentials is not None
-            and students_with_identical_credentials > 3
-        ):
-            logger.warning(
-                "user_creation_denied",
-                actor_user_id=current_user_id,
-                target_email=create_request.email,
-                denial_reason="maximum_number_of_identical_email_and_phonenumber_reached",
-            )
-
-            raise MaxNumberOfIdenticalCredentialsError(
-                "Maximum number of students with identical email and phone number reached"
-            )
-
-        parents_with_identical_credentials = (
-            await UserRepositoryBase.get_parent_with_identical_credentials(
-                db, create_request.phone_number, create_request.email
-            )
-        )
-        if (
-            parents_with_identical_credentials is not None
-            and parents_with_identical_credentials >= 1
-        ):
-            logger.warning(
-                "user_creation_denied",
-                actor_user_id=current_user_id,
-                target_email=create_request.email,
-                denial_reason="maximum_number_of_identical_email_and_phonenumber_reached",
-            )
-
-            raise MaxNumberOfIdenticalCredentialsError(
-                "Maximum number of parents with identical email and phone number reached"
+        elif create_request.role == UserRole.PARENT:
+            await _check_contact_limit(
+                db,
+                current_user_id,
+                create_request,
+                role=UserRole.PARENT,
+                match_mode="any",
+                max_allowed=PARENT_MAX_SHARED_CONTACT,
             )
 
         raw_invite_token, hashed_invite_token = generate_invite_token()
@@ -109,7 +122,7 @@ class UserServiceAdmin:
                 created_by=current_user_id,
             )
 
-            UserRepositoryBase.add_user(db, new_user)
+            UserRepositoryBase.add_entity(db, new_user)
 
             await db.flush()
 
@@ -121,8 +134,8 @@ class UserServiceAdmin:
 
             new_user_session = UserSession(user_id=new_user.id)
 
-            UserRepositoryBase.add_user(db, new_user_activation)
-            UserRepositoryBase.add_user(db, new_user_session)
+            UserRepositoryBase.add_entity(db, new_user_activation)
+            UserRepositoryBase.add_entity(db, new_user_session)
 
             await db.commit()
             await db.refresh(new_user)

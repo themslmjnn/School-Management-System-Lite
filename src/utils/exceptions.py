@@ -26,3 +26,20 @@ class CannotCreateDirectorError(AppException):
 
 class MaxNumberOfIdenticalCredentialsError(AppException):
     pass
+
+class EmptyCredentialsError(AppException):
+    pass
+
+
+class InvalidCredentialsError(AppException):
+    pass
+
+class AccountLockedError(AppException):
+    pass
+
+class InvalidRefreshTokenError(AppException):
+    pass
+
+
+class ExpiredRefreshTokenError(AppException):
+    pass

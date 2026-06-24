@@ -27,14 +27,14 @@ async def create_user(
     current_user: Annotated[CurrentUser, Depends(require_system_admin)],
     create_request: CreateUserAdmin,
 ):
-    return UserServiceAdmin.create_user(db, current_user.id, create_request)
+    return await UserServiceAdmin.create_user(db, current_user.id, create_request)
 
 
 @router.get("")
 async def get_users(): ...
 
 
-@router.patch("/{user_id}")
+@router.get("/{user_id}")
 async def get_user(): ...
 
 

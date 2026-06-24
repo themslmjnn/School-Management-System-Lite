@@ -15,3 +15,6 @@ class UserStatus(StrEnum):
     GRADUATED = "graduated"
     EXPELLED = "expelled"
     WITHDRAWN = "withdrawn"
+    DEACTIVATED = "deactivated"
+    PENDING_DELETION = "pending_deletion"
+    DELETED = "deleted"

@@ -1,3 +1,5 @@
+from typing import Literal
+
 from pydantic import EmailStr
 from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -9,10 +11,10 @@ from src.utils.enums import UserRole
 
 class UserRepositoryBase:
     @staticmethod
-    def add_user(
-        db: AsyncSession, new_user: User | UserSession | UserActivation
+    def add_entity(
+        db: AsyncSession, new_entity: User | UserSession | UserActivation
     ) -> None:
-        db.add(new_user)
+        db.add(new_entity)
 
     @staticmethod
     async def get_user_by_id(
@@ -40,31 +42,23 @@ class UserRepositoryBase:
         return result.scalar_one_or_none()
 
     @staticmethod
-    async def get_student_with_identical_credentials(
-        db: AsyncSession, phone_number: str, email: EmailStr
-    ) -> int | None:
-        query = select(func.count(User.id)).where(
-            User.email == email,
-            User.phone_number == phone_number,
-            User.role == UserRole.STUDENT,
+    async def count_users_with_contact(
+        db: AsyncSession,
+        role: UserRole,
+        *,
+        phone_number: str,
+        email: EmailStr,
+        match_mode: Literal["all", "any"] = "all",
+    ) -> int:
+        contact_filter = (
+            and_(User.email == email, User.phone_number == phone_number)
+            if match_mode == "all"
+            else or_(User.email == email, User.phone_number == phone_number)
         )
 
-        result = await db.execute(query)
-
-        return result.scalar()
-
-    @staticmethod
-    async def get_parent_with_identical_credentials(
-        db: AsyncSession, phone_number: str, email: EmailStr
-    ) -> int | None:
         query = select(func.count(User.id)).where(
-            and_(
-                or_(
-                    User.email == email,
-                    User.phone_number == phone_number,
-                ),
-                User.role == UserRole.PARENT,
-            )
+            User.role == role,
+            contact_filter,
         )
 
         result = await db.execute(query)

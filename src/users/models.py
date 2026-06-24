@@ -1,6 +1,6 @@
 from datetime import date, datetime
 
-from sqlalchemy import DateTime, ForeignKey, String, UniqueConstraint
+from sqlalchemy import DateTime, ForeignKey, Index, String, text
 from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -26,10 +26,18 @@ class User(Base):
         SQLEnum(UserStatus), nullable=False, default=UserStatus.ACTIVE
     )
     is_active: Mapped[bool] = mapped_column(nullable=False, default=False)
-    created_by: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    created_by: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id"), nullable=True
+    )
 
     __table_args__ = (
-        UniqueConstraint("phone_number", "email", "role", name="uix_parent_fields"),
+        Index(
+            "uix_non_student_unique_contact",
+            "phone_number",
+            "email",
+            unique=True,
+            postgresql_where=text("role <> 'STUDENT'"),
+        ),
     )
 
     creator: Mapped["User"] = relationship(
@@ -44,6 +52,13 @@ class User(Base):
     )
 
     session: Mapped["UserSession"] = relationship(
+        "UserSession",
+        back_populates="user",
+        uselist=False,
+        cascade="all, delete-orphan",
+    )
+
+    login_lockout: Mapped["UserLoginLockout"] = relationship(
         "UserSession",
         back_populates="user",
         uselist=False,
@@ -66,25 +81,20 @@ class UserSession(Base):
         nullable=False,
         unique=True,
     )
-
     access_token_version: Mapped[int] = mapped_column(nullable=False, default=1)
-
     refresh_token_hash: Mapped[str | None] = mapped_column(nullable=True)
     refresh_token_expires_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
     refresh_token_family: Mapped[str | None] = mapped_column(String(64), nullable=True)
-
     failed_login_attempts: Mapped[int] = mapped_column(nullable=False, default=0)
     locked_until: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
-
     reset_password_token_hash: Mapped[str | None] = mapped_column(nullable=True)
     reset_password_token_expires_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
-
     pending_new_email: Mapped[str | None] = mapped_column(String(100), nullable=True)
     email_change_code_hash: Mapped[str | None] = mapped_column(nullable=True)
     email_change_code_expires_at: Mapped[datetime | None] = mapped_column(
@@ -92,6 +102,22 @@ class UserSession(Base):
     )
 
     user: Mapped["User"] = relationship("User", back_populates="session")
+
+
+class UserLoginLockout(Base):
+    __tablename__ = "users_login_lockout"
+
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        unique=True,
+    )
+    failed_login_attempts: Mapped[int] = mapped_column(nullable=False, default=0)
+    locked_until: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
+    user: Mapped["User"] = relationship("User", back_populates="login_lockout")
 
 
 class UserActivation(Base):
@@ -102,7 +128,6 @@ class UserActivation(Base):
         nullable=False,
         unique=True,
     )
-
     invite_token_hash: Mapped[str | None] = mapped_column(nullable=True)
     invite_token_expires_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True

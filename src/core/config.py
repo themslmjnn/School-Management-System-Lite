@@ -100,6 +100,10 @@ class Settings(BaseSettings):
     @property
     def DB_URL(self):
         return f"postgresql+asyncpg://{self.DB_USER}:{self.DB_PSSW}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
+    
+    @property
+    def cookie_secure(self) -> bool:
+        return self.ENVIRONMENT == "production"
 
     model_config = SettingsConfigDict(env_file=".env")
 
