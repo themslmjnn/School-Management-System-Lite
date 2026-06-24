@@ -110,3 +110,4 @@ def verify_refresh_token(raw_refresh_token: str, hashed_refresh_token: str) -> b
         hashlib.sha256(raw_refresh_token.encode()).hexdigest(),
         hashed_refresh_token,
     )
+

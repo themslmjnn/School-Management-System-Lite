@@ -11,3 +11,9 @@ class HTTP401:
 class HTTP403:
     ACCESS_DENIED = "Access denied"
     ACCOUNT_DEACTIVATED = "Your account has been deactivated"
+
+
+class HTTP400:
+    INVITE_TOKEN_USED = "Account already activated or was never invited"
+    INVALID_INVITE_TOKEN = "Invalid invite token"
+    EXPIRED_INVITE_TOKEN = "Expired invite token"

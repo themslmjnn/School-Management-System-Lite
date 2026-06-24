@@ -6,20 +6,22 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from auth.repositories import AuthRepository
-from core.security import create_access_token, create_refresh_token, verify_password
-from src.auth.schemas import CreateAccessToken, CreateRefreshToken, LoginResponse
+from core.security import create_access_token, create_refresh_token, hash_password, verify_invite_token, verify_password
+from src.auth.schemas import ActivateAccountWithToken, CreateAccessToken, CreateRefreshToken, LoginResponse
 from src.core.caching import delete_cache
 from src.core.config import settings
 from src.core.logging import get_logger
 from src.users.repositories import UserRepositoryBase
 from src.utils.cache_keys import SessionCacheKey
 from src.utils.enums import UserStatus
-from utils.constants import HTTP401, HTTP403
+from utils.constants import HTTP400, HTTP401, HTTP403
 from utils.exceptions import (
     AccountInactiveError,
     AccountLockedError,
     EmptyCredentialsError,
+    ExpiredInviteTokenError,
     InvalidCredentialsError,
+    InvalidInviteTokenError,
 )
 
 logger = get_logger(__name__)
@@ -220,4 +222,60 @@ class AuthService:
         logger.info(
             "logout",
             user_id=current_user_id,
+        )
+
+
+    
+    @staticmethod
+    async def activate_account_with_token(
+        db: AsyncSession, activation_request: ActivateAccountWithToken
+    ) -> None:
+        user = await AuthRepository.get_user_by_username(
+            db, activation_request.email, load_activation=True
+        )
+
+        if user is None or user.activation.invite_token_hash is None:
+            logger.warning(
+                "activation_failed",
+                reason="invalid_invite_token",
+                email=activation_request.email,
+            )
+
+            raise InvalidInviteTokenError(HTTP400.INVALID_INVITE_TOKEN)
+
+        if (
+            user.activation.invite_token_expires_at is None
+            or datetime.now(UTC) > user.activation.invite_token_expires_at
+        ):
+            logger.warning(
+                "activation_failed",
+                reason="invite_token_expired",
+                user_id=user.id,
+            )
+
+            raise ExpiredInviteTokenError(HTTP400.EXPIRED_INVITE_TOKEN)
+
+        if not verify_invite_token(
+            activation_request.invite_token, user.activation.invite_token_hash
+        ):
+            logger.warning(
+                "activation_failed",
+                reason="invite_token_mismatch",
+                user_id=user.id,
+            )
+
+            raise InvalidInviteTokenError(HTTP400.INVALID_INVITE_TOKEN)
+
+        user.password_hash = await hash_password(activation_request.new_password)
+        user.is_active = True
+        user.activation.invite_token_hash = None
+        user.activation.invite_token_expires_at = None
+
+        await db.commit()
+        await db.refresh(user)
+
+        logger.info(
+            "account_activated",
+            user_id=user.id,
+            method="invite_token",
         )

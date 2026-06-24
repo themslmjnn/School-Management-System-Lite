@@ -43,3 +43,10 @@ class InvalidRefreshTokenError(AppException):
 
 class ExpiredRefreshTokenError(AppException):
     pass
+
+class InvalidInviteTokenError(AppException):
+    pass
+
+
+class ExpiredInviteTokenError(AppException):
+    pass
