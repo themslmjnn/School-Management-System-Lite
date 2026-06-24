@@ -1,13 +1,28 @@
+import hmac
 import secrets
 from datetime import UTC, datetime, timedelta
 
 from fastapi import Response
 from fastapi.security import OAuth2PasswordRequestForm
+from jose import ExpiredSignatureError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from auth.repositories import AuthRepository
-from core.security import create_access_token, create_refresh_token, hash_password, verify_invite_token, verify_password
-from src.auth.schemas import ActivateAccountWithToken, CreateAccessToken, CreateRefreshToken, LoginResponse
+from core.security import (
+    create_access_token,
+    create_refresh_token,
+    decode_refresh_token,
+    hash_password,
+    verify_invite_token,
+    verify_password,
+    verify_refresh_token,
+)
+from src.auth.schemas import (
+    ActivateAccountWithToken,
+    CreateAccessToken,
+    CreateRefreshToken,
+    LoginResponse,
+)
 from src.core.caching import delete_cache
 from src.core.config import settings
 from src.core.logging import get_logger
@@ -20,8 +35,10 @@ from utils.exceptions import (
     AccountLockedError,
     EmptyCredentialsError,
     ExpiredInviteTokenError,
+    ExpiredRefreshTokenError,
     InvalidCredentialsError,
     InvalidInviteTokenError,
+    InvalidRefreshTokenError,
 )
 
 logger = get_logger(__name__)
@@ -279,3 +296,107 @@ class AuthService:
             user_id=user.id,
             method="invite_token",
         )
+
+    
+    @staticmethod
+    async def refresh_token(
+        db: AsyncSession,
+        response: Response,
+        raw_refresh_token: str,
+        refresh_token_family: str,
+    ) -> LoginResponse:
+        try:
+            payload = decode_refresh_token(raw_refresh_token)
+            user_id = int(payload.get("sub"))
+
+        except ExpiredSignatureError as e:
+            logger.warning(
+                "refresh_token_rotation_failed",
+                reason="token_expired",
+            )
+            raise ExpiredRefreshTokenError(HTTP401.EXPIRED_REFRESH_TOKEN) from e
+
+        except (ValueError, TypeError) as e:
+            logger.warning(
+                "invalid_jwt",
+                error_type=type(e).__name__,
+                error_message=str(e),
+            )
+
+            raise InvalidRefreshTokenError(HTTP401.INVALID_REFRESH_TOKEN) from e
+
+        user = await UserRepositoryBase.get_user_by_id(db, user_id, load_session=True)
+
+        if user is None or user.session.refresh_token_hash is None:
+            logger.warning(
+                "refresh_token_rotation_failed",
+                reason="invalid_refresh_token",
+                user_id=user_id,
+            )
+
+            raise InvalidRefreshTokenError(HTTP401.INVALID_REFRESH_TOKEN)
+
+        if datetime.now(UTC) > user.session.refresh_token_expires_at:
+            logger.warning(
+                "refresh_token_rotation_failed",
+                reason="refresh_token_expired",
+                user_id=user.id,
+            )
+
+            raise ExpiredRefreshTokenError(HTTP401.EXPIRED_REFRESH_TOKEN)
+
+        refresh_token_family_valid = hmac.compare_digest(
+            refresh_token_family, user.session.refresh_token_family
+        )
+        refresh_token_hash_valid = verify_refresh_token(
+            raw_refresh_token, user.session.refresh_token_hash
+        )
+
+        if not refresh_token_family_valid or not refresh_token_hash_valid:
+            await AuthService._invalidate_all_tokens(db, user.id)
+
+            logger.warning(
+                "refresh_token_security_violation",
+                user_id=user.id,
+                refresh_token_family_valid=refresh_token_family_valid,
+                refresh_token_hash_valid=refresh_token_hash_valid,
+                action="all_tokens_invalidated",
+            )
+
+            raise InvalidRefreshTokenError(HTTP401.INVALID_REFRESH_TOKEN)
+
+        new_family = secrets.token_urlsafe(32)
+        user.session.refresh_token_family = new_family
+
+        access_token = create_access_token(
+            CreateAccessToken(
+                user_id=user.id,
+                role=user.role,
+                access_token_version=user.session.access_token_version,
+            )
+        )
+        raw_refresh_token, hashed_refresh_token = create_refresh_token(
+            CreateRefreshToken(user_id=user.id)
+        )
+
+        user.session.refresh_token_hash = hashed_refresh_token
+        user.session.refresh_token_expires_at = datetime.now(UTC) + timedelta(
+            days=settings.REFRESH_TOKEN_EXPIRES_DAYS
+        )
+
+        await db.commit()
+        await db.refresh(user)
+
+        logger.info(
+            "refresh_token_rotated",
+            user_id=user.id,
+            method="refresh_token",
+        )
+
+        AuthService._set_refresh_token_cookie(response, raw_refresh_token)
+        AuthService._set_refresh_family_cookie(response, new_family)
+
+        return {
+            "access_token": access_token,
+            "token_type": "bearer",
+        }

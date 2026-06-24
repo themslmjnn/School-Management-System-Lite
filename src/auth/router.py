@@ -1,12 +1,13 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Request, Response, status
+from fastapi import APIRouter, Cookie, Depends, HTTPException, Request, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
 
 from src.auth.schemas import ActivateAccountWithToken, LoginResponse
 from src.auth.service import AuthService
 from src.core.dependencies import async_db_dependency, current_user_dependency
 from src.core.limiter import ip_limiter
+from utils.constants import HTTP401
 
 router = APIRouter(
     prefix="/auth",
@@ -41,3 +42,24 @@ async def activate_with_token(
     activation_request: ActivateAccountWithToken,
 ):
     await AuthService.activate_account_with_token(db, activation_request)
+
+@router.post(
+    "/refresh_token", response_model=LoginResponse, status_code=status.HTTP_200_OK
+)
+@ip_limiter.limit("30/minute")
+async def refresh(
+    request: Request,
+    response: Response,
+    db: async_db_dependency,
+    refresh_token: str | None = Cookie(default=None),
+    refresh_token_family: str | None = Cookie(default=None),
+):
+    if refresh_token is None or refresh_token_family is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=HTTP401.INVALID_REFRESH_TOKEN,
+        )
+
+    return await AuthService.refresh_token(
+        db, response, refresh_token, refresh_token_family
+    )
