@@ -7,6 +7,7 @@ from slowapi.extension import _rate_limit_exceeded_handler
 from slowapi.middleware import SlowAPIMiddleware
 
 from src.api.health import router as health_router
+from src.auth.router import router as auth_router
 from src.core.caching import redis_client
 from src.core.config import settings
 from src.core.limiter import ip_limiter
@@ -19,30 +20,30 @@ setup_logging()
 logger = get_logger(__name__)
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    app.state.redis_client = redis_client
+# @asynccontextmanager
+# async def lifespan(app: FastAPI):
+#     app.state.redis_client = redis_client
 
-    try:
-        await redis_client.ping()
+#     try:
+#         await redis_client.ping()
 
-        logger.info("redis_connected")
-    except Exception as e:
-        logger.warning(
-            "redis_unavailable",
-            error=str(e),
-        )
+#         logger.info("redis_connected")
+#     except Exception as e:
+#         logger.warning(
+#             "redis_unavailable",
+#             error=str(e),
+#         )
 
-    yield
+#     yield
 
-    await redis_client.aclose()
+#     await redis_client.aclose()
 
-    logger.info("redis_disconnected")
+#     logger.info("redis_disconnected")
 
 
 app = FastAPI(
     title="Student Grade Manager",
-    lifespan=lifespan,
+    # lifespan=lifespan,
     docs_url=None if settings.ENVIRONMENT == "production" else "/docs",
     redoc_url=None if settings.ENVIRONMENT == "production" else "/redoc",
 )
@@ -53,6 +54,7 @@ app.add_middleware(SlowAPIMiddleware)
 
 app.include_router(health_router)
 app.include_router(user_system_admin_router.router)
+app.include_router(auth_router)
 
 EXCEPTION_STATUS_MAP = {
     exc.AccessDeniedError: 403,

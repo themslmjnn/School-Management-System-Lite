@@ -15,10 +15,11 @@ class User(Base):
     firstname: Mapped[str] = mapped_column(String(50), index=True, nullable=False)
     lastname: Mapped[str] = mapped_column(String(50), index=True, nullable=False)
     middlename: Mapped[str | None] = mapped_column(String(50), nullable=True)
-    date_of_birth: Mapped[date] = mapped_column(nullable=False)
+    date_of_birth: Mapped[date | None] = mapped_column(nullable=True)
+    address: Mapped[str | None] = mapped_column(String(100), nullable=True)
     phone_number: Mapped[str] = mapped_column(String(25), nullable=False)
     email: Mapped[str] = mapped_column(String(50), nullable=False)
-    address: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    password_hash: Mapped[str | None] = mapped_column(nullable=True)
     role: Mapped[UserRole] = mapped_column(
         SQLEnum(UserRole), nullable=False, default=UserRole.STUDENT
     )
@@ -59,7 +60,7 @@ class User(Base):
     )
 
     login_lockout: Mapped["UserLoginLockout"] = relationship(
-        "UserSession",
+        "UserLoginLockout",
         back_populates="user",
         uselist=False,
         cascade="all, delete-orphan",

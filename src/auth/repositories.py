@@ -3,7 +3,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
 from src.users.models import User
-from src.utils.enums import UserRole
 
 
 class AuthRepository:

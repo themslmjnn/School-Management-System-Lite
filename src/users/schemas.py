@@ -12,7 +12,7 @@ class CreateUserAdmin(BaseModel):
     firstname: str = Field(min_length=2, max_length=50)
     lastname: str = Field(min_length=2, max_length=50)
     middlename: str | None = Field(min_length=2, max_length=50, default=None)
-    date_of_birth: date
+    date_of_birth: date | None = Field(default=None)
     phone_number: str
     email: EmailStr
     address: str | None = Field(min_length=15, max_length=100, default=None)
@@ -42,7 +42,9 @@ class CreateUserAdmin(BaseModel):
 
     @field_validator("date_of_birth")
     @classmethod
-    def validate_date_of_birth(cls, v: date) -> date:
+    def validate_date_of_birth(cls, v: date | None) -> date | None:
+        if v is None:
+            return None
         return validators.validate_date_of_birth(v)
 
     @field_validator("phone_number")
@@ -55,18 +57,18 @@ class UserResponseAdmin(BaseSchema):
     id: int
     firstname: str
     lastname: str
-    middlename: str
+    middlename: str | None
     role: UserRole
 
 
 class UserResponseAdminDetailed(UserResponseAdmin):
-    date_of_birth: date
+    date_of_birth: date | None
     phone_number: str
     email: EmailStr
-    address: str
+    address: str | None
     status: UserStatus
     is_active: bool
-    created_by: int
+    created_by: int | None
     created_at: datetime
     updated_at: datetime
 

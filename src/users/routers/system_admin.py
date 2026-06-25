@@ -24,10 +24,10 @@ router = APIRouter(
 )
 async def create_user(
     db: async_db_dependency,
-    current_user: Annotated[CurrentUser, Depends(require_system_admin)],
+    # current_user: Annotated[CurrentUser, Depends(require_system_admin)],
     create_request: CreateUserAdmin,
 ):
-    return await UserServiceAdmin.create_user(db, current_user.id, create_request)
+    return await UserServiceAdmin.create_user(db, create_request)
 
 
 @router.get("")

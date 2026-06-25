@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, Field, field_validator
+from pydantic import BaseModel, Field, field_validator
 
 from src.utils.enums import UserRole
 from src.utils.validators import validate_password, validate_phone_number
@@ -20,7 +20,7 @@ class LoginResponse(BaseModel):
 
 
 class ActivateAccountWithToken(BaseModel):
-    email: EmailStr
+    username: str
     invite_token: str
     new_password: str
 

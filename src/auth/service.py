@@ -7,18 +7,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from jose import ExpiredSignatureError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from auth.repositories import AuthRepository
-from core.security import (
-    create_access_token,
-    create_refresh_token,
-    decode_refresh_token,
-    generate_reset_password_token,
-    hash_password,
-    verify_invite_token,
-    verify_password,
-    verify_refresh_token,
-    verify_reset_password_token,
-)
+from src.auth.repositories import AuthRepository
 from src.auth.schemas import (
     ActivateAccountWithToken,
     CreateAccessToken,
@@ -30,11 +19,22 @@ from src.auth.schemas import (
 from src.core.caching import delete_cache
 from src.core.config import settings
 from src.core.logging import get_logger
+from src.core.security import (
+    create_access_token,
+    create_refresh_token,
+    decode_refresh_token,
+    generate_reset_password_token,
+    hash_password,
+    verify_invite_token,
+    verify_password,
+    verify_refresh_token,
+    verify_reset_password_token,
+)
 from src.users.repositories import UserRepositoryBase
 from src.utils.cache_keys import SessionCacheKey
+from src.utils.constants import HTTP400, HTTP401, HTTP403
 from src.utils.enums import UserStatus
-from utils.constants import HTTP400, HTTP401, HTTP403
-from utils.exceptions import (
+from src.utils.exceptions import (
     AccountInactiveError,
     AccountLockedError,
     EmptyCredentialsError,
@@ -46,8 +46,8 @@ from utils.exceptions import (
     InvalidRefreshTokenError,
     InvalidResetPasswordTokenError,
 )
-from utils.response_messages import PublicMessages
-from utils.response_schema import MessageResponse
+from src.utils.response_messages import PublicMessages
+from src.utils.response_schema import MessageResponse
 
 logger = get_logger(__name__)
 
@@ -260,7 +260,7 @@ class AuthService:
         db: AsyncSession, activation_request: ActivateAccountWithToken
     ) -> None:
         user = await AuthRepository.get_user_by_username(
-            db, activation_request.email, load_activation=True
+            db, activation_request.username, load_activation=True
         )
 
         if user is None or user.activation.invite_token_hash is None:
@@ -295,7 +295,7 @@ class AuthService:
 
             raise InvalidInviteTokenError(HTTP400.INVALID_INVITE_TOKEN)
 
-        user.password_hash = await hash_password(activation_request.new_password)
+        user.password_hash = hash_password(activation_request.new_password)
         user.is_active = True
         user.activation.invite_token_hash = None
         user.activation.invite_token_expires_at = None
@@ -478,7 +478,7 @@ class AuthService:
         )
 
         if user is not None and user.session is not None:
-            raw_reset_password_token, hashed_reset_password_token = (
+            _, hashed_reset_password_token = (
                 generate_reset_password_token()
             )
 
