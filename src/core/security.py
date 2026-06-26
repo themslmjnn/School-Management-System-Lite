@@ -3,7 +3,6 @@ import hmac
 import secrets
 from datetime import UTC, datetime, timedelta
 
-from fastapi.concurrency import run_in_threadpool
 from jose import ExpiredSignatureError, JWTError, jwt
 from passlib.context import CryptContext
 
@@ -68,8 +67,10 @@ def verify_invite_token(raw_invite_token: str, hashed_invite_token: str) -> bool
 #         bcrypt_context.hashpw, password.encode(), bcrypt_context.gensalt()
 #     )
 
+
 def hash_password(password: str) -> str:
     return bcrypt_context.hash(password)
+
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     return bcrypt_context.verify(plain_password, hashed_password)

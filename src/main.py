@@ -20,30 +20,30 @@ setup_logging()
 logger = get_logger(__name__)
 
 
-# @asynccontextmanager
-# async def lifespan(app: FastAPI):
-#     app.state.redis_client = redis_client
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    app.state.redis_client = redis_client
 
-#     try:
-#         await redis_client.ping()
+    try:
+        await redis_client.ping()
 
-#         logger.info("redis_connected")
-#     except Exception as e:
-#         logger.warning(
-#             "redis_unavailable",
-#             error=str(e),
-#         )
+        logger.info("redis_connected")
+    except Exception as e:
+        logger.warning(
+            "redis_unavailable",
+            error=str(e),
+        )
 
-#     yield
+    yield
 
-#     await redis_client.aclose()
+    await redis_client.aclose()
 
-#     logger.info("redis_disconnected")
+    logger.info("redis_disconnected")
 
 
 app = FastAPI(
     title="Student Grade Manager",
-    # lifespan=lifespan,
+    lifespan=lifespan,
     docs_url=None if settings.ENVIRONMENT == "production" else "/docs",
     redoc_url=None if settings.ENVIRONMENT == "production" else "/redoc",
 )
@@ -57,14 +57,24 @@ app.include_router(user_system_admin_router.router)
 app.include_router(auth_router)
 
 EXCEPTION_STATUS_MAP = {
-    exc.AccessDeniedError: 403,
-    exc.AccountInactiveError: 409,
-    exc.CannotCreateDirectorError: 403,
-    exc.CannotCreateSystemAdminError: 403,
+    exc.InvalidCredentialsError: 401,
     exc.EmptyCredentialsError: 400,
     exc.InvalidAccessTokenError: 401,
-    exc.ExpiredRefreshTokenError: 401,
     exc.InvalidRefreshTokenError: 401,
+    exc.ExpiredRefreshTokenError: 401,
+    exc.AccountInactiveError: 409,
+    exc.AccountLockedError: 403,
+    exc.AccessDeniedError: 403,
+    exc.InvalidInviteTokenError: 400,
+    exc.ExpiredInviteTokenError: 400,
+    exc.InvalidResetPasswordTokenError: 400,
+    exc.ExpiredResetPasswordTokenError: 400,
+    exc.UsernameAlreadyTakenError: 409,
+    exc.DuplicateValueError: 409,
+    exc.MaxNumberOfIdenticalContactError: 409,
+    exc.DateOfBirthNullError: 400,
+    exc.CannotCreateDirectorError: 403,
+    exc.CannotCreateSystemAdminError: 403,
 }
 
 

@@ -7,7 +7,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from jose import ExpiredSignatureError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.auth.repositories import AuthRepository
+from src.auth.repository import AuthRepository
 from src.auth.schemas import (
     ActivateAccountWithToken,
     CreateAccessToken,
@@ -30,7 +30,7 @@ from src.core.security import (
     verify_refresh_token,
     verify_reset_password_token,
 )
-from src.users.repositories import UserRepositoryBase
+from src.users.repository import UserRepositoryBase
 from src.utils.cache_keys import SessionCacheKey
 from src.utils.constants import HTTP400, HTTP401, HTTP403
 from src.utils.enums import UserStatus
@@ -151,7 +151,7 @@ class AuthService:
                 "login_blocked",
                 reason="account_locked",
                 user_id=user.id,
-                locked_until=user.log.locked_until.isoformat(),
+                locked_until=user.login_lockout.locked_until.isoformat(),
             )
 
             raise AccountLockedError(
@@ -168,10 +168,10 @@ class AuthService:
             raise InvalidCredentialsError(HTTP401.INVALID_CREDENTIALS)
 
         if not verify_password(form_data.password, user.password_hash):
-            user.session.failed_login_attempts += 1
+            user.login_lockout.failed_login_attempts += 1
 
-            if user.session.failed_login_attempts >= MAX_FAILED_ATTEMPTS:
-                user.session.locked_until = datetime.now(UTC) + timedelta(
+            if user.login_lockout.failed_login_attempts >= MAX_FAILED_ATTEMPTS:
+                user.login_lockout.locked_until = datetime.now(UTC) + timedelta(
                     minutes=LOCKOUT_MINUTES
                 )
 
@@ -297,6 +297,7 @@ class AuthService:
 
         user.password_hash = hash_password(activation_request.new_password)
         user.is_active = True
+        user.status = UserStatus.ACTIVE
         user.activation.invite_token_hash = None
         user.activation.invite_token_expires_at = None
 
@@ -422,7 +423,7 @@ class AuthService:
             logger.warning(
                 "password_reset_failed",
                 reason="user_not_found",
-                targeted_user_identifier=update_request.username,
+                target_username=update_request.username,
             )
 
             raise InvalidCredentialsError(HTTP401.INVALID_CREDENTIALS)
@@ -445,7 +446,7 @@ class AuthService:
             logger.warning(
                 "reset_password_failed",
                 reason="invalid_reset_password_token",
-                targeted_user_identifier=update_request.identifier,
+                target_username=update_request.username,
             )
 
             raise InvalidResetPasswordTokenError(HTTP400.INVALID_RESET_PASSWORD_TOKEN)
@@ -478,9 +479,7 @@ class AuthService:
         )
 
         if user is not None and user.session is not None:
-            _, hashed_reset_password_token = (
-                generate_reset_password_token()
-            )
+            _, hashed_reset_password_token = generate_reset_password_token()
 
             user.session.reset_password_token_hash = hashed_reset_password_token
             user.session.reset_password_token_expires_at = datetime.now(

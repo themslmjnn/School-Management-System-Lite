@@ -18,3 +18,4 @@ class UserStatus(StrEnum):
     DEACTIVATED = "deactivated"
     PENDING_DELETION = "pending_deletion"
     DELETED = "deleted"
+    PENDING_ACTIVATION = "pending_activation"

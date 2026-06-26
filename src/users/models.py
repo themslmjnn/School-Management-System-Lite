@@ -88,10 +88,6 @@ class UserSession(Base):
         DateTime(timezone=True), nullable=True
     )
     refresh_token_family: Mapped[str | None] = mapped_column(String(64), nullable=True)
-    failed_login_attempts: Mapped[int] = mapped_column(nullable=False, default=0)
-    locked_until: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
     reset_password_token_hash: Mapped[str | None] = mapped_column(nullable=True)
     reset_password_token_expires_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True

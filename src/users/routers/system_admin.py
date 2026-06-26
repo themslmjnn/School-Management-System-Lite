@@ -8,7 +8,8 @@ from src.core.dependencies import (
     require_system_admin,
 )
 from src.users.schemas import (
-    CreateUserAdmin,
+    CreateStaffAdmin,
+    CreateStudentAdmin,
     UserResponseAdminDetailed,
 )
 from src.users.service import UserServiceAdmin
@@ -20,39 +21,54 @@ router = APIRouter(
 
 
 @router.post(
-    "", response_model=UserResponseAdminDetailed, status_code=status.HTTP_201_CREATED
+    "/staff",
+    response_model=UserResponseAdminDetailed,
+    status_code=status.HTTP_201_CREATED,
 )
-async def create_user(
+async def create_staff(
     db: async_db_dependency,
-    # current_user: Annotated[CurrentUser, Depends(require_system_admin)],
-    create_request: CreateUserAdmin,
+    current_user: Annotated[CurrentUser, Depends(require_system_admin)],
+    create_request: CreateStaffAdmin,
 ):
-    return await UserServiceAdmin.create_user(db, create_request)
+    return await UserServiceAdmin.create_staff(db, current_user.id, create_request)
 
 
-@router.get("")
-async def get_users(): ...
+@router.post(
+    "/student",
+    response_model=UserResponseAdminDetailed,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_student(
+    db: async_db_dependency,
+    current_user: Annotated[CurrentUser, Depends(require_system_admin)],
+    create_request: CreateStudentAdmin,
+):
+    return await UserServiceAdmin.create_student(db, current_user.id, create_request)
 
 
-@router.get("/{user_id}")
-async def get_user(): ...
+# @router.get("")
+# async def get_users(): ...
 
 
-@router.delete("/{user_id}")
-async def delete_user(): ...
+# @router.get("/{user_id}")
+# async def get_user(): ...
 
 
-@router.patch("/{user_id}/deactivate")
-async def deactivate_user(): ...
+# @router.delete("/{user_id}")
+# async def delete_user(): ...
 
 
-@router.patch("/{user_id}/activate")
-async def activate_user(): ...
+# @router.patch("/{user_id}/deactivate")
+# async def deactivate_user(): ...
 
 
-@router.patch("/{user_id}")
-async def update_user(): ...
+# @router.patch("/{user_id}/activate")
+# async def activate_user(): ...
 
 
-@router.post("/{user_id}/reset_password_request")
-async def create_reset_password_request(): ...
+# @router.patch("/{user_id}")
+# async def update_user(): ...
+
+
+# @router.post("/{user_id}/reset_password_request")
+# async def create_reset_password_request(): ...

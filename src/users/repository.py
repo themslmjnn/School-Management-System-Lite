@@ -1,20 +1,19 @@
-from typing import Literal
-
 from pydantic import EmailStr
-from sqlalchemy import and_, func, or_, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
-from src.users.models import User, UserActivation, UserSession
+from src.users.models import User, UserActivation, UserLoginLockout, UserSession
 from src.utils.enums import UserRole
+
+ENTITY_TYPE = User | UserSession | UserActivation | UserLoginLockout
 
 
 class UserRepositoryBase:
     @staticmethod
-    def add_entity(
-        db: AsyncSession, new_entity: User | UserSession | UserActivation
-    ) -> None:
-        db.add(new_entity)
+    def add_entity(db: AsyncSession, **new_entity: ENTITY_TYPE) -> None:
+        for entity in new_entity.values():
+            db.add(entity)
 
     @staticmethod
     async def get_user_by_id(
@@ -44,21 +43,21 @@ class UserRepositoryBase:
     @staticmethod
     async def count_users_with_contact(
         db: AsyncSession,
-        role: UserRole,
+        role: UserRole | None,
         *,
         phone_number: str,
         email: EmailStr,
-        match_mode: Literal["all", "any"] = "all",
     ) -> int:
-        contact_filter = (
-            and_(User.email == email, User.phone_number == phone_number)
-            if match_mode == "all"
-            else or_(User.email == email, User.phone_number == phone_number)
+        role_filter = (
+            User.role != UserRole.STUDENT if role is None else User.role == role
         )
 
         query = select(func.count(User.id)).where(
-            User.role == role,
-            contact_filter,
+            role_filter,
+            or_(
+                User.email == email,
+                User.phone_number == phone_number,
+            ),
         )
 
         result = await db.execute(query)

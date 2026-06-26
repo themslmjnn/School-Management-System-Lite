@@ -7,15 +7,13 @@ from src.utils.base_schema import BaseSchema
 from src.utils.enums import UserRole, UserStatus
 
 
-class CreateUserAdmin(BaseModel):
+class CreateUserBase(BaseModel):
     username: str = Field(min_length=6, max_length=20)
     firstname: str = Field(min_length=2, max_length=50)
     lastname: str = Field(min_length=2, max_length=50)
     middlename: str | None = Field(min_length=2, max_length=50, default=None)
-    date_of_birth: date | None = Field(default=None)
     phone_number: str
     email: EmailStr
-    address: str | None = Field(min_length=15, max_length=100, default=None)
     role: UserRole
 
     @field_validator("username")
@@ -40,28 +38,35 @@ class CreateUserAdmin(BaseModel):
             return None
         return validators.validate_middlename(v)
 
-    @field_validator("date_of_birth")
-    @classmethod
-    def validate_date_of_birth(cls, v: date | None) -> date | None:
-        if v is None:
-            return None
-        return validators.validate_date_of_birth(v)
-
     @field_validator("phone_number")
     @classmethod
     def validate_phone_number(cls, v: str) -> str:
         return validators.validate_phone_number(v)
 
 
-class UserResponseAdmin(BaseSchema):
-    id: int
+class CreateStaffAdmin(CreateUserBase):
+    pass
+
+
+class CreateStudentAdmin(CreateUserBase):
+    date_of_birth: date
+    address: str | None = Field(min_length=15, max_length=100, default=None)
+
+    @field_validator("date_of_birth")
+    @classmethod
+    def validate_date_of_birth(cls, v: date) -> date:
+        return validators.validate_date_of_birth(v)
+
+
+class UserResponseAdmin(BaseModel):
     firstname: str
     lastname: str
     middlename: str | None
     role: UserRole
 
 
-class UserResponseAdminDetailed(UserResponseAdmin):
+class UserResponseAdminDetailed(UserResponseAdmin, BaseSchema):
+    id: int
     date_of_birth: date | None
     phone_number: str
     email: EmailStr

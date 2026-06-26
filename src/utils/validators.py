@@ -134,4 +134,4 @@ def validate_phone_number(phone_number: str) -> str:
             "Phone number must not exceed 15 digits",
         )
 
-    return phone_number
+    return digits

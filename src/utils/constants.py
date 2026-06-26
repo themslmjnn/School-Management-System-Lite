@@ -1,3 +1,10 @@
+class HTTP400:
+    INVITE_TOKEN_USED = "Account already activated or was never invited"
+    INVALID_INVITE_TOKEN = "Invalid invite token"
+    EXPIRED_INVITE_TOKEN = "Expired invite token"
+    DATE_OF_BIRTH = "Date of birth should not be None for Students"
+
+
 class HTTP401:
     INVALID_CREDENTIALS = "Invalid credentials"
     ACCOUNT_NOT_ACTIVATED = "Account has not been activated yet"
@@ -13,7 +20,6 @@ class HTTP403:
     ACCOUNT_DEACTIVATED = "Your account has been deactivated"
 
 
-class HTTP400:
-    INVITE_TOKEN_USED = "Account already activated or was never invited"
-    INVALID_INVITE_TOKEN = "Invalid invite token"
-    EXPIRED_INVITE_TOKEN = "Expired invite token"
+class HTTP409:
+    USERNAME = "Username already taken"
+    DUPLICATE_VALUE = "User with the following credentials already exists"

@@ -1,33 +1,15 @@
+from sqlalchemy.exc import IntegrityError
+
+from src.utils.constants import HTTP409
+
+
 class AppException(Exception):
     def __init__(self, detail: str):
         self.detail = detail
         super().__init__(detail)
 
 
-class InvalidAccessTokenError(AppException):
-    pass
-
-
-class AccountInactiveError(AppException):
-    pass
-
-
-class AccessDeniedError(AppException):
-    pass
-
-
-class CannotCreateSystemAdminError(AppException):
-    pass
-
-
-class CannotCreateDirectorError(AppException):
-    pass
-
-
-class MaxNumberOfIdenticalCredentialsError(AppException):
-    pass
-
-
+# AUTHENTICATION
 class EmptyCredentialsError(AppException):
     pass
 
@@ -36,7 +18,7 @@ class InvalidCredentialsError(AppException):
     pass
 
 
-class AccountLockedError(AppException):
+class InvalidAccessTokenError(AppException):
     pass
 
 
@@ -48,6 +30,20 @@ class ExpiredRefreshTokenError(AppException):
     pass
 
 
+class AccountInactiveError(AppException):
+    pass
+
+
+class AccountLockedError(AppException):
+    pass
+
+
+# AUTHORIZATION
+class AccessDeniedError(AppException):
+    pass
+
+
+# NON-AUTH TOKENS
 class InvalidInviteTokenError(AppException):
     pass
 
@@ -62,3 +58,39 @@ class InvalidResetPasswordTokenError(AppException):
 
 class ExpiredResetPasswordTokenError(AppException):
     pass
+
+
+# USER
+class UsernameAlreadyTakenError(AppException):
+    pass
+
+
+class DuplicateValueError(AppException):
+    pass
+
+
+class MaxNumberOfIdenticalContactError(AppException):
+    pass
+
+
+class DateOfBirthNullError(AppException):
+    pass
+
+
+# ROLE RESTRICTIONS
+class CannotCreateSystemAdminError(AppException):
+    pass
+
+
+class CannotCreateDirectorError(AppException):
+    pass
+
+
+def handle_user_integrity_error(error: IntegrityError) -> None:
+    error_str = str(error.orig)
+
+    if "users_username_key" in error_str:
+        raise UsernameAlreadyTakenError(HTTP409.USERNAME)
+
+    if "uix_non_student_unique_contact" in error_str:
+        raise DuplicateValueError(HTTP409.DUPLICATE_VALUE)
