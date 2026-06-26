@@ -3,6 +3,7 @@ import hmac
 import secrets
 from datetime import UTC, datetime, timedelta
 
+from fastapi.concurrency import run_in_threadpool
 from jose import ExpiredSignatureError, JWTError, jwt
 from passlib.context import CryptContext
 
@@ -48,34 +49,6 @@ def decode_access_token(access_token: str) -> dict:
         raise ValueError(HTTP401.INVALID_ACCESS_TOKEN) from exc
 
 
-def generate_invite_token() -> tuple[str, str]:
-    raw_invite_token = secrets.token_urlsafe(32)
-    hashed_invite_token = hashlib.sha256(raw_invite_token.encode()).hexdigest()
-
-    return raw_invite_token, hashed_invite_token
-
-
-def verify_invite_token(raw_invite_token: str, hashed_invite_token: str) -> bool:
-    return hmac.compare_digest(
-        hashlib.sha256(raw_invite_token.encode()).hexdigest(),
-        hashed_invite_token,
-    )
-
-
-# async def hash_password(password: str) -> str:
-#     return await run_in_threadpool(
-#         bcrypt_context.hashpw, password.encode(), bcrypt_context.gensalt()
-#     )
-
-
-def hash_password(password: str) -> str:
-    return bcrypt_context.hash(password)
-
-
-def verify_password(plain_password: str, hashed_password: str) -> bool:
-    return bcrypt_context.verify(plain_password, hashed_password)
-
-
 def create_refresh_token(payload: CreateRefreshToken) -> tuple[str, str]:
     raw_refresh_token = jwt.encode(
         {
@@ -116,6 +89,30 @@ def verify_refresh_token(raw_refresh_token: str, hashed_refresh_token: str) -> b
     return hmac.compare_digest(
         hashlib.sha256(raw_refresh_token.encode()).hexdigest(),
         hashed_refresh_token,
+    )
+
+
+def generate_invite_token() -> tuple[str, str]:
+    raw_invite_token = secrets.token_urlsafe(32)
+    hashed_invite_token = hashlib.sha256(raw_invite_token.encode()).hexdigest()
+
+    return raw_invite_token, hashed_invite_token
+
+
+def verify_invite_token(raw_invite_token: str, hashed_invite_token: str) -> bool:
+    return hmac.compare_digest(
+        hashlib.sha256(raw_invite_token.encode()).hexdigest(),
+        hashed_invite_token,
+    )
+
+
+async def hash_password(password: str) -> str:
+    return await run_in_threadpool(bcrypt_context.hash, password)
+
+
+async def verify_password(plain_password: str, hashed_password: str) -> bool:
+    return await run_in_threadpool(
+        bcrypt_context.verify, plain_password, hashed_password
     )
 
 

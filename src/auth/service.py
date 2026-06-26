@@ -167,7 +167,7 @@ class AuthService:
 
             raise InvalidCredentialsError(HTTP401.INVALID_CREDENTIALS)
 
-        if not verify_password(form_data.password, user.password_hash):
+        if not await verify_password(form_data.password, user.password_hash):
             user.login_lockout.failed_login_attempts += 1
 
             if user.login_lockout.failed_login_attempts >= MAX_FAILED_ATTEMPTS:
@@ -295,7 +295,7 @@ class AuthService:
 
             raise InvalidInviteTokenError(HTTP400.INVALID_INVITE_TOKEN)
 
-        user.password_hash = hash_password(activation_request.new_password)
+        user.password_hash = await hash_password(activation_request.new_password)
         user.is_active = True
         user.status = UserStatus.ACTIVE
         user.activation.invite_token_hash = None
@@ -451,7 +451,7 @@ class AuthService:
 
             raise InvalidResetPasswordTokenError(HTTP400.INVALID_RESET_PASSWORD_TOKEN)
 
-        user.password_hash = hash_password(update_request.new_password)
+        user.password_hash = await hash_password(update_request.new_password)
         user.session.reset_password_token_hash = None
         user.session.reset_password_token_expires_at = None
         user.session.access_token_version += 1
