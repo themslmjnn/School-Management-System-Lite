@@ -102,11 +102,19 @@ class GuardianLinkNotFoundError(AppException):
     pass
 
 
-def handle_user_integrity_error(error: IntegrityError) -> None:
+class PendingEmailNotFoundError(AppException):
+    pass
+
+
+def handle_username_integrity_error(error: IntegrityError) -> None:
     error_str = str(error.orig)
 
     if "users_username_key" in error_str:
         raise UsernameAlreadyTakenError(HTTP409.USERNAME)
+
+
+def handle_non_student_unique_contact_error(error: IntegrityError) -> None:
+    error_str = str(error.orig)
 
     if "uix_non_student_unique_contact" in error_str:
         raise DuplicateValueError(HTTP409.DUPLICATE_VALUE)

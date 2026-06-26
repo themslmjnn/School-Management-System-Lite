@@ -16,7 +16,8 @@ from src.utils.exceptions import (
     CannotCreateSystemAdminError,
     DateOfBirthNullError,
     MaxNumberOfIdenticalContactError,
-    handle_user_integrity_error,
+    handle_non_student_unique_contact_error,
+    handle_username_integrity_error,
 )
 
 logger = get_logger(__name__)
@@ -40,13 +41,13 @@ async def _check_contact_limit(
         email=create_request.email,
     )
 
-    if existing_count > max_allowed:
+    if existing_count >= max_allowed:
         logger.warning(
             "user_creation_denied",
             actor_user_id=current_user_id,
             target_email=create_request.email,
             target_username=create_request.username,
-            requested_role=role.value,
+            requested_role=create_request.role,
             denial_reason="maximum_number_of_identical_contact_reached",
         )
         raise MaxNumberOfIdenticalContactError(
@@ -155,7 +156,8 @@ class UserServiceAdmin:
                 requested_by=current_user_id,
             )
 
-            handle_user_integrity_error(e)
+            handle_username_integrity_error(e)
+            handle_non_student_unique_contact_error(e)
             raise
 
     @staticmethod
@@ -247,4 +249,5 @@ class UserServiceAdmin:
                 requested_by=current_user_id,
             )
 
+            handle_username_integrity_error(e)
             raise

@@ -2,8 +2,9 @@ from collections.abc import AsyncGenerator
 from dataclasses import dataclass
 from typing import Annotated
 
-from fastapi import Depends
+from fastapi import Depends, Query
 from fastapi.security import OAuth2PasswordBearer
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.caching import get_cache, set_cache
@@ -101,3 +102,11 @@ def require_roles(*roles: UserRole):
 
 
 require_system_admin = require_roles(UserRole.SYSTEM_ADMIN)
+
+
+class PaginationParams(BaseModel):
+    skip: int = Query(ge=0, default=0)
+    limit: int = Query(ge=1, le=100, default=10)
+
+
+pagination_dependency = Annotated[PaginationParams, Depends(PaginationParams)]

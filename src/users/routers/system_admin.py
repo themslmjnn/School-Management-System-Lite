@@ -46,8 +46,10 @@ async def create_student(
     return await UserServiceAdmin.create_student(db, current_user.id, create_request)
 
 
-# @router.get("")
-# async def get_users(): ...
+@router.get(
+    "",
+)
+async def get_users(): ...
 
 
 # @router.get("/{user_id}")

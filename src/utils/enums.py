@@ -24,3 +24,17 @@ class UserStatus(StrEnum):
 class GuardianPriority(StrEnum):
     PRIMARY = "primary"
     SECONDARY = "secondary"
+
+
+class EmailType(StrEnum):
+    INVITE = "invite"
+    PASSWORD_RESET_ADMIN = "password_reset_admin"
+    ACTIVATION_WITH_TOKEN = "activation_with_token"
+    ACCOUNT_DEACTIVATION = "account_deactivation"
+    ACCOUNT_ACTIVATION = "account_activation"
+
+
+class EmailSendingStatus(StrEnum):
+    PENDING = "pending"
+    SENT = "sent"
+    FAILED = "failed"

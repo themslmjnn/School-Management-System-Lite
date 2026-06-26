@@ -23,7 +23,18 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRES_MINUTES: int = 15
     REFRESH_TOKEN_EXPIRES_DAYS: int = 7
 
-    INVITE_TOKEN_EXPIRES_HOURS: int = 24
+    INVITE_TOKEN_EXPIRES_HOURS: int = 48
+    RESET_PASSWORD_EXPIRES_MINUTES: int = 15
+    EMAIL_CHANGE_CODE_EXPIRES_MINUTES: int = 15
+
+    RESEND_API_KEY: str
+    MAIL_FROM: str = "onboarding@resend.dev"
+    MAIL_FROM_NAME: str = "LFGS | SGM"
+
+    MAILTRAP_HOST: str = "sandbox.smtp.mailtrap.io"
+    MAILTRAP_PORT: int = 587
+    MAILTRAP_USERNAME: str
+    MAILTRAP_PASSWORD: str
 
     @field_validator("ENVIRONMENT")
     @classmethod

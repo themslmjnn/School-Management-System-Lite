@@ -1,6 +1,6 @@
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
 from slowapi.errors import RateLimitExceeded
 from slowapi.extension import _rate_limit_exceeded_handler
@@ -79,6 +79,7 @@ EXCEPTION_STATUS_MAP = {
     exc.GuardianLinkAlreadyExistsError: 409,
     exc.GuardianSlotAlreadyFilledError: 400,
     exc.InvalidGuardianLinkError: 400,
+    exc.PendingEmailNotFoundError: 404,
 }
 
 
@@ -101,7 +102,8 @@ async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONR
         error=str(exc),
         path=request.url.path,
     )
+
     return JSONResponse(
-        status_code=500,
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content={"detail": "An internal error occurred"},
     )

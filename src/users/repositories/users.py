@@ -1,3 +1,4 @@
+# 1. src/users/repositories/users.py
 from pydantic import EmailStr
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession

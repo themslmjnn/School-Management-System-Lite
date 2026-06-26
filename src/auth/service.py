@@ -1,3 +1,5 @@
+# 3. src/auth/service.py
+
 import hmac
 import secrets
 from datetime import UTC, datetime, timedelta
