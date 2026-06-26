@@ -1,0 +1,43 @@
+from sqlalchemy import Enum as SQLEnum
+from sqlalchemy import ForeignKey, Index, UniqueConstraint, text
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from src.database import Base
+from src.utils.enums import GuardianPriority
+
+
+class StudentGuardianLink(Base):
+    __tablename__ = "student_guardian_links"
+
+    parent_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    student_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    priority: Mapped[GuardianPriority] = mapped_column(
+        SQLEnum(GuardianPriority), nullable=False, default=GuardianPriority.SECONDARY
+    )
+
+    __table_args__ = (
+        UniqueConstraint("parent_id", "student_id", name="uix_parent_student_pair"),
+        Index(
+            "uix_one_primary_guardian_per_student",
+            "student_id",
+            unique=True,
+            postgresql_where=text("priority = 'PRIMARY'"),
+        ),
+        Index(
+            "uix_one_secondary_guardian_per_student",
+            "student_id",
+            unique=True,
+            postgresql_where=text("priority = 'SECONDARY'"),
+        ),
+    )
+
+    parent: Mapped["User"] = relationship(
+        "User", foreign_keys="[StudentGuardianLink.parent_id]"
+    )
+    student: Mapped["User"] = relationship(
+        "User", foreign_keys="[StudentGuardianLink.student_id]"
+    )

@@ -19,3 +19,8 @@ class UserStatus(StrEnum):
     PENDING_DELETION = "pending_deletion"
     DELETED = "deleted"
     PENDING_ACTIVATION = "pending_activation"
+
+
+class GuardianPriority(StrEnum):
+    PRIMARY = "primary"
+    SECONDARY = "secondary"

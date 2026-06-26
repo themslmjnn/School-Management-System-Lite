@@ -86,6 +86,22 @@ class CannotCreateDirectorError(AppException):
     pass
 
 
+class InvalidGuardianLinkError(AppException):
+    pass
+
+
+class GuardianLinkAlreadyExistsError(AppException):
+    pass
+
+
+class GuardianSlotAlreadyFilledError(AppException):
+    pass
+
+
+class GuardianLinkNotFoundError(AppException):
+    pass
+
+
 def handle_user_integrity_error(error: IntegrityError) -> None:
     error_str = str(error.orig)
 

@@ -6,9 +6,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.core.config import settings
 from src.core.logging import get_logger
 from src.core.security import generate_invite_token
-from src.users.models import User, UserActivation, UserLoginLockout, UserSession
-from src.users.repository import UserRepositoryBase
-from src.users.schemas import CreateStaffAdmin, CreateStudentAdmin
+from src.users.models.users import User, UserActivation, UserLoginLockout, UserSession
+from src.users.repositories.users import UserRepositoryBase
+from src.users.schemas.users import CreateStaffAdmin, CreateStudentAdmin
 from src.utils.constants import HTTP400
 from src.utils.enums import UserRole, UserStatus
 from src.utils.exceptions import (

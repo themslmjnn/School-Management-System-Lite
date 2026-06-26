@@ -7,12 +7,12 @@ from src.core.dependencies import (
     async_db_dependency,
     require_system_admin,
 )
-from src.users.schemas import (
+from src.users.schemas.users import (
     CreateStaffAdmin,
     CreateStudentAdmin,
     UserResponseAdminDetailed,
 )
-from src.users.service import UserServiceAdmin
+from src.users.services.users import UserServiceAdmin
 
 router = APIRouter(
     prefix="/users",

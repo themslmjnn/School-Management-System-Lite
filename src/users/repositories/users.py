@@ -3,7 +3,7 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
-from src.users.models import User, UserActivation, UserLoginLockout, UserSession
+from src.users.models.users import User, UserActivation, UserLoginLockout, UserSession
 from src.utils.enums import UserRole
 
 ENTITY_TYPE = User | UserSession | UserActivation | UserLoginLockout

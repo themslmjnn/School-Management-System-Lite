@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.core.caching import get_cache, set_cache
 from src.core.security import decode_access_token
 from src.database import AsyncSessionLocal
-from src.users.repository import UserRepositoryBase
+from src.users.repositories.users import UserRepositoryBase
 from src.utils.cache_keys import SessionCacheKey
 from src.utils.constants import HTTP401, HTTP403
 from src.utils.enums import UserRole

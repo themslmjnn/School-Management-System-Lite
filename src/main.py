@@ -75,6 +75,10 @@ EXCEPTION_STATUS_MAP = {
     exc.DateOfBirthNullError: 400,
     exc.CannotCreateDirectorError: 403,
     exc.CannotCreateSystemAdminError: 403,
+    exc.GuardianLinkNotFoundError: 404,
+    exc.GuardianLinkAlreadyExistsError: 409,
+    exc.GuardianSlotAlreadyFilledError: 400,
+    exc.InvalidGuardianLinkError: 400,
 }
 
 
