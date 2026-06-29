@@ -1,3 +1,4 @@
+import asyncio
 from datetime import UTC, datetime, timedelta
 
 from sqlalchemy.exc import IntegrityError
@@ -6,19 +7,23 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.core.config import settings
 from src.core.logging import get_logger
 from src.core.security import generate_invite_token
+from src.emails.repository import PendingEmailRepository
 from src.users.models.users import User, UserActivation, UserLoginLockout, UserSession
 from src.users.repositories.users import UserRepositoryBase
 from src.users.schemas.users import CreateStaffAdmin, CreateStudentAdmin
-from src.utils.constants import HTTP400
-from src.utils.enums import UserRole, UserStatus
+from src.utils import email as email_sender
+from src.utils.constants import HTTP400, HTTP404
+from src.utils.enums import EmailType, UserRole, UserStatus
 from src.utils.exceptions import (
     CannotCreateDirectorError,
     CannotCreateSystemAdminError,
     DateOfBirthNullError,
     MaxNumberOfIdenticalContactError,
+    UserNotFoundError,
     handle_non_student_unique_contact_error,
     handle_username_integrity_error,
 )
+from src.utils.helpers import ensure_exists, update_object
 
 logger = get_logger(__name__)
 
@@ -132,7 +137,20 @@ class UserServiceAdmin:
                 user_login_lockout=new_user_login_lockout,
             )
 
-            print(raw_invite_token)
+            subject, html_body, text_body = email_sender.build_invite_email(
+                raw_invite_token, new_user.email
+            )
+
+            PendingEmailRepository.add_pending_email(
+                db,
+                recipient=new_user.email,
+                subject=subject,
+                html_body=html_body,
+                text_body=text_body,
+                email_type=EmailType.INVITE,
+                triggered_by=current_user_id,
+                recipient_user_id=new_user.id,
+            )
 
             await db.commit()
             await db.refresh(new_user)
@@ -225,7 +243,20 @@ class UserServiceAdmin:
                 user_login_lockout=new_user_login_lockout,
             )
 
-            print(raw_invite_token)
+            subject, html_body, text_body = email_sender.build_invite_email(
+                raw_invite_token, new_user.email
+            )
+
+            PendingEmailRepository.add_pending_email(
+                db,
+                recipient=new_user.email,
+                subject=subject,
+                html_body=html_body,
+                text_body=text_body,
+                email_type=EmailType.INVITE,
+                triggered_by=current_user_id,
+                recipient_user_id=new_user.id,
+            )
 
             await db.commit()
             await db.refresh(new_user)
@@ -251,3 +282,30 @@ class UserServiceAdmin:
 
             handle_username_integrity_error(e)
             raise
+
+    @staticmethod
+    async def delete_parent(db: AsyncSession, current_user_id: int, target_user_id: int) -> None:
+        user_to_be_deleted = await UserRepositoryBase.get_parent(db, target_user_id)
+        ensure_exists(user_to_be_deleted, UserNotFoundError(HTTP404.USER))
+
+        UserRepositoryBase.delete_user(db, user_to_be_deleted)
+        
+        asyncio.create_task(
+            email_sender.send_safe(
+                email_sender.send_user_deletion_email(),
+                email_type="account_deletion",
+            )
+        )
+        
+        deleted_user_id, deleted_user_username = user_to_be_deleted.id, user_to_be_deleted.username
+
+        await db.commit()
+
+        logger.info(
+            "user_successfully_delete",
+            deleted_user_id=deleted_user_id,
+            deleted_user_username=deleted_user_username,
+            deleted_user_role=UserRole.PARENT,
+            delete_by=current_user_id,
+        )
+

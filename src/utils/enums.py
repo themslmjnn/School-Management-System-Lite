@@ -32,6 +32,7 @@ class EmailType(StrEnum):
     ACTIVATION_WITH_TOKEN = "activation_with_token"
     ACCOUNT_DEACTIVATION = "account_deactivation"
     ACCOUNT_ACTIVATION = "account_activation"
+    ACCOUNT_DELETION = "account_deletion"
 
 
 class EmailSendingStatus(StrEnum):

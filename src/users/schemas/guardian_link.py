@@ -9,14 +9,13 @@ class CreateGuardianLink(BaseModel):
     student_id: int
     priority: GuardianPriority = GuardianPriority.SECONDARY
 
-
-class UpdateGuardianPriority(BaseModel):
-    priority: GuardianPriority
-
-
 class GuardianLinkResponse(BaseSchema):
     parent_id: int
     student_id: int
+    priority: GuardianPriority
+
+
+class UpdateGuardianPriority(BaseModel):
     priority: GuardianPriority
 
 

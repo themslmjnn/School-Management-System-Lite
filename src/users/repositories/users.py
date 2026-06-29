@@ -1,6 +1,5 @@
-# 1. src/users/repositories/users.py
 from pydantic import EmailStr
-from sqlalchemy import func, or_, select
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
@@ -64,3 +63,27 @@ class UserRepositoryBase:
         result = await db.execute(query)
 
         return result.scalar()
+    
+    @staticmethod
+    async def get_parent(db: AsyncSession, target_user_id: int) -> User | None:
+        query = (
+            select(User)
+            .where(
+                and_(
+                    User.id == target_user_id,
+                    User.role == UserRole.PARENT,
+                )
+            )
+        )
+
+        result = await db.execute(query)
+
+        return result.scalar_one_or_none()
+    
+    @staticmethod
+    def delete_user(db: AsyncSession, user_to_be_deleted: User) -> None:
+        db.delete(user_to_be_deleted)
+
+    # @staticmethod
+    # async def delete_entity(db: AsyncSession, entity: ENTITY_TYPE) -> None:
+

@@ -153,3 +153,6 @@ async def send_invite_email(email: str, raw_invite_token: str) -> None:
     subject, html, text = build_invite_email(raw_invite_token, email)
 
     await send(subject=subject, to_email=email, html_body=html, text_body=text)
+
+
+async def send_user_deletion_email(): ...

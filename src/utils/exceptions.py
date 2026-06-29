@@ -106,6 +106,10 @@ class PendingEmailNotFoundError(AppException):
     pass
 
 
+class UserNotFoundError(AppException):
+    pass
+
+
 def handle_username_integrity_error(error: IntegrityError) -> None:
     error_str = str(error.orig)
 

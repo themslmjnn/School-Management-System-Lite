@@ -80,3 +80,17 @@ class UserResponseAdminDetailed(UserResponseAdmin, BaseSchema):
     @field_serializer("created_at", "updated_at")
     def serialize_updated_at(self, value: datetime) -> str:
         return value.strftime("%d %b %Y, %H:%M")
+
+
+class SearchUserBase(BaseModel):
+    firstname: str | None = Field(default=None, max_length=50)
+    lastname: str | None = Field(default=None, max_length=50)
+    middlename: str | None = Field(default=None, max_length=50)
+    email: str | None = Field(default=None, max_length=20)
+    phone_number: str | None = Field(default=None, max_length=15)
+    role: UserRole | None = None
+    is_active: bool | None = None
+
+
+class SearchUserAdmin(SearchUserBase):
+    username: str | None = Field(default=None, max_length=15)

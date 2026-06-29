@@ -19,7 +19,9 @@ class HTTP403:
     ACCESS_DENIED = "Access denied"
     ACCOUNT_DEACTIVATED = "Your account has been deactivated"
 
-
+class HTTP404:
+    USER = "User not found"
+    
 class HTTP409:
     USERNAME = "Username already taken"
     DUPLICATE_VALUE = "User with the following credentials already exists"
