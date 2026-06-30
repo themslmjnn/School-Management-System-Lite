@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.core.logging import get_logger
 from src.users.models.guardian_link import StudentGuardianLink
 from src.users.repositories.guardian_link import GuardianLinkRepository
-from src.users.repositories.users import UserRepositoryBase
+from users.repositories.users_admin import UserRepositoryBase
 from src.users.schemas.guardian_link import (
     ChildResponse,
     CreateGuardianLink,

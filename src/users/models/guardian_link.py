@@ -35,9 +35,9 @@ class StudentGuardianLink(Base):
         ),
     )
 
-    parent: Mapped["User"] = relationship( # noqa: F821
+    parent: Mapped["User"] = relationship(  # noqa: F821
         "User", foreign_keys="[StudentGuardianLink.parent_id]"
     )
-    student: Mapped["User"] = relationship( # noqa: F821
+    student: Mapped["User"] = relationship(  # noqa: F821
         "User", foreign_keys="[StudentGuardianLink.student_id]"
     )

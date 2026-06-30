@@ -1,10 +1,10 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.email.enums import EmailSendingStatus
-from src.email.models import PendingEmail
+from src.emails.models import PendingEmail
+from src.utils.enums import EmailSendingStatus
 
 
 class PendingEmailRepository:
@@ -26,7 +26,7 @@ class PendingEmailRepository:
             html_body=html_body,
             text_body=text_body,
             email_type=email_type,
-            status="pending",
+            status=EmailSendingStatus.PENDING,
             triggered_by=triggered_by,
             recipient_user_id=recipient_user_id,
         )
@@ -36,7 +36,9 @@ class PendingEmailRepository:
     @staticmethod
     async def _count_failed(db: AsyncSession) -> int:
         query = select(func.count()).select_from(
-            select(PendingEmail).where(PendingEmail.status == "failed").subquery()
+            select(PendingEmail)
+            .where(PendingEmail.status == EmailSendingStatus.FAILED)
+            .subquery()
         )
 
         result = await db.execute(query)
@@ -45,13 +47,12 @@ class PendingEmailRepository:
 
     @staticmethod
     async def get_pending_emails(
-        db: AsyncSession,
-        limit: int = 10,
+        db: AsyncSession, limit: int = 10
     ) -> list[PendingEmail]:
         query = (
             select(PendingEmail)
             .where(
-                PendingEmail.status == EmailSendingStatus.pending,
+                PendingEmail.status == EmailSendingStatus.PENDING,
                 PendingEmail.retry_count < 3,
             )
             .order_by(PendingEmail.created_at.asc())
@@ -72,7 +73,7 @@ class PendingEmailRepository:
 
         query = (
             select(PendingEmail)
-            .where(PendingEmail.status == "failed")
+            .where(PendingEmail.status == EmailSendingStatus.FAILED)
             .order_by(PendingEmail.created_at.desc())
             .offset(skip)
             .limit(limit)
@@ -92,7 +93,7 @@ class PendingEmailRepository:
         count_query = select(func.count()).select_from(
             select(PendingEmail)
             .where(
-                PendingEmail.status == "failed",
+                PendingEmail.status == EmailSendingStatus.FAILED,
                 PendingEmail.triggered_by == triggered_by,
             )
             .subquery()
@@ -103,7 +104,7 @@ class PendingEmailRepository:
         query = (
             select(PendingEmail)
             .where(
-                PendingEmail.status == "failed",
+                PendingEmail.status == EmailSendingStatus.FAILED,
                 PendingEmail.triggered_by == triggered_by,
             )
             .order_by(PendingEmail.created_at.desc())
@@ -137,7 +138,7 @@ class PendingEmailRepository:
     @staticmethod
     async def mark_sent(db: AsyncSession, record: PendingEmail) -> None:
         record.status = "sent"
-        record.sent_at = datetime.now(timezone.utc)
+        record.sent_at = datetime.now(UTC)
 
         await db.commit()
 
@@ -149,7 +150,7 @@ class PendingEmailRepository:
         record.last_error = error
 
         if record.retry_count >= 3:
-            record.status = "failed"
+            record.status = EmailSendingStatus.FAILED
 
         await db.commit()
 
@@ -158,7 +159,7 @@ class PendingEmailRepository:
         db: AsyncSession,
         record: PendingEmail,
     ) -> None:
-        record.status = "pending"
+        record.status = EmailSendingStatus.PENDING
         record.retry_count = 0
         record.last_error = None
 

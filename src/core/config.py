@@ -116,6 +116,12 @@ class Settings(BaseSettings):
     def cookie_secure(self) -> bool:
         return self.ENVIRONMENT == "production"
 
+    @property
+    def APP_URL(self) -> str:
+        if self.ENVIRONMENT == "production":
+            return "https://sgm.com"
+        return "http://localhost:8000"
+
     model_config = SettingsConfigDict(env_file=".env")
 
 

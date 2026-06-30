@@ -39,3 +39,14 @@ class EmailSendingStatus(StrEnum):
     PENDING = "pending"
     SENT = "sent"
     FAILED = "failed"
+
+
+class UserSortField(StrEnum):
+    created_at = "created_at"
+    first_name = "first_name"
+    last_name = "last_name"
+
+
+class OrderBy(StrEnum):
+    asc = "asc"
+    desc = "desc"

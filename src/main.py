@@ -1,4 +1,3 @@
-import asyncio
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request, status
@@ -11,11 +10,10 @@ from src.api.health import router as health_router
 from src.auth.router import router as auth_router
 from src.core.caching import redis_client
 from src.core.config import settings
-from src.core.email_worker import run_email_worker
 from src.core.limiter import ip_limiter
 from src.core.logging import get_logger, setup_logging
-from src.users.routers import system_admin as user_system_admin_router
 from src.utils import exceptions as exc
+from users.routers import router_admin as user_system_admin_router
 
 setup_logging()
 
@@ -36,18 +34,7 @@ async def lifespan(app: FastAPI):
             error=str(e),
         )
 
-    email_worker_task = asyncio.create_task(run_email_worker())
-
-    logger.info("email_worker_task_started")
-
     yield
-
-    email_worker_task.cancel()
-    try:
-        await email_worker_task
-    except (asyncio.CancelledError, Exception):
-        logger.info("email_worker_stopped")
-        raise
 
     await redis_client.aclose()
 
@@ -94,6 +81,9 @@ EXCEPTION_STATUS_MAP = {
     exc.InvalidGuardianLinkError: 400,
     exc.PendingEmailNotFoundError: 404,
     exc.UserNotFoundError: 404,
+    exc.NoChangesDetectedError: 409,
+    exc.UserAlreadyInactiveError: 409,
+    exc.CannotCreateStudentError: 400,
 }
 
 

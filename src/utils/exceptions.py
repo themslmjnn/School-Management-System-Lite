@@ -110,6 +110,22 @@ class UserNotFoundError(AppException):
     pass
 
 
+class NoChangesDetectedError(AppException):
+    pass
+
+
+class UserAlreadyInactiveError(AppException):
+    pass
+
+
+class CannotCreateStudentError(AppException):
+    pass
+
+
+class UserAlreadyActiveError(AppException):
+    pass
+
+
 def handle_username_integrity_error(error: IntegrityError) -> None:
     error_str = str(error.orig)
 
