@@ -69,7 +69,7 @@ class DuplicateValueError(AppException):
     pass
 
 
-class MaxNumberOfIdenticalContactError(AppException):
+class MaxNumberOfIdenticalContactsError(AppException):
     pass
 
 

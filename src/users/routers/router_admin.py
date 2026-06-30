@@ -19,8 +19,8 @@ from src.users.schemas.users import (
     UserResponseAdmin,
     UserResponseAdminDetailed,
 )
-from users.services.user_management import UserServiceAdmin
 from src.utils.enums import OrderBy, UserSortField
+from users.services.user_management import UserServiceAdmin
 
 router = APIRouter(
     prefix="/users",

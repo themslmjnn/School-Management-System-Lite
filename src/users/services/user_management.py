@@ -27,7 +27,7 @@ from src.utils.exceptions import (
     CannotCreateDirectorError,
     CannotCreateStudentError,
     CannotCreateSystemAdminError,
-    MaxNumberOfIdenticalContactError,
+    MaxNumberOfIdenticalContactsError,
     UserAlreadyActiveError,
     UserAlreadyInactiveError,
     UserNotFoundError,
@@ -63,15 +63,14 @@ async def _check_contact_limit(
         logger.warning(
             "user_registration_denied",
             actor_user_id=current_user_id,
-            target_email=create_request.email,
             target_username=create_request.username,
             requested_role=UserRole.STUDENT
             if role == UserRole.STUDENT
             else create_request.role,
-            denial_reason="maximum_number_of_identical_contact_reached",
+            denial_reason="maximum_number_of_identical_contacts_reached",
         )
 
-        raise MaxNumberOfIdenticalContactError(
+        raise MaxNumberOfIdenticalContactsError(
             f"Maximum number of {'students' if role == UserRole.STUDENT else 'staff'} with identical contact details reached"
         )
 
@@ -85,10 +84,9 @@ class UserServiceAdmin:
             logger.warning(
                 "user_creation_denied",
                 actor_user_id=current_user_id,
-                target_email=create_request.email,
                 target_username=create_request.username,
                 requested_role=create_request.role.value,
-                denial_reason="system_admin_creation_via_api_forbidden",
+                denial_reason="system_admin_creation_via_api_is_forbidden",
             )
 
             raise CannotCreateSystemAdminError(
@@ -99,10 +97,9 @@ class UserServiceAdmin:
             logger.warning(
                 "user_creation_denied",
                 actor_user_id=current_user_id,
-                target_email=create_request.email,
                 target_username=create_request.username,
                 requested_role=create_request.role.value,
-                denial_reason="director_creation_via_api_forbidden",
+                denial_reason="director_creation_via_api_is_forbidden",
             )
 
             raise CannotCreateDirectorError("Director creation via API is forbidden")
@@ -111,14 +108,13 @@ class UserServiceAdmin:
             logger.warning(
                 "user_creation_denied",
                 actor_user_id=current_user_id,
-                target_email=create_request.email,
                 target_username=create_request.username,
                 requested_role=UserRole.STUDENT,
-                denial_reason="student_creation_via_this_service_is_forbidden",
+                denial_reason="student_creation_via_staff_service_is_forbidden",
             )
 
             raise CannotCreateStudentError(
-                "Student creation via this service is forbidden"
+                "Student creation via staff service is forbidden"
             )
 
         await _check_contact_limit(

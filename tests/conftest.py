@@ -24,6 +24,8 @@ from src.database import Base
 from src.main import app
 from src.users.models import User
 from src.users.repositories.users_admin import UserRepositoryBase
+from users.schemas.users import CreateStaffAdmin, CreateStudentAdmin
+from utils.enums import UserRole
 
 ASYNC_DB_URL = (
     f"postgresql+asyncpg://{settings.DB_USER}:{settings.DB_PSSW}"
@@ -161,3 +163,28 @@ def mock_delete_cache(mocker):
 @pytest.fixture
 def mock_set_cache(mocker):
     return mocker.patch("src.users.service.set_cache")
+
+
+create_user_request = {
+    "username": "new_test_username",
+    "firstname": "New",
+    "lastname": "User",
+    "email": "new_test_email@gmail.com",
+    "phone_number": "+15550000001",
+}
+
+@pytest.fixture
+def valid_create_user_request_staff(role: UserRole):
+    return CreateStaffAdmin(
+        **create_user_request,
+        role=role,
+    )
+
+@pytest.fixture
+def valid_create_user_request_student():
+    return CreateStudentAdmin(
+        **create_user_request,
+        date_of_birth="2008-05-01",
+        address=None,
+        role=UserRole.STUDENT,
+    )
