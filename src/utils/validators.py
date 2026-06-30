@@ -1,6 +1,7 @@
-import re
 from datetime import date
 
+import phonenumbers
+from phonenumbers import NumberParseException, PhoneNumberType
 from pydantic_core import PydanticCustomError
 
 
@@ -101,37 +102,41 @@ def validate_password(password: str) -> str:
     return password
 
 
-def validate_phone_number(phone_number: str) -> str:
+def parse_and_validate_mobile_number(phone_number: str) -> str:
     phone_number = phone_number.strip()
 
-    normalized = re.sub(r"[\s\-().]", "", phone_number)
-
-    if normalized.startswith("+"):
-        digits = normalized[1:]
-    elif normalized.startswith("00"):
-        digits = normalized[2:]
-    else:
+    try:
+        parsed = phonenumbers.parse(phone_number, None)
+    except NumberParseException as err:
         raise PydanticCustomError(
             "phone_number_invalid_format",
-            "Phone number must start with '+' or '00' country code",
-        )
+            "Phone number must be in international format, e.g. +14155552671",
+        ) from err
 
-    if not digits.isdigit():
+    if not phonenumbers.is_valid_number(parsed):
         raise PydanticCustomError(
-            "phone_number_invalid_format",
-            "Phone number contains invalid characters",
+            "phone_number_invalid",
+            "Phone number is not a valid number for its country",
         )
 
-    if len(digits) < 7:
+    number_type = phonenumbers.number_type(parsed)
+    if number_type not in (
+        PhoneNumberType.MOBILE,
+        PhoneNumberType.FIXED_LINE_OR_MOBILE,
+    ):
         raise PydanticCustomError(
-            "phone_number_too_short",
-            "Phone number must contain at least 7 digits",
+            "phone_number_not_mobile",
+            "Phone number must be a mobile number",
         )
 
-    if len(digits) > 15:
-        raise PydanticCustomError(
-            "phone_number_too_long",
-            "Phone number must not exceed 15 digits",
-        )
+    return phonenumbers.format_number(
+        parsed, phonenumbers.PhoneNumberFormat.E164
+    ).lstrip("+")
 
-    return digits
+
+def format_phone_for_display(canonical_digits: str) -> str:
+    parsed = phonenumbers.parse("+" + canonical_digits, None)
+
+    return phonenumbers.format_number(
+        parsed, phonenumbers.PhoneNumberFormat.INTERNATIONAL
+    )
