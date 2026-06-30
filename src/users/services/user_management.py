@@ -3,14 +3,15 @@ from datetime import UTC, datetime, timedelta
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from core.dependencies import CurrentUser
 from src.core.caching import delete_cache, get_cache, set_cache
 from src.core.config import settings
+from src.core.dependencies import CurrentUser
 from src.core.logging import get_logger
 from src.core.security import generate_invite_token, generate_reset_password_token
 from src.emails.repository import PendingEmailRepository
 from src.pagination import PaginatedResponse
 from src.users.models.users import User, UserActivation, UserLoginLockout, UserSession
+from src.users.repositories.users_admin import UserRepositoryAdmin, UserRepositoryBase
 from src.users.schemas.users import (
     CreateStaffAdmin,
     CreateStudentAdmin,
@@ -35,13 +36,12 @@ from src.utils.exceptions import (
     handle_username_integrity_error,
 )
 from src.utils.helpers import ensure_exists, update_object
-from users.repositories.users_admin import UserRepositoryAdmin, UserRepositoryBase
 
 logger = get_logger(__name__)
 
 STUDENT_MAX_SHARED_CONTACT = 3
 STAFF_MAX_SHARED_CONTACT = 1
-SYSTEM_ADMIN_INVISIBLE_ROLES = frozenset({UserRole.system_admin})
+SYSTEM_ADMIN_INVISIBLE_ROLES = frozenset({UserRole.SYSTEM_ADMIN})
 
 
 async def _check_contact_limit(

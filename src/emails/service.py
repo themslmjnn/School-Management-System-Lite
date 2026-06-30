@@ -45,20 +45,13 @@ class PendingEmailService:
     @staticmethod
     async def get_my_failed_emails(
         db: AsyncSession,
-        current_user: CurrentUser,
+        current_user_id: int,
         skip: int = 0,
         limit: int = 10,
     ) -> PaginatedResponse:
-        if current_user.role not in (
-            UserRole.library_admin,
-            UserRole.receptionist,
-            UserRole.system_admin,
-        ):
-            raise AccessDeniedError(HTTP403.ACCESS_DENIED)
-
         failed_emails, total = await PendingEmailRepository.get_failed_by_triggered_by(
             db,
-            triggered_by=current_user.id,
+            triggered_by=current_user_id,
             skip=skip,
             limit=limit,
         )
@@ -77,13 +70,6 @@ class PendingEmailService:
         current_user: CurrentUser,
         email_id: int,
     ) -> None:
-        if current_user.role not in (
-            UserRole.library_admin,
-            UserRole.receptionist,
-            UserRole.system_admin,
-        ):
-            raise AccessDeniedError(HTTP403.ACCESS_DENIED)
-
         failed_email = await PendingEmailRepository.get_pending_email_by_id(
             db, email_id
         )

@@ -3,6 +3,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Path, status
 
 from src.core.dependencies import (
+    CurrentUser,
     async_db_dependency,
     current_user_dependency,
     pagination_dependency,
@@ -52,18 +53,18 @@ async def retry_failed_email(
 )
 async def get_my_failed_emails(
     db: async_db_dependency,
-    current_user: current_user_dependency,
+    current_user: Annotated[CurrentUser, Depends(current_user_dependency)],
     pagination: pagination_dependency,
 ):
     return await PendingEmailService.get_my_failed_emails(
-        db, current_user, skip=pagination.skip, limit=pagination.limit
+        db, current_user.id, skip=pagination.skip, limit=pagination.limit
     )
 
 
 @router.post("/my-failed/{email_id}/retry", status_code=status.HTTP_204_NO_CONTENT)
 async def retry_my_failed_email(
     db: async_db_dependency,
-    current_user: current_user_dependency,
+    current_user: Annotated[CurrentUser, Depends(current_user_dependency)],
     email_id: Annotated[int, Path(ge=1)],
 ):
     return await PendingEmailService.retry_my_failed_email(db, current_user, email_id)
