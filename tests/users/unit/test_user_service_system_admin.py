@@ -1,7 +1,8 @@
-# tests/test_register_staff.py
-from datetime import UTC, datetime, timezone
+from datetime import UTC, datetime
+from unittest.mock import AsyncMock
 
 import pytest
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from emails.repository import PendingEmailRepository
 from src.emails.models import EmailType
@@ -11,12 +12,22 @@ from src.utils.exceptions import (
     CannotCreateSystemAdminError,
     DuplicateValueError,
     MaxNumberOfIdenticalContactsError,
+    UserAlreadyActiveError,
+    UserAlreadyInactiveError,
     UsernameAlreadyTakenError,
+    UserNotFoundError,
 )
-from tests.factories import make_student, make_teacher
+from tests.factories import (
+    make_deactivated_user,
+    make_student,
+    make_system_admin,
+    make_teacher,
+)
+from users.models.users import User
 from users.repositories.users_admin import UserRepositoryBase
 from users.schemas.users import CreateStaffAdmin, CreateStudentAdmin
 from users.services.user_management import UserServiceAdmin
+from utils.cache_keys import SessionCacheKey, UserCacheKey
 from utils.enums import UserRole, UserStatus
 
 
@@ -336,3 +347,25 @@ class TestRegisterStudent:
         assert user.password_hash is None
         assert user.date_of_birth == valid_create_student_request.date_of_birth
         assert user.created_by == system_admin.id
+
+
+class TestDeleteParent:
+    async def test_delete_parent_successfully(
+        self, test_db: AsyncSession, system_admin: User, parent: User
+    ) -> None:
+        await UserServiceAdmin.delete_parent(test_db, system_admin.id, parent.id)
+
+        deleted_user = await UserRepositoryBase.get_user_by_id(test_db, parent.id)
+        assert deleted_user is None
+
+    async def test_delete_parent_not_found(
+        self, test_db: AsyncSession, system_admin: User
+    ) -> None:
+        with pytest.raises(UserNotFoundError):
+            await UserServiceAdmin.delete_parent(test_db, system_admin.id, 999_999)
+
+    async def test_delete_parent_rejects_non_parent_role(
+        self, test_db: AsyncSession, system_admin: User, teacher: User
+    ) -> None:
+        with pytest.raises(UserNotFoundError):
+            await UserServiceAdmin.delete_parent(test_db, system_admin.id, teacher.id)
