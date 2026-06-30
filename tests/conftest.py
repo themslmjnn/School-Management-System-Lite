@@ -6,14 +6,6 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy import create_engine
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.pool import NullPool
-from tests.factories import (
-    make_director,
-    make_parent,
-    make_student,
-    make_system_admin,
-    make_teacher,
-    make_vice_director,
-)
 
 import src.core.caching as cache_module
 from src.auth.schemas import CreateAccessToken
@@ -24,6 +16,14 @@ from src.database import Base
 from src.main import app
 from src.users.models import User
 from src.users.repositories.users_admin import UserRepositoryBase
+from tests.factories import (
+    make_director,
+    make_parent,
+    make_student,
+    make_system_admin,
+    make_teacher,
+    make_vice_director,
+)
 from users.schemas.users import CreateStaffAdmin, CreateStudentAdmin
 from utils.enums import UserRole
 
@@ -173,12 +173,14 @@ create_user_request = {
     "phone_number": "+15550000001",
 }
 
+
 @pytest.fixture
 def valid_create_user_request_staff(role: UserRole):
     return CreateStaffAdmin(
         **create_user_request,
         role=role,
     )
+
 
 @pytest.fixture
 def valid_create_user_request_student():
