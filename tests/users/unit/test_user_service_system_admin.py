@@ -4,6 +4,7 @@ from unittest.mock import AsyncMock
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from core.dependencies import CurrentUser
 from emails.repository import PendingEmailRepository
 from src.emails.models import EmailType
 from src.utils.exceptions import (
@@ -12,6 +13,7 @@ from src.utils.exceptions import (
     CannotCreateSystemAdminError,
     DuplicateValueError,
     MaxNumberOfIdenticalContactsError,
+    NoChangesDetectedError,
     UserAlreadyActiveError,
     UserAlreadyInactiveError,
     UsernameAlreadyTakenError,
@@ -25,7 +27,12 @@ from tests.factories import (
 )
 from users.models.users import User
 from users.repositories.users_admin import UserRepositoryBase
-from users.schemas.users import CreateStaffAdmin, CreateStudentAdmin
+from users.schemas.users import (
+    CreateStaffAdmin,
+    CreateStudentAdmin,
+    UpdateUser,
+    UpdateUserEmail,
+)
 from users.services.user_management import UserServiceAdmin
 from utils.cache_keys import SessionCacheKey, UserCacheKey
 from utils.enums import UserRole, UserStatus
@@ -373,7 +380,11 @@ class TestDeleteParent:
 
 class TestDeactivateUser:
     async def test_deactivate_user_successfully(
-        self, test_db: AsyncSession, system_admin: User, teacher: User, mock_delete_cache: AsyncMock
+        self,
+        test_db: AsyncSession,
+        system_admin: User,
+        teacher: User,
+        mock_delete_cache: AsyncMock,
     ) -> None:
         await UserServiceAdmin.deactivate_user(test_db, system_admin.id, teacher.id)
 
@@ -388,7 +399,11 @@ class TestDeactivateUser:
         assert user_with_session.session.refresh_token_expires_at is None
 
     async def test_deactivate_user_invalidates_cache(
-        self, test_db: AsyncSession, system_admin: User, teacher: User, mock_delete_cache: AsyncMock
+        self,
+        test_db: AsyncSession,
+        system_admin: User,
+        teacher: User,
+        mock_delete_cache: AsyncMock,
     ) -> None:
         await UserServiceAdmin.deactivate_user(test_db, system_admin.id, teacher.id)
 
@@ -409,7 +424,9 @@ class TestDeactivateUser:
         deactivated = await make_deactivated_user(test_db)
 
         with pytest.raises(UserAlreadyInactiveError):
-            await UserServiceAdmin.deactivate_user(test_db, system_admin.id, deactivated.id)
+            await UserServiceAdmin.deactivate_user(
+                test_db, system_admin.id, deactivated.id
+            )
 
     async def test_deactivate_user_excludes_system_admins(
         self, test_db: AsyncSession, system_admin: User
@@ -417,7 +434,9 @@ class TestDeactivateUser:
         other_admin = await make_system_admin(test_db)
 
         with pytest.raises(UserNotFoundError):
-            await UserServiceAdmin.deactivate_user(test_db, system_admin.id, other_admin.id)
+            await UserServiceAdmin.deactivate_user(
+                test_db, system_admin.id, other_admin.id
+            )
 
 
 class TestActivateUser:
@@ -428,7 +447,9 @@ class TestActivateUser:
 
         await UserServiceAdmin.activate_user(test_db, system_admin.id, deactivated.id)
 
-        activated_user = await UserRepositoryBase.get_user_by_id(test_db, deactivated.id)
+        activated_user = await UserRepositoryBase.get_user_by_id(
+            test_db, deactivated.id
+        )
         assert activated_user.is_active is True
 
     async def test_activate_user_invalidates_cache(
@@ -460,4 +481,208 @@ class TestActivateUser:
         other_admin = await make_deactivated_user(test_db, role=UserRole.SYSTEM_ADMIN)
 
         with pytest.raises(UserNotFoundError):
-            await UserServiceAdmin.activate_user(test_db, system_admin.id, other_admin.id)
+            await UserServiceAdmin.activate_user(
+                test_db, system_admin.id, other_admin.id
+            )
+
+
+class TestUpdateUser:
+    async def test_update_user_successfully(
+        self, test_db: AsyncSession, system_admin: User, teacher: User
+    ) -> None:
+        update_request = UpdateUser(firstname="UpdatedFirstName")
+
+        updated_user = await UserServiceAdmin.update_user(
+            test_db, system_admin.id, teacher.id, update_request
+        )
+
+        assert updated_user.firstname == "UpdatedFirstName"
+
+    async def test_update_user_not_found(
+        self, test_db: AsyncSession, system_admin: User
+    ) -> None:
+        update_request = UpdateUser(firstname="DoesntMatter")
+
+        with pytest.raises(UserNotFoundError):
+            await UserServiceAdmin.update_user(
+                test_db, system_admin.id, 999_999, update_request
+            )
+
+    async def test_update_user_excludes_system_admins(
+        self, test_db: AsyncSession, system_admin: User
+    ) -> None:
+        other_admin = await make_system_admin(test_db)
+        update_request = UpdateUser(firstname="DoesntMatter")
+
+        with pytest.raises(UserNotFoundError):
+            await UserServiceAdmin.update_user(
+                test_db, system_admin.id, other_admin.id, update_request
+            )
+
+    async def test_update_user_no_fields_set_raises_no_changes(
+        self, test_db: AsyncSession, system_admin: User, teacher: User
+    ) -> None:
+        update_request = UpdateUser()
+
+        with pytest.raises(NoChangesDetectedError):
+            await UserServiceAdmin.update_user(
+                test_db, system_admin.id, teacher.id, update_request
+            )
+
+    async def test_update_user_same_value_raises_no_changes(
+        self, test_db: AsyncSession, system_admin: User, teacher: User
+    ) -> None:
+        update_request = UpdateUser(firstname=teacher.firstname)
+
+        with pytest.raises(NoChangesDetectedError):
+            await UserServiceAdmin.update_user(
+                test_db, system_admin.id, teacher.id, update_request
+            )
+
+    @pytest.mark.parametrize(
+        ("existing_user_data", "request_override", "expected_exception"),
+        [
+            (
+                {"username": "taken_username"},
+                {"username": "taken_username"},
+                UsernameAlreadyTakenError,
+            ),
+            (
+                {"email": "taken@example.com", "phone_number": "+15551239876"},
+                {"phone_number": "+15551239876"},
+                DuplicateValueError,
+            ),
+        ],
+    )
+    async def test_update_user_rejects_duplicate_fields(
+        self,
+        test_db: AsyncSession,
+        system_admin: User,
+        teacher: User,
+        existing_user_data: dict,
+        request_override: dict,
+        expected_exception,
+    ) -> None:
+        await make_teacher(test_db, **existing_user_data)
+        update_request = UpdateUser(**request_override)
+
+        with pytest.raises(expected_exception):
+            await UserServiceAdmin.update_user(
+                test_db, system_admin.id, teacher.id, update_request
+            )
+
+
+class TestUpdateUserEmail:
+    async def test_update_user_email_successfully(
+        self, test_db: AsyncSession, system_admin: User, teacher: User
+    ) -> None:
+        update_request = UpdateUserEmail(new_email="new.email@example.com")
+
+        await UserServiceAdmin.update_user_email(
+            test_db, system_admin.id, teacher.id, update_request
+        )
+
+        updated_user = await UserRepositoryBase.get_user_by_id(test_db, teacher.id)
+        assert updated_user.email == "new.email@example.com"
+
+    async def test_update_user_email_resets_session_fields(
+        self, test_db: AsyncSession, system_admin: User, teacher: User
+    ) -> None:
+        update_request = UpdateUserEmail(new_email="new.email2@example.com")
+
+        await UserServiceAdmin.update_user_email(
+            test_db, system_admin.id, teacher.id, update_request
+        )
+
+        user_with_session = await UserRepositoryBase.get_user_by_id(
+            test_db, teacher.id, load_session=True
+        )
+        session = user_with_session.session
+
+        assert session.access_token_version == 2
+        assert session.refresh_token_hash is None
+        assert session.refresh_token_family is None
+        assert session.refresh_token_expires_at is None
+        assert session.pending_new_email is None
+        assert session.email_change_code_hash is None
+        assert session.email_change_code_expires_at is None
+
+    async def test_update_user_email_not_found(
+        self, test_db: AsyncSession, system_admin: User
+    ) -> None:
+        update_request = UpdateUserEmail(new_email="nobody@example.com")
+
+        with pytest.raises(UserNotFoundError):
+            await UserServiceAdmin.update_user_email(
+                test_db, system_admin.id, 999_999, update_request
+            )
+
+    async def test_update_user_email_excludes_system_admins(
+        self, test_db: AsyncSession, system_admin: User
+    ) -> None:
+        other_admin = await make_system_admin(test_db)
+        update_request = UpdateUserEmail(new_email="nobody2@example.com")
+
+        with pytest.raises(UserNotFoundError):
+            await UserServiceAdmin.update_user_email(
+                test_db, system_admin.id, other_admin.id, update_request
+            )
+
+    async def test_update_user_email_rejects_duplicate_contact(
+        self, test_db: AsyncSession, system_admin: User, teacher: User
+    ) -> None:
+        await make_teacher(
+            test_db, email="taken@example.com", phone_number=teacher.phone_number
+        )
+        update_request = UpdateUserEmail(new_email="taken@example.com")
+
+        with pytest.raises(DuplicateValueError):
+            await UserServiceAdmin.update_user_email(
+                test_db, system_admin.id, teacher.id, update_request
+            )
+
+
+class TestCreateResetPasswordRequest:
+    async def test_creates_reset_password_request_successfully(
+        self, test_db: AsyncSession, system_admin: User, teacher: User
+    ) -> None:
+        current_user = CurrentUser(system_admin.id, system_admin.role)
+
+        await UserServiceAdmin.create_reset_password_request(
+            test_db, current_user, teacher.id
+        )
+
+        user_with_session = await UserRepositoryBase.get_user_by_id(
+            test_db, teacher.id, load_session=True
+        )
+        session = user_with_session.session
+
+        assert session.reset_password_token_hash is not None
+        assert session.reset_password_token_expires_at is not None
+
+        pending_emails = await PendingEmailRepository.get_pending_email_by_triggered_by(
+            test_db, system_admin.id
+        )
+        assert len(pending_emails) == 1
+        assert pending_emails[0].recipient_user_id == teacher.id
+
+    async def test_create_reset_password_request_not_found(
+        self, test_db: AsyncSession, system_admin: User
+    ) -> None:
+        current_user = CurrentUser(system_admin.id, system_admin.role)
+
+        with pytest.raises(UserNotFoundError):
+            await UserServiceAdmin.create_reset_password_request(
+                test_db, current_user, 999_999
+            )
+
+    async def test_create_reset_password_request_excludes_system_admins(
+        self, test_db: AsyncSession, system_admin: User
+    ) -> None:
+        other_admin = await make_system_admin(test_db)
+        current_user = CurrentUser(system_admin.id, system_admin.role)
+
+        with pytest.raises(UserNotFoundError):
+            await UserServiceAdmin.create_reset_password_request(
+                test_db, current_user, other_admin.id
+            )
