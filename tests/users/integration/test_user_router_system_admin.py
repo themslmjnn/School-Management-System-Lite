@@ -283,9 +283,14 @@ class TestRegisterStudentRoute:
         assert response.status_code == 422
         assert "date_of_birth" in error_fields
 
+
 class TestDeleteParentRoute:
     async def test_delete_parent_returns_204(
-        self, test_db: AsyncSession, client: AsyncClient, system_admin: User, parent: User
+        self,
+        test_db: AsyncSession,
+        client: AsyncClient,
+        system_admin: User,
+        parent: User,
     ) -> None:
         headers = await make_auth_header(test_db, system_admin)
 
@@ -305,7 +310,11 @@ class TestDeleteParentRoute:
         assert response.status_code == 404
 
     async def test_delete_parent_returns_404_for_non_parent_role(
-        self, test_db: AsyncSession, client: AsyncClient, system_admin: User, teacher: User
+        self,
+        test_db: AsyncSession,
+        client: AsyncClient,
+        system_admin: User,
+        teacher: User,
     ) -> None:
         headers = await make_auth_header(test_db, system_admin)
 
@@ -341,11 +350,17 @@ class TestDeleteParentRoute:
 
 class TestDeactivateUserRoute:
     async def test_deactivate_user_returns_204(
-        self, test_db: AsyncSession, client: AsyncClient, system_admin: User, teacher: User
+        self,
+        test_db: AsyncSession,
+        client: AsyncClient,
+        system_admin: User,
+        teacher: User,
     ) -> None:
         headers = await make_auth_header(test_db, system_admin)
 
-        response = await client.patch(f"/users/{teacher.id}/deactivate", headers=headers)
+        response = await client.patch(
+            f"/users/{teacher.id}/deactivate", headers=headers
+        )
 
         assert response.status_code == 204
         deactivated = await UserRepositoryBase.get_user_by_id(test_db, teacher.id)
@@ -366,7 +381,9 @@ class TestDeactivateUserRoute:
         deactivated = await make_deactivated_user(test_db)
         headers = await make_auth_header(test_db, system_admin)
 
-        response = await client.patch(f"/users/{deactivated.id}/deactivate", headers=headers)
+        response = await client.patch(
+            f"/users/{deactivated.id}/deactivate", headers=headers
+        )
 
         assert response.status_code == 409
 
@@ -376,7 +393,9 @@ class TestDeactivateUserRoute:
         other_admin = await make_system_admin(test_db)
         headers = await make_auth_header(test_db, system_admin)
 
-        response = await client.patch(f"/users/{other_admin.id}/deactivate", headers=headers)
+        response = await client.patch(
+            f"/users/{other_admin.id}/deactivate", headers=headers
+        )
 
         assert response.status_code == 404
 
@@ -385,7 +404,9 @@ class TestDeactivateUserRoute:
     ) -> None:
         headers = await make_auth_header(test_db, teacher)
 
-        response = await client.patch(f"/users/{student.id}/deactivate", headers=headers)
+        response = await client.patch(
+            f"/users/{student.id}/deactivate", headers=headers
+        )
 
         assert response.status_code == 403
 
@@ -413,7 +434,9 @@ class TestActivateUserRoute:
         deactivated = await make_deactivated_user(test_db)
         headers = await make_auth_header(test_db, system_admin)
 
-        response = await client.patch(f"/users/{deactivated.id}/activate", headers=headers)
+        response = await client.patch(
+            f"/users/{deactivated.id}/activate", headers=headers
+        )
 
         assert response.status_code == 204
         activated = await UserRepositoryBase.get_user_by_id(test_db, deactivated.id)
@@ -429,7 +452,11 @@ class TestActivateUserRoute:
         assert response.status_code == 404
 
     async def test_activate_user_returns_409_when_already_active(
-        self, test_db: AsyncSession, client: AsyncClient, system_admin: User, teacher: User
+        self,
+        test_db: AsyncSession,
+        client: AsyncClient,
+        system_admin: User,
+        teacher: User,
     ) -> None:
         headers = await make_auth_header(test_db, system_admin)
 
@@ -443,7 +470,9 @@ class TestActivateUserRoute:
         deactivated = await make_deactivated_user(test_db)
         headers = await make_auth_header(test_db, teacher)
 
-        response = await client.patch(f"/users/{deactivated.id}/activate", headers=headers)
+        response = await client.patch(
+            f"/users/{deactivated.id}/activate", headers=headers
+        )
 
         assert response.status_code == 403
 
@@ -461,5 +490,260 @@ class TestActivateUserRoute:
         headers = await make_auth_header(test_db, system_admin)
 
         response = await client.patch("/users/0/activate", headers=headers)
+
+        assert response.status_code == 422
+
+
+class TestUpdateUserRoute:
+    async def test_update_user_returns_200_and_expected_shape(
+        self,
+        test_db: AsyncSession,
+        client: AsyncClient,
+        system_admin: User,
+        teacher: User,
+    ) -> None:
+        headers = await make_auth_header(test_db, system_admin)
+
+        response = await client.patch(
+            f"/users/{teacher.id}",
+            json={"firstname": "UpdatedFirstName"},
+            headers=headers,
+        )
+
+        assert response.status_code == 200
+        body = response.json()
+        assert body["firstname"] == "UpdatedFirstName"
+        assert "id" not in body
+
+    async def test_update_user_returns_404_when_not_found(
+        self, test_db: AsyncSession, client: AsyncClient, system_admin: User
+    ) -> None:
+        headers = await make_auth_header(test_db, system_admin)
+
+        response = await client.patch(
+            "/users/999999", json={"firstname": "Whoever"}, headers=headers
+        )
+
+        assert response.status_code == 404
+
+    async def test_update_user_returns_404_for_system_admin_target(
+        self, test_db: AsyncSession, client: AsyncClient, system_admin: User
+    ) -> None:
+        other_admin = await make_system_admin(test_db)
+        headers = await make_auth_header(test_db, system_admin)
+
+        response = await client.patch(
+            f"/users/{other_admin.id}", json={"firstname": "Whoever"}, headers=headers
+        )
+
+        assert response.status_code == 404
+
+    async def test_update_user_returns_409_when_no_changes(
+        self,
+        test_db: AsyncSession,
+        client: AsyncClient,
+        system_admin: User,
+        teacher: User,
+    ) -> None:
+        headers = await make_auth_header(test_db, system_admin)
+
+        response = await client.patch(f"/users/{teacher.id}", json={}, headers=headers)
+
+        assert response.status_code == 409
+
+    async def test_update_user_returns_409_for_duplicate_username(
+        self,
+        test_db: AsyncSession,
+        client: AsyncClient,
+        system_admin: User,
+        teacher: User,
+    ) -> None:
+        await make_teacher(test_db, username="taken_username")
+        headers = await make_auth_header(test_db, system_admin)
+
+        response = await client.patch(
+            f"/users/{teacher.id}",
+            json={"username": "taken_username"},
+            headers=headers,
+        )
+
+        assert response.status_code == 409
+
+    async def test_update_user_returns_403_for_non_admin(
+        self, test_db: AsyncSession, client: AsyncClient, teacher: User, student: User
+    ) -> None:
+        headers = await make_auth_header(test_db, teacher)
+
+        response = await client.patch(
+            f"/users/{student.id}", json={"firstname": "Whoever"}, headers=headers
+        )
+
+        assert response.status_code == 403
+
+    async def test_update_user_returns_401_when_unauthenticated(
+        self, client: AsyncClient, teacher: User
+    ) -> None:
+        response = await client.patch(
+            f"/users/{teacher.id}", json={"firstname": "Whoever"}
+        )
+
+        assert response.status_code == 401
+
+    async def test_update_user_returns_422_for_invalid_username_symbol(
+        self,
+        test_db: AsyncSession,
+        client: AsyncClient,
+        system_admin: User,
+        teacher: User,
+    ) -> None:
+        headers = await make_auth_header(test_db, system_admin)
+
+        response = await client.patch(
+            f"/users/{teacher.id}", json={"username": "bad-name!"}, headers=headers
+        )
+
+        assert response.status_code == 422
+
+
+class TestUpdateUserEmailRoute:
+    async def test_update_user_email_returns_204(
+        self,
+        test_db: AsyncSession,
+        client: AsyncClient,
+        system_admin: User,
+        teacher: User,
+    ) -> None:
+        headers = await make_auth_header(test_db, system_admin)
+
+        response = await client.patch(
+            f"/users/{teacher.id}/email",
+            json={"new_email": "fresh.email@example.com"},
+            headers=headers,
+        )
+
+        assert response.status_code == 204
+        updated_user = await UserRepositoryBase.get_user_by_id(test_db, teacher.id)
+        assert updated_user.email == "fresh.email@example.com"
+
+    async def test_update_user_email_returns_404_when_not_found(
+        self, test_db: AsyncSession, client: AsyncClient, system_admin: User
+    ) -> None:
+        headers = await make_auth_header(test_db, system_admin)
+
+        response = await client.patch(
+            "/users/999999/email",
+            json={"new_email": "nobody@example.com"},
+            headers=headers,
+        )
+
+        assert response.status_code == 404
+
+    async def test_update_user_email_returns_409_for_duplicate_contact(
+        self,
+        test_db: AsyncSession,
+        client: AsyncClient,
+        system_admin: User,
+        teacher: User,
+    ) -> None:
+        await make_teacher(
+            test_db, email="taken@example.com", phone_number=teacher.phone_number
+        )
+        headers = await make_auth_header(test_db, system_admin)
+
+        response = await client.patch(
+            f"/users/{teacher.id}/email",
+            json={"new_email": "taken@example.com"},
+            headers=headers,
+        )
+
+        assert response.status_code == 409
+
+    async def test_update_user_email_returns_403_for_non_admin(
+        self, test_db: AsyncSession, client: AsyncClient, teacher: User, student: User
+    ) -> None:
+        headers = await make_auth_header(test_db, teacher)
+
+        response = await client.patch(
+            f"/users/{student.id}/email",
+            json={"new_email": "whoever@example.com"},
+            headers=headers,
+        )
+
+        assert response.status_code == 403
+
+    async def test_update_user_email_returns_401_when_unauthenticated(
+        self, client: AsyncClient, teacher: User
+    ) -> None:
+        response = await client.patch(
+            f"/users/{teacher.id}/email", json={"new_email": "whoever@example.com"}
+        )
+
+        assert response.status_code == 401
+
+    async def test_update_user_email_returns_422_for_invalid_email(
+        self,
+        test_db: AsyncSession,
+        client: AsyncClient,
+        system_admin: User,
+        teacher: User,
+    ) -> None:
+        headers = await make_auth_header(test_db, system_admin)
+
+        response = await client.patch(
+            f"/users/{teacher.id}/email",
+            json={"new_email": "not-an-email"},
+            headers=headers,
+        )
+
+        assert response.status_code == 422
+
+
+class TestCreateResetPasswordRequestRoute:
+    async def test_create_reset_password_request_returns_204(
+        self,
+        test_db: AsyncSession,
+        client: AsyncClient,
+        system_admin: User,
+        teacher: User,
+    ) -> None:
+        """Will fail until the FLAGGED BUG in create_reset_password_request
+        is fixed (PendingEmailRepository.create -> add_pending_email)."""
+        headers = await make_auth_header(test_db, system_admin)
+
+        response = await client.post(f"/users/{teacher.id}/password", headers=headers)
+
+        assert response.status_code == 204
+
+    async def test_create_reset_password_request_returns_404_when_not_found(
+        self, test_db: AsyncSession, client: AsyncClient, system_admin: User
+    ) -> None:
+        headers = await make_auth_header(test_db, system_admin)
+
+        response = await client.post("/users/999999/password", headers=headers)
+
+        assert response.status_code == 404
+
+    async def test_create_reset_password_request_returns_403_for_non_admin(
+        self, test_db: AsyncSession, client: AsyncClient, teacher: User, student: User
+    ) -> None:
+        headers = await make_auth_header(test_db, teacher)
+
+        response = await client.post(f"/users/{student.id}/password", headers=headers)
+
+        assert response.status_code == 403
+
+    async def test_create_reset_password_request_returns_401_when_unauthenticated(
+        self, client: AsyncClient, teacher: User
+    ) -> None:
+        response = await client.post(f"/users/{teacher.id}/password")
+
+        assert response.status_code == 401
+
+    async def test_create_reset_password_request_returns_422_for_invalid_path_id(
+        self, test_db: AsyncSession, client: AsyncClient, system_admin: User
+    ) -> None:
+        headers = await make_auth_header(test_db, system_admin)
+
+        response = await client.post("/users/0/password", headers=headers)
 
         assert response.status_code == 422
