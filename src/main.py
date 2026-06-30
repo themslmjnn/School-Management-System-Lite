@@ -36,18 +36,18 @@ async def lifespan(app: FastAPI):
             error=str(e),
         )
 
-    email_worker_task = asyncio.create_task(run_email_worker())
+    # email_worker_task = asyncio.create_task(run_email_worker())
 
-    logger.info("email_worker_task_started")
+    # logger.info("email_worker_task_started")
 
     yield
 
-    email_worker_task.cancel()
-    try:
-        await email_worker_task
-    except (asyncio.CancelledError, Exception):
-        logger.info("email_worker_stopped")
-        raise
+    # email_worker_task.cancel()
+    # try:
+    #     await email_worker_task
+    # except (asyncio.CancelledError, Exception):
+    #     logger.info("email_worker_stopped")
+    #     raise
 
     await redis_client.aclose()
 

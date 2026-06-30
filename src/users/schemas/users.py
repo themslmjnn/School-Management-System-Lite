@@ -1,6 +1,6 @@
 from datetime import date, datetime
 
-from pydantic import BaseModel, EmailStr, Field, field_serializer, field_validator
+from pydantic import BaseModel, EmailStr, Field, computed_field, field_serializer, field_validator
 
 from src.utils import validators
 from src.utils.base_schema import BaseSchema
@@ -40,7 +40,7 @@ class CreateUserBase(BaseModel):
     @field_validator("phone_number")
     @classmethod
     def validate_phone_number(cls, v: str) -> str:
-        return validators.validate_phone_number(v)
+        return validators.parse_and_validate_mobile_number(v)
 
 
 class CreateStaffAdmin(CreateUserBase):
@@ -80,20 +80,30 @@ class UserResponseAdminDetailed(UserResponseAdmin, BaseSchema):
     @field_serializer("created_at", "updated_at")
     def serialize_updated_at(self, value: datetime) -> str:
         return value.strftime("%d %b %Y, %H:%M")
+    
+    @computed_field
+    @property
+    def format_phone_number(self) -> str:
+        return validators.format_phone_for_display(self.phone_number)
 
 
 class SearchUserBase(BaseModel):
     firstname: str | None = Field(default=None, max_length=50)
     lastname: str | None = Field(default=None, max_length=50)
     middlename: str | None = Field(default=None, max_length=50)
-    email: str | None = Field(default=None, max_length=20)
-    phone_number: str | None = Field(default=None, max_length=15)
     role: UserRole | None = None
-    is_active: bool | None = None
+    status: UserStatus | None = None
 
 
 class SearchUserAdmin(SearchUserBase):
     username: str | None = Field(default=None, max_length=15)
+    email: str | None = Field(default=None, max_length=20)
+    phone_number: str | None = Field(default=None, max_length=15)
+    is_active: bool | None = None
+
+
+class SearchUserDirectors(SearchUserBase):
+    pass
 
 
 class UpdateUser(BaseModel):

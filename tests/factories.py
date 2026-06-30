@@ -4,11 +4,11 @@ from datetime import UTC, date, datetime, timedelta
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.security import generate_invite_token, hash_password
-from users.models.guardian_link import StudentGuardianLink
-from users.models.users import User, UserActivation, UserLoginLockout, UserSession
-from users.repositories.guardian_link import GuardianLinkRepository
-from users.repositories.users_admin import UserRepositoryBase
-from utils.enums import GuardianPriority, UserRole, UserStatus
+from src.users.models.guardian_link import StudentGuardianLink
+from src.users.models.users import User, UserActivation, UserLoginLockout, UserSession
+from src.users.repositories.guardian_link import GuardianLinkRepository
+from src.users.repositories.users_admin import UserRepositoryBase
+from src.utils.enums import GuardianPriority, UserRole, UserStatus
 
 _counter = itertools.count(1)
 
@@ -49,7 +49,7 @@ async def make_user(
         if date_of_birth is not None
         else (date(2008, 1, 1) if role == UserRole.STUDENT else None),
         address=address,
-        password_hash=hash_password(password) if password else None,
+        password_hash=await hash_password(password) if password else None,
         role=role,
         status=status,
         is_active=is_active,

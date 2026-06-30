@@ -2,6 +2,7 @@ from unittest.mock import MagicMock
 
 import pytest
 import pytest_asyncio
+import redis.asyncio as aioredis
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import create_engine
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
@@ -11,11 +12,14 @@ import src.core.caching as cache_module
 from src.auth.schemas import CreateAccessToken
 from src.core.config import settings
 from src.core.dependencies import get_db
+from src.core.limiter import ip_limiter
 from src.core.security import create_access_token
 from src.database import Base
 from src.main import app
 from src.users.models import User
 from src.users.repositories.users_admin import UserRepositoryBase
+from src.users.schemas.users import CreateStaffAdmin, CreateStudentAdmin
+from src.utils.enums import UserRole
 from tests.factories import (
     make_director,
     make_parent,
@@ -24,8 +28,6 @@ from tests.factories import (
     make_teacher,
     make_vice_director,
 )
-from users.schemas.users import CreateStaffAdmin, CreateStudentAdmin
-from utils.enums import UserRole
 
 ASYNC_DB_URL = (
     f"postgresql+asyncpg://{settings.DB_USER}:{settings.DB_PSSW}"
@@ -97,16 +99,33 @@ async def client(test_db):
 
 @pytest_asyncio.fixture(scope="function", autouse=True)
 async def flush_cache():
-    await cache_module.redis_client.flushdb()
+    fresh_client = aioredis.Redis(
+        host=settings.REDIS_HOST,
+        port=settings.REDIS_PORT,
+        password=settings.REDIS_PASSWORD or None,
+        db=settings.REDIS_DB,
+        decode_responses=True,
+    )
+
+    cache_module.redis_client = fresh_client
+
+    await fresh_client.flushdb()
 
     yield
 
-    await cache_module.redis_client.flushdb()
+    await fresh_client.flushdb()
+    await fresh_client.aclose()
 
 
 @pytest.fixture
 def mock_response():
     return MagicMock()
+
+@pytest.fixture(scope="function", autouse=True)
+def reset_rate_limiter():
+    ip_limiter._storage.reset()
+
+    yield
 
 
 async def make_auth_header(test_db: AsyncSession, user: User) -> dict:
@@ -170,15 +189,15 @@ create_user_request = {
     "firstname": "New",
     "lastname": "User",
     "email": "new_test_email@gmail.com",
-    "phone_number": "+15550000001",
+    "phone_number": "+992555000000",
 }
 
 
 @pytest.fixture
-def valid_create_user_request_staff(role: UserRole):
+def valid_create_user_request_staff():
     return CreateStaffAdmin(
         **create_user_request,
-        role=role,
+        role=UserRole.TEACHER,
     )
 
 

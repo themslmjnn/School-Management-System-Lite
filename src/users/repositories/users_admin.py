@@ -81,6 +81,7 @@ class UserRepositoryBase:
         *,
         load_session: bool = False,
         load_activation: bool = False,
+        load_login_lockout: bool = False,
         allowed_roles: frozenset[UserRole] | None = None,
         excluded_roles: frozenset[UserRole] | None = None,
     ) -> User | None:
@@ -94,6 +95,8 @@ class UserRepositoryBase:
             query = query.options(joinedload(User.session))
         if load_activation:
             query = query.options(joinedload(User.activation))
+        if load_login_lockout:
+            query = query.options(joinedload(User.login_lockout))
 
         result = await db.execute(query)
 
@@ -153,6 +156,30 @@ class UserRepositoryAdmin:
             base_query = base_query.filter(User.username.ilike(f"%{filters.username}%"))
 
         return base_query
+
+    @staticmethod
+    async def get_users(
+        db: AsyncSession,
+        *,
+        excluded_roles: frozenset[UserRole] | None = None,
+        allowed_roles: frozenset[UserRole] | None = None,
+        filters: SearchUserBase | SearchUserAdmin | None = None,
+        sort_by: str = UserSortField.created_at,
+        order: str = OrderBy.desc,
+        skip: int = 0,
+        limit: int = 10,
+    ) -> tuple[list[User], int]:
+        query = select(User)
+
+        if excluded_roles:
+            query = query.filter(User.role.not_in(excluded_roles))
+        if allowed_roles:
+            query = query.filter(User.role.in_(allowed_roles))
+
+        query = UserRepositoryBase.apply_base_filters(query, filters)
+        query = UserRepositoryBase.apply_sorting(query, sort_by, order)
+
+        return await UserRepositoryBase.paginate(db, query, skip, limit)
 
     @staticmethod
     async def get_users_admin(

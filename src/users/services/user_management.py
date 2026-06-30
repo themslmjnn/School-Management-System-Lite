@@ -11,7 +11,10 @@ from src.core.security import generate_invite_token, generate_reset_password_tok
 from src.emails.repository import PendingEmailRepository
 from src.pagination import PaginatedResponse
 from src.users.models.users import User, UserActivation, UserLoginLockout, UserSession
-from src.users.repositories.users_admin import UserRepositoryAdmin, UserRepositoryBase
+from src.users.repositories.users_admin import (
+    UserRepositoryAdmin,
+    UserRepositoryBase,
+)
 from src.users.schemas.users import (
     CreateStaffAdmin,
     CreateStudentAdmin,
@@ -42,6 +45,10 @@ logger = get_logger(__name__)
 STUDENT_MAX_SHARED_CONTACT = 3
 STAFF_MAX_SHARED_CONTACT = 1
 SYSTEM_ADMIN_INVISIBLE_ROLES = frozenset({UserRole.SYSTEM_ADMIN})
+DIRECTOR_INVISIBLE_ROLES = frozenset({UserRole.SYSTEM_ADMIN, UserRole.PARENT})
+VICE_DIRECTOR_INVISIBLE_ROLES = frozenset(
+    {UserRole.SYSTEM_ADMIN, UserRole.DIRECTOR, UserRole.VICE_DIRECTOR, UserRole.PARENT}
+)
 
 
 async def _check_contact_limit(
@@ -82,7 +89,7 @@ class UserServiceAdmin:
     ) -> User:
         if create_request.role == UserRole.SYSTEM_ADMIN:
             logger.warning(
-                "user_creation_denied",
+                "user_registration_denied",
                 actor_user_id=current_user_id,
                 target_username=create_request.username,
                 requested_role=create_request.role.value,
@@ -195,7 +202,7 @@ class UserServiceAdmin:
         except IntegrityError as e:
             await db.rollback()
 
-            logger.error(
+            logger.warning(
                 "user_registration_failed",
                 reason="integrity_error",
                 error=str(e.orig),
@@ -582,3 +589,33 @@ class UserServiceAdmin:
         )
 
         return result
+
+
+class UserServiceStaff:
+    @staticmethod
+    async def get_users(
+        db: AsyncSession,
+        skip: int,
+        limit: int,
+        filters: SearchUserAdmin,
+        sort_by: str,
+        order: str,
+    ) -> PaginatedResponse:
+
+        users, total = await UserRepositoryAdmin.get_users(
+            db,
+            excluded_roles=DIRECTOR_INVISIBLE_ROLES,
+            skip=skip,
+            limit=limit,
+            filters=filters,
+            sort_by=sort_by,
+            order=order,
+        )
+
+        return PaginatedResponse(
+            items=users,
+            total=total,
+            skip=skip,
+            limit=limit,
+            has_more=skip + limit < total,
+        )
