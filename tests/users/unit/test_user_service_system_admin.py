@@ -21,21 +21,24 @@ from src.utils.exceptions import (
 )
 from tests.factories import (
     make_deactivated_user,
+    make_parent,
     make_student,
     make_system_admin,
     make_teacher,
+    make_user,
 )
 from users.models.users import User
 from users.repositories.users_admin import UserRepositoryBase
 from users.schemas.users import (
     CreateStaffAdmin,
     CreateStudentAdmin,
+    SearchUserAdmin,
     UpdateUser,
     UpdateUserEmail,
 )
 from users.services.user_management import UserServiceAdmin
 from utils.cache_keys import SessionCacheKey, UserCacheKey
-from utils.enums import UserRole, UserStatus
+from utils.enums import OrderBy, UserRole, UserSortField, UserStatus
 
 
 class TestRegisterStaff:
@@ -686,3 +689,456 @@ class TestCreateResetPasswordRequest:
             await UserServiceAdmin.create_reset_password_request(
                 test_db, current_user, other_admin.id
             )
+
+
+class TestGetUsers:
+    async def test_returns_empty_when_no_users(self, test_db: AsyncSession) -> None:
+        filters = SearchUserAdmin()
+
+        result = await UserServiceAdmin.get_users(
+            test_db,
+            skip=0,
+            limit=10,
+            filters=filters,
+            sort_by=UserSortField.created_at,
+            order=OrderBy.desc,
+        )
+
+        assert result.items == []
+        assert result.total == 0
+        assert result.has_more is False
+
+    async def test_excludes_system_admin_from_results(
+        self, test_db: AsyncSession, system_admin: User
+    ) -> None:
+        await make_teacher(test_db)
+
+        filters = SearchUserAdmin()
+
+        result = await UserServiceAdmin.get_users(
+            test_db,
+            skip=0,
+            limit=10,
+            filters=filters,
+            sort_by=UserSortField.created_at,
+            order=OrderBy.desc,
+        )
+
+        returned_ids = [user.id for user in result.items]
+
+        assert system_admin.id not in returned_ids
+
+    async def test_returns_all_non_system_admin_users(
+        self, test_db: AsyncSession, system_admin: User
+    ) -> None:
+        teacher = await make_teacher(test_db)
+        student = await make_student(test_db)
+        parent = await make_parent(test_db)
+
+        filters = SearchUserAdmin()
+
+        result = await UserServiceAdmin.get_users(
+            test_db,
+            skip=0,
+            limit=10,
+            filters=filters,
+            sort_by=UserSortField.created_at,
+            order=OrderBy.desc,
+        )
+
+        returned_ids = [user.id for user in result.items]
+
+        assert teacher.id in returned_ids
+        assert student.id in returned_ids
+        assert parent.id in returned_ids
+        assert system_admin.id not in returned_ids
+
+    async def test_has_more_is_true_when_results_exceed_page(
+        self, test_db: AsyncSession
+    ) -> None:
+        await make_teacher(test_db)
+        await make_teacher(
+            test_db, email="second@example.com", phone_number="+15550000002"
+        )
+        await make_teacher(
+            test_db, email="third@example.com", phone_number="+15550000003"
+        )
+
+        filters = SearchUserAdmin()
+
+        result = await UserServiceAdmin.get_users(
+            test_db,
+            skip=0,
+            limit=2,
+            filters=filters,
+            sort_by=UserSortField.created_at,
+            order=OrderBy.desc,
+        )
+
+        assert result.has_more is True
+        assert len(result.items) == 2
+
+    async def test_has_more_is_false_when_results_fit_in_page(
+        self, test_db: AsyncSession
+    ) -> None:
+        await make_teacher(test_db)
+        await make_teacher(
+            test_db, email="second@example.com", phone_number="+15550000002"
+        )
+
+        filters = SearchUserAdmin()
+
+        result = await UserServiceAdmin.get_users(
+            test_db,
+            skip=0,
+            limit=10,
+            filters=filters,
+            sort_by=UserSortField.created_at,
+            order=OrderBy.desc,
+        )
+
+        assert result.total == 2
+        assert result.has_more is False
+
+    async def test_skip_and_limit_return_correct_slice(
+        self, test_db: AsyncSession
+    ) -> None:
+        await make_teacher(test_db)
+        await make_teacher(
+            test_db, email="second@example.com", phone_number="+15550000002"
+        )
+        await make_teacher(
+            test_db, email="third@example.com", phone_number="+15550000003"
+        )
+
+        filters = SearchUserAdmin()
+
+        result = await UserServiceAdmin.get_users(
+            test_db,
+            skip=1,
+            limit=1,
+            filters=filters,
+            sort_by=UserSortField.created_at,
+            order=OrderBy.desc,
+        )
+
+        assert len(result.items) == 1
+        assert result.total == 3
+
+    async def test_filter_by_username(self, test_db: AsyncSession) -> None:
+        target = await make_teacher(test_db, username="target_user")
+        await make_teacher(
+            test_db,
+            username="other_user",
+            email="other@example.com",
+            phone_number="+15550000002",
+        )
+
+        filters = SearchUserAdmin(username="target")
+
+        result = await UserServiceAdmin.get_users(
+            test_db,
+            skip=0,
+            limit=10,
+            filters=filters,
+            sort_by=UserSortField.created_at,
+            order=OrderBy.desc,
+        )
+
+        assert len(result.items) == 1
+        assert result.items[0].id == target.id
+
+    async def test_filter_by_email(self, test_db: AsyncSession) -> None:
+        target = await make_teacher(test_db, email="target@example.com")
+        await make_teacher(
+            test_db, email="other@example.com", phone_number="+15550000002"
+        )
+
+        filters = SearchUserAdmin(email="target")
+
+        result = await UserServiceAdmin.get_users(
+            test_db,
+            skip=0,
+            limit=10,
+            filters=filters,
+            sort_by=UserSortField.created_at,
+            order=OrderBy.desc,
+        )
+
+        assert len(result.items) == 1
+        assert result.items[0].id == target.id
+
+    async def test_filter_by_firstname(self, test_db: AsyncSession) -> None:
+        target = await make_teacher(test_db, firstname="Unique")
+        await make_teacher(
+            test_db,
+            firstname="Other",
+            email="other@example.com",
+            phone_number="+15550000002",
+        )
+
+        filters = SearchUserAdmin(firstname="Unique")
+
+        result = await UserServiceAdmin.get_users(
+            test_db,
+            skip=0,
+            limit=10,
+            filters=filters,
+            sort_by=UserSortField.created_at,
+            order=OrderBy.desc,
+        )
+
+        assert len(result.items) == 1
+        assert result.items[0].id == target.id
+
+    async def test_filter_by_lastname(self, test_db: AsyncSession) -> None:
+        target = await make_teacher(test_db, lastname="Targetlast")
+        await make_teacher(
+            test_db,
+            lastname="Otherlast",
+            email="other@example.com",
+            phone_number="+15550000002",
+        )
+
+        filters = SearchUserAdmin(lastname="Targetlast")
+
+        result = await UserServiceAdmin.get_users(
+            test_db,
+            skip=0,
+            limit=10,
+            filters=filters,
+            sort_by=UserSortField.created_at,
+            order=OrderBy.desc,
+        )
+
+        assert len(result.items) == 1
+        assert result.items[0].id == target.id
+
+    async def test_filter_by_phone_number(self, test_db: AsyncSession) -> None:
+        target = await make_teacher(test_db, phone_number="+15550000099")
+        await make_teacher(
+            test_db, email="other@example.com", phone_number="+15550000002"
+        )
+
+        filters = SearchUserAdmin(phone_number="+15550000099")
+
+        result = await UserServiceAdmin.get_users(
+            test_db,
+            skip=0,
+            limit=10,
+            filters=filters,
+            sort_by=UserSortField.created_at,
+            order=OrderBy.desc,
+        )
+
+        assert len(result.items) == 1
+        assert result.items[0].id == target.id
+
+    async def test_filter_by_role(self, test_db: AsyncSession) -> None:
+        teacher = await make_teacher(test_db)
+        await make_parent(test_db)
+
+        filters = SearchUserAdmin(role=UserRole.TEACHER)
+
+        result = await UserServiceAdmin.get_users(
+            test_db,
+            skip=0,
+            limit=10,
+            filters=filters,
+            sort_by=UserSortField.created_at,
+            order=OrderBy.desc,
+        )
+
+        returned_ids = [user.id for user in result.items]
+
+        assert teacher.id in returned_ids
+        assert all(user.role == UserRole.TEACHER for user in result.items)
+
+    async def test_filter_by_is_active_true(self, test_db: AsyncSession) -> None:
+        active_user = await make_teacher(test_db, is_active=True)
+        await make_teacher(
+            test_db,
+            is_active=False,
+            email="inactive@example.com",
+            phone_number="+15550000002",
+        )
+
+        filters = SearchUserAdmin(is_active=True)
+
+        result = await UserServiceAdmin.get_users(
+            test_db,
+            skip=0,
+            limit=10,
+            filters=filters,
+            sort_by=UserSortField.created_at,
+            order=OrderBy.desc,
+        )
+
+        returned_ids = [user.id for user in result.items]
+
+        assert active_user.id in returned_ids
+        assert all(user.is_active is True for user in result.items)
+
+    async def test_filter_by_is_active_false(self, test_db: AsyncSession) -> None:
+        await make_teacher(test_db, is_active=True)
+        inactive_user = await make_teacher(
+            test_db,
+            is_active=False,
+            email="inactive@example.com",
+            phone_number="+15550000002",
+        )
+
+        filters = SearchUserAdmin(is_active=False)
+
+        result = await UserServiceAdmin.get_users(
+            test_db,
+            skip=0,
+            limit=10,
+            filters=filters,
+            sort_by=UserSortField.created_at,
+            order=OrderBy.desc,
+        )
+
+        returned_ids = [user.id for user in result.items]
+
+        assert inactive_user.id in returned_ids
+        assert all(user.is_active is False for user in result.items)
+
+    async def test_sort_by_firstname_asc(self, test_db: AsyncSession) -> None:
+        await make_teacher(test_db, firstname="Charlie")
+        await make_teacher(
+            test_db,
+            firstname="Alice",
+            email="alice@example.com",
+            phone_number="+15550000002",
+        )
+        await make_teacher(
+            test_db,
+            firstname="Bob",
+            email="bob@example.com",
+            phone_number="+15550000003",
+        )
+
+        filters = SearchUserAdmin()
+
+        result = await UserServiceAdmin.get_users(
+            test_db,
+            skip=0,
+            limit=10,
+            filters=filters,
+            sort_by=UserSortField.first_name,
+            order=OrderBy.asc,
+        )
+
+        firstnames = [user.firstname for user in result.items]
+
+        assert firstnames == sorted(firstnames)
+
+    async def test_sort_by_firstname_desc(self, test_db: AsyncSession) -> None:
+        await make_teacher(test_db, firstname="Charlie")
+        await make_teacher(
+            test_db,
+            firstname="Alice",
+            email="alice@example.com",
+            phone_number="+15550000002",
+        )
+        await make_teacher(
+            test_db,
+            firstname="Bob",
+            email="bob@example.com",
+            phone_number="+15550000003",
+        )
+
+        filters = SearchUserAdmin()
+
+        result = await UserServiceAdmin.get_users(
+            test_db,
+            skip=0,
+            limit=10,
+            filters=filters,
+            sort_by=UserSortField.first_name,
+            order=OrderBy.desc,
+        )
+
+        firstnames = [user.firstname for user in result.items]
+
+        assert firstnames == sorted(firstnames, reverse=True)
+
+    async def test_invalid_sort_field_falls_back_to_created_at(
+        self, test_db: AsyncSession
+    ) -> None:
+        await make_teacher(test_db)
+        await make_teacher(
+            test_db, email="second@example.com", phone_number="+15550000002"
+        )
+
+        filters = SearchUserAdmin()
+
+        result = await UserServiceAdmin.get_users(
+            test_db,
+            skip=0,
+            limit=10,
+            filters=filters,
+            sort_by="invalid_field",
+            order=OrderBy.desc,
+        )
+
+        assert result.total == 2
+
+
+class TestGetUserByID:
+    async def test_raises_error_for_non_existent_user(
+        self, test_db: AsyncSession
+    ) -> None:
+        user = await make_user(test_db)
+        non_existent_id = user.id + 9_999_999
+
+        with pytest.raises(UserNotFoundError):
+            await UserServiceAdmin.get_user_by_id(test_db, non_existent_id)
+
+    async def test_returns_correct_data(self, test_db: AsyncSession) -> None:
+        user = await make_teacher(
+            test_db, email="test_email@example.com", phone_number="+15551110000"
+        )
+
+        result = await UserServiceAdmin.get_user_by_id(test_db, user.id)
+
+        assert result.id == user.id
+        assert result.email == "test_email@example.com"
+        assert result.phone_number == "+15551110000"
+        assert result.role == UserRole.TEACHER
+        assert result.is_active == user.is_active
+
+    async def test_populates_cache_after_db_hit(
+        self, test_db: AsyncSession, mock_set_cache, mocker
+    ) -> None:
+        user = await make_teacher(test_db)
+
+        await UserServiceAdmin.get_user_by_id(test_db, user.id)
+
+        mock_set_cache.assert_called_once_with(
+            UserCacheKey.user_detail_key_admin(user.id),
+            mocker.ANY,
+            900,
+        )
+
+    async def test_returns_cached_data(self, test_db: AsyncSession) -> None:
+        user = await make_teacher(test_db)
+
+        first_result = await UserServiceAdmin.get_user_by_id(test_db, user.id)
+        second_result = await UserServiceAdmin.get_user_by_id(test_db, user.id)
+
+        assert second_result == first_result
+
+    async def test_does_not_hit_db_on_cache_hit(
+        self, test_db: AsyncSession, mocker
+    ) -> None:
+        user = await make_teacher(test_db)
+
+        await UserServiceAdmin.get_user_by_id(test_db, user.id)
+
+        mock_get_user = mocker.patch.object(UserRepositoryBase, "get_user_by_id")
+
+        await UserServiceAdmin.get_user_by_id(test_db, user.id)
+
+        mock_get_user.assert_not_called()

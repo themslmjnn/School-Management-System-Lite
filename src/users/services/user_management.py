@@ -326,51 +326,6 @@ class UserServiceAdmin:
         )
 
     @staticmethod
-    async def get_users(
-        db: AsyncSession,
-        skip: int,
-        limit: int,
-        filters: SearchUserAdmin,
-        sort_by: str,
-        order: str,
-    ) -> PaginatedResponse:
-
-        users, total = await UserRepositoryAdmin.get_users_admin(
-            db, skip, limit, filters, sort_by, order
-        )
-
-        return PaginatedResponse(
-            items=users,
-            total=total,
-            skip=skip,
-            limit=limit,
-            has_more=skip + limit < total,
-        )
-
-    @staticmethod
-    async def get_user_by_id(
-        db: AsyncSession, user_id: int
-    ) -> UserResponseAdminDetailed | dict:
-        cache_key = UserCacheKey.user_detail_key_admin(user_id)
-        cached = await get_cache(cache_key)
-        if cached is not None:
-            return cached
-
-        user = await UserRepositoryBase.get_user_by_id(
-            db, user_id, excluded_roles=SYSTEM_ADMIN_INVISIBLE_ROLES
-        )
-        ensure_exists(user, UserNotFoundError(HTTP404.USER))
-
-        result = UserResponseAdminDetailed.model_validate(user)
-        await set_cache(
-            cache_key,
-            result.model_dump(mode="json"),
-            900,
-        )
-
-        return result
-
-    @staticmethod
     async def deactivate_user(
         db: AsyncSession, current_user_id: int, user_id: int
     ) -> None:
@@ -582,3 +537,48 @@ class UserServiceAdmin:
             "reset_password_request_created",
             user_id=user.id,
         )
+
+    @staticmethod
+    async def get_users(
+        db: AsyncSession,
+        skip: int,
+        limit: int,
+        filters: SearchUserAdmin,
+        sort_by: str,
+        order: str,
+    ) -> PaginatedResponse:
+
+        users, total = await UserRepositoryAdmin.get_users_admin(
+            db, skip, limit, filters, sort_by, order
+        )
+
+        return PaginatedResponse(
+            items=users,
+            total=total,
+            skip=skip,
+            limit=limit,
+            has_more=skip + limit < total,
+        )
+
+    @staticmethod
+    async def get_user_by_id(
+        db: AsyncSession, user_id: int
+    ) -> UserResponseAdminDetailed | dict:
+        cache_key = UserCacheKey.user_detail_key_admin(user_id)
+        cached = await get_cache(cache_key)
+        if cached is not None:
+            return cached
+
+        user = await UserRepositoryBase.get_user_by_id(
+            db, user_id, excluded_roles=SYSTEM_ADMIN_INVISIBLE_ROLES
+        )
+        ensure_exists(user, UserNotFoundError(HTTP404.USER))
+
+        result = UserResponseAdminDetailed.model_validate(user)
+        await set_cache(
+            cache_key,
+            result.model_dump(mode="json"),
+            900,
+        )
+
+        return result
