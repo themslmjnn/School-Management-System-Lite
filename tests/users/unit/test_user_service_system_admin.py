@@ -369,3 +369,95 @@ class TestDeleteParent:
     ) -> None:
         with pytest.raises(UserNotFoundError):
             await UserServiceAdmin.delete_parent(test_db, system_admin.id, teacher.id)
+
+
+class TestDeactivateUser:
+    async def test_deactivate_user_successfully(
+        self, test_db: AsyncSession, system_admin: User, teacher: User, mock_delete_cache: AsyncMock
+    ) -> None:
+        await UserServiceAdmin.deactivate_user(test_db, system_admin.id, teacher.id)
+
+        user_with_session = await UserRepositoryBase.get_user_by_id(
+            test_db, teacher.id, load_session=True
+        )
+
+        assert user_with_session.is_active is False
+        assert user_with_session.session.access_token_version == 2
+        assert user_with_session.session.refresh_token_hash is None
+        assert user_with_session.session.refresh_token_family is None
+        assert user_with_session.session.refresh_token_expires_at is None
+
+    async def test_deactivate_user_invalidates_cache(
+        self, test_db: AsyncSession, system_admin: User, teacher: User, mock_delete_cache: AsyncMock
+    ) -> None:
+        await UserServiceAdmin.deactivate_user(test_db, system_admin.id, teacher.id)
+
+        mock_delete_cache.assert_called_once_with(
+            UserCacheKey.user_detail_key_admin(teacher.id),
+            SessionCacheKey.access_token_version_key(teacher.id),
+        )
+
+    async def test_deactivate_user_not_found(
+        self, test_db: AsyncSession, system_admin: User
+    ) -> None:
+        with pytest.raises(UserNotFoundError):
+            await UserServiceAdmin.deactivate_user(test_db, system_admin.id, 999_999)
+
+    async def test_deactivate_already_inactive_user(
+        self, test_db: AsyncSession, system_admin: User
+    ) -> None:
+        deactivated = await make_deactivated_user(test_db)
+
+        with pytest.raises(UserAlreadyInactiveError):
+            await UserServiceAdmin.deactivate_user(test_db, system_admin.id, deactivated.id)
+
+    async def test_deactivate_user_excludes_system_admins(
+        self, test_db: AsyncSession, system_admin: User
+    ) -> None:
+        other_admin = await make_system_admin(test_db)
+
+        with pytest.raises(UserNotFoundError):
+            await UserServiceAdmin.deactivate_user(test_db, system_admin.id, other_admin.id)
+
+
+class TestActivateUser:
+    async def test_activate_user_successfully(
+        self, test_db: AsyncSession, system_admin: User, mock_delete_cache: AsyncMock
+    ) -> None:
+        deactivated = await make_deactivated_user(test_db)
+
+        await UserServiceAdmin.activate_user(test_db, system_admin.id, deactivated.id)
+
+        activated_user = await UserRepositoryBase.get_user_by_id(test_db, deactivated.id)
+        assert activated_user.is_active is True
+
+    async def test_activate_user_invalidates_cache(
+        self, test_db: AsyncSession, system_admin: User, mock_delete_cache: AsyncMock
+    ) -> None:
+        deactivated = await make_deactivated_user(test_db)
+
+        await UserServiceAdmin.activate_user(test_db, system_admin.id, deactivated.id)
+
+        mock_delete_cache.assert_called_once_with(
+            UserCacheKey.user_detail_key_admin(deactivated.id)
+        )
+
+    async def test_activate_user_not_found(
+        self, test_db: AsyncSession, system_admin: User
+    ) -> None:
+        with pytest.raises(UserNotFoundError):
+            await UserServiceAdmin.activate_user(test_db, system_admin.id, 999_999)
+
+    async def test_activate_already_active_user(
+        self, test_db: AsyncSession, system_admin: User, teacher: User
+    ) -> None:
+        with pytest.raises(UserAlreadyActiveError):
+            await UserServiceAdmin.activate_user(test_db, system_admin.id, teacher.id)
+
+    async def test_activate_user_excludes_system_admins(
+        self, test_db: AsyncSession, system_admin: User
+    ) -> None:
+        other_admin = await make_deactivated_user(test_db, role=UserRole.SYSTEM_ADMIN)
+
+        with pytest.raises(UserNotFoundError):
+            await UserServiceAdmin.activate_user(test_db, system_admin.id, other_admin.id)
