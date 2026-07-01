@@ -1,11 +1,13 @@
+from datetime import UTC, datetime
+
 from pydantic import EmailStr
-from sqlalchemy import Select, and_, func, or_, select
+from sqlalchemy import Select, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
 from src.users.models.users import User, UserActivation, UserLoginLockout, UserSession
 from src.users.schemas.users import SearchUserAdmin, SearchUserBase
-from src.utils.enums import OrderBy, UserRole, UserSortField
+from src.utils.enums import OrderBy, UserRole, UserSortField, UserStatus
 
 ENTITY_TYPE = User | UserSession | UserActivation | UserLoginLockout
 
@@ -127,24 +129,36 @@ class UserRepositoryBase:
         return result.scalar()
 
     @staticmethod
-    async def get_parent(db: AsyncSession, target_user_id: int) -> User | None:
+    async def delete_user(db: AsyncSession, user_to_be_deleted: User) -> None:
+        await db.delete(user_to_be_deleted)
+
+    @staticmethod
+    async def get_users_due_for_hard_deletion(
+        db: AsyncSession,
+    ) -> list[User]:
         query = select(User).where(
-            and_(
-                User.id == target_user_id,
-                User.role == UserRole.PARENT,
-            )
+            User.status == UserStatus.PENDING_DELETION,
+            User.deletion_scheduled_for <= datetime.now(UTC),
+        )
+
+        result = await db.execute(query)
+
+        return list(result.scalars().all())
+
+    @staticmethod
+    async def get_user_by_id_pending_deletion(
+        db: AsyncSession,
+        user_id: int,
+    ) -> User | None:
+        query = select(User).where(
+            User.id == user_id,
+            User.role == UserRole.PARENT,
+            User.status == UserStatus.PENDING_DELETION,
         )
 
         result = await db.execute(query)
 
         return result.scalar_one_or_none()
-
-    @staticmethod
-    def delete_user(db: AsyncSession, user_to_be_deleted: User) -> None:
-        db.delete(user_to_be_deleted)
-
-    # @staticmethod
-    # async def delete_entity(db: AsyncSession, entity: ENTITY_TYPE) -> None:
 
 
 class UserRepositoryAdmin:

@@ -8,7 +8,7 @@ from src.core.dependencies import CurrentUser
 from src.emails.models import EmailType
 from src.emails.repository import PendingEmailRepository
 from src.users.models.users import User
-from src.users.repositories.users_admin import UserRepositoryBase
+from users.repositories.users import UserRepositoryBase
 from src.users.schemas.users import (
     CreateStaffAdmin,
     CreateStudentAdmin,
@@ -16,7 +16,7 @@ from src.users.schemas.users import (
     UpdateUser,
     UpdateUserEmail,
 )
-from src.users.services.user_management import UserServiceAdmin
+from users.services.system_admin import UserServiceAdmin
 from src.utils.cache_keys import SessionCacheKey, UserCacheKey
 from src.utils.enums import OrderBy, UserRole, UserSortField, UserStatus
 from src.utils.exceptions import (
@@ -43,33 +43,33 @@ from tests.factories import (
 
 class TestRegisterStaff:
     async def test_block_system_admin_creation(
-        self, test_db, system_admin, valid_create_user_request_staff: CreateStaffAdmin
+        self, test_db, system_admin, valid_create_staff_request: CreateStaffAdmin
     ):
-        valid_create_user_request_staff.role = UserRole.SYSTEM_ADMIN
+        valid_create_staff_request.role = UserRole.SYSTEM_ADMIN
 
         with pytest.raises(CannotCreateSystemAdminError):
             await UserServiceAdmin.register_staff(
-                test_db, system_admin.id, valid_create_user_request_staff
+                test_db, system_admin.id, valid_create_staff_request
             )
 
     async def test_block_director_creation(
-        self, test_db, system_admin, valid_create_user_request_staff: CreateStaffAdmin
+        self, test_db, system_admin, valid_create_staff_request: CreateStaffAdmin
     ):
-        valid_create_user_request_staff.role = UserRole.DIRECTOR
+        valid_create_staff_request.role = UserRole.DIRECTOR
 
         with pytest.raises(CannotCreateDirectorError):
             await UserServiceAdmin.register_staff(
-                test_db, system_admin.id, valid_create_user_request_staff
+                test_db, system_admin.id, valid_create_staff_request
             )
 
     async def test_block_student_creation(
-        self, test_db, system_admin, valid_create_user_request_staff: CreateStaffAdmin
+        self, test_db, system_admin, valid_create_staff_request: CreateStaffAdmin
     ):
-        valid_create_user_request_staff.role = UserRole.STUDENT
+        valid_create_staff_request.role = UserRole.STUDENT
 
         with pytest.raises(CannotCreateStudentError):
             await UserServiceAdmin.register_staff(
-                test_db, system_admin.id, valid_create_user_request_staff
+                test_db, system_admin.id, valid_create_staff_request
             )
 
     @pytest.mark.parametrize(
@@ -91,7 +91,7 @@ class TestRegisterStaff:
         self,
         test_db,
         system_admin,
-        valid_create_user_request_staff: CreateStaffAdmin,
+        valid_create_staff_request: CreateStaffAdmin,
         existing_user_data: dict,
         request_override: dict,
         expected_exception,
@@ -99,18 +99,18 @@ class TestRegisterStaff:
         await make_teacher(test_db, **existing_user_data)
 
         for field, value in request_override.items():
-            setattr(valid_create_user_request_staff, field, value)
+            setattr(valid_create_staff_request, field, value)
 
         with pytest.raises(expected_exception):
             await UserServiceAdmin.register_staff(
-                test_db, system_admin.id, valid_create_user_request_staff
+                test_db, system_admin.id, valid_create_staff_request
             )
 
     async def test_create_user_session_table_successfully(
-        self, test_db, system_admin, valid_create_user_request_staff: CreateStaffAdmin
+        self, test_db, system_admin, valid_create_staff_request: CreateStaffAdmin
     ):
         user = await UserServiceAdmin.register_staff(
-            test_db, system_admin.id, valid_create_user_request_staff
+            test_db, system_admin.id, valid_create_staff_request
         )
 
         user_with_session = await UserRepositoryBase.get_user_by_id(
@@ -131,10 +131,10 @@ class TestRegisterStaff:
         assert session.email_change_code_expires_at is None
 
     async def test_create_user_login_lockout_table_successfully(
-        self, test_db, system_admin, valid_create_user_request_staff: CreateStaffAdmin
+        self, test_db, system_admin, valid_create_staff_request: CreateStaffAdmin
     ):
         user = await UserServiceAdmin.register_staff(
-            test_db, system_admin.id, valid_create_user_request_staff
+            test_db, system_admin.id, valid_create_staff_request
         )
 
         user_with_lockout = await UserRepositoryBase.get_user_by_id(
@@ -148,10 +148,10 @@ class TestRegisterStaff:
         assert lockout.locked_until is None
 
     async def test_create_user_activation_table_successfully(
-        self, test_db, system_admin, valid_create_user_request_staff: CreateStaffAdmin
+        self, test_db, system_admin, valid_create_staff_request: CreateStaffAdmin
     ):
         user = await UserServiceAdmin.register_staff(
-            test_db, system_admin.id, valid_create_user_request_staff
+            test_db, system_admin.id, valid_create_staff_request
         )
 
         user_with_activation = await UserRepositoryBase.get_user_by_id(
@@ -166,10 +166,10 @@ class TestRegisterStaff:
         assert activation.invite_token_expires_at > datetime.now(UTC)
 
     async def test_create_pending_email_successfully(
-        self, test_db, system_admin, valid_create_user_request_staff: CreateStaffAdmin
+        self, test_db, system_admin, valid_create_staff_request: CreateStaffAdmin
     ):
         user = await UserServiceAdmin.register_staff(
-            test_db, system_admin.id, valid_create_user_request_staff
+            test_db, system_admin.id, valid_create_staff_request
         )
 
         pending_emails = await PendingEmailRepository.get_pending_email_by_triggered_by(
@@ -187,15 +187,15 @@ class TestRegisterStaff:
         assert email.recipient_user_id == user.id
 
     async def test_create_user_successfully(
-        self, test_db, system_admin, valid_create_user_request_staff: CreateStaffAdmin
+        self, test_db, system_admin, valid_create_staff_request: CreateStaffAdmin
     ):
         user = await UserServiceAdmin.register_staff(
-            test_db, system_admin.id, valid_create_user_request_staff
+            test_db, system_admin.id, valid_create_staff_request
         )
 
         assert user.id is not None
-        assert user.email == valid_create_user_request_staff.email
-        assert user.role == valid_create_user_request_staff.role
+        assert user.email == valid_create_staff_request.email
+        assert user.role == valid_create_staff_request.role
         assert user.status == UserStatus.PENDING_ACTIVATION
         assert user.is_active is False
         assert user.password_hash is None
@@ -206,22 +206,24 @@ class TestRegisterStaff:
         self,
         test_db,
         system_admin,
-        valid_create_user_request_staff: CreateStaffAdmin,
+        valid_create_staff_request: CreateStaffAdmin,
         mocker,
     ):
-        await make_teacher(test_db, email="constraint.check@example.com", phone_number="+992555111333")
+        await make_teacher(
+            test_db, email="constraint.check@example.com", phone_number="+992555111333"
+        )
 
         mocker.patch(
             "src.users.services.user_management.UserRepositoryBase.count_users_with_contact",
             return_value=0,
         )
 
-        valid_create_user_request_staff.email = "constraint.check@example.com"
-        valid_create_user_request_staff.phone_number = "+992555111333"
+        valid_create_staff_request.email = "constraint.check@example.com"
+        valid_create_staff_request.phone_number = "+992555111333"
 
         with pytest.raises(DuplicateValueError):
             await UserServiceAdmin.register_staff(
-                test_db, system_admin.id, valid_create_user_request_staff
+                test_db, system_admin.id, valid_create_staff_request
             )
 
 
@@ -262,12 +264,12 @@ class TestRegisterStudent:
             await make_student(
                 test_db,
                 email="shared@example.com",
-                phone_number="+15553334444",
+                phone_number="+992555333444",
                 username=f"existing_student_{i}",
             )
 
         valid_create_student_request.email = "shared@example.com"
-        valid_create_student_request.phone_number = "+15553334444"
+        valid_create_student_request.phone_number = "+992555333444"
 
         with pytest.raises(MaxNumberOfIdenticalContactsError):
             await UserServiceAdmin.register_student(
@@ -357,8 +359,16 @@ class TestRegisterStudent:
 
 class TestDeleteParent:
     async def test_delete_parent_successfully(
-        self, test_db: AsyncSession, system_admin: User, parent: User
+        self,
+        test_db: AsyncSession,
+        system_admin: User,
+        parent: User,
     ) -> None:
+        # mocker.patch(
+        #     "src.users.services.user_management.email_sender.send_user_deletion_email",
+        #     new_callable=AsyncMock,
+        # )
+
         await UserServiceAdmin.delete_parent(test_db, system_admin.id, parent.id)
 
         deleted_user = await UserRepositoryBase.get_user_by_id(test_db, parent.id)

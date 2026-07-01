@@ -7,7 +7,7 @@ from src.core.security import generate_invite_token, hash_password
 from src.users.models.guardian_link import StudentGuardianLink
 from src.users.models.users import User, UserActivation, UserLoginLockout, UserSession
 from src.users.repositories.guardian_link import GuardianLinkRepository
-from src.users.repositories.users_admin import UserRepositoryBase
+from users.repositories.users import UserRepositoryBase
 from src.utils.enums import GuardianPriority, UserRole, UserStatus
 
 _counter = itertools.count(1)

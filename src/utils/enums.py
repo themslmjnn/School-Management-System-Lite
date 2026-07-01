@@ -33,6 +33,7 @@ class EmailType(StrEnum):
     ACCOUNT_DEACTIVATION = "account_deactivation"
     ACCOUNT_ACTIVATION = "account_activation"
     ACCOUNT_DELETION = "account_deletion"
+    ADMIN_EMAIL_OVERRIDE = "admin_email_override"
 
 
 class EmailSendingStatus(StrEnum):

@@ -1,6 +1,13 @@
 from datetime import date, datetime
 
-from pydantic import BaseModel, EmailStr, Field, computed_field, field_serializer, field_validator
+from pydantic import (
+    BaseModel,
+    EmailStr,
+    Field,
+    computed_field,
+    field_serializer,
+    field_validator,
+)
 
 from src.utils import validators
 from src.utils.base_schema import BaseSchema
@@ -80,7 +87,7 @@ class UserResponseAdminDetailed(UserResponseAdmin, BaseSchema):
     @field_serializer("created_at", "updated_at")
     def serialize_updated_at(self, value: datetime) -> str:
         return value.strftime("%d %b %Y, %H:%M")
-    
+
     @computed_field
     @property
     def format_phone_number(self) -> str:

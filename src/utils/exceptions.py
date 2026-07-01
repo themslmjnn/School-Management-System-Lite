@@ -126,6 +126,10 @@ class UserAlreadyActiveError(AppException):
     pass
 
 
+class UserAlreadyPendingDeletionError(AppException):
+    pass
+
+
 def handle_username_integrity_error(error: IntegrityError) -> None:
     error_str = str(error.orig)
 

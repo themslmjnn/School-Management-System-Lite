@@ -1,3 +1,4 @@
+import asyncio
 from datetime import UTC, datetime, timedelta
 
 from sqlalchemy.exc import IntegrityError
@@ -11,10 +12,6 @@ from src.core.security import generate_invite_token, generate_reset_password_tok
 from src.emails.repository import PendingEmailRepository
 from src.pagination import PaginatedResponse
 from src.users.models.users import User, UserActivation, UserLoginLockout, UserSession
-from src.users.repositories.users_admin import (
-    UserRepositoryAdmin,
-    UserRepositoryBase,
-)
 from src.users.schemas.users import (
     CreateStaffAdmin,
     CreateStudentAdmin,
@@ -34,20 +31,34 @@ from src.utils.exceptions import (
     MaxNumberOfIdenticalContactsError,
     UserAlreadyActiveError,
     UserAlreadyInactiveError,
+    UserAlreadyPendingDeletionError,
     UserNotFoundError,
     handle_non_student_unique_contact_error,
     handle_username_integrity_error,
 )
 from src.utils.helpers import ensure_exists, update_object
+from users.repositories.users import (
+    UserRepositoryAdmin,
+    UserRepositoryBase,
+)
 
 logger = get_logger(__name__)
 
+DELETION_GRACE_PERIOD_DAYS = 30
 STUDENT_MAX_SHARED_CONTACT = 3
 STAFF_MAX_SHARED_CONTACT = 1
 SYSTEM_ADMIN_INVISIBLE_ROLES = frozenset({UserRole.SYSTEM_ADMIN})
 DIRECTOR_INVISIBLE_ROLES = frozenset({UserRole.SYSTEM_ADMIN, UserRole.PARENT})
 VICE_DIRECTOR_INVISIBLE_ROLES = frozenset(
     {UserRole.SYSTEM_ADMIN, UserRole.DIRECTOR, UserRole.VICE_DIRECTOR, UserRole.PARENT}
+)
+NON_GUARDIAN_ROLES = frozenset({UserRole.STUDENT, UserRole.SYSTEM_ADMIN})
+BLOCKED_ROLES_VIA_STAFF_ENDPOINT = frozenset(
+    {
+        UserRole.SYSTEM_ADMIN,
+        UserRole.DIRECTOR,
+        UserRole.STUDENT,
+    }
 )
 
 
@@ -84,58 +95,53 @@ async def _check_contact_limit(
 
 class UserServiceAdmin:
     @staticmethod
-    async def register_staff(
-        db: AsyncSession, current_user_id: int, create_request: CreateStaffAdmin
+    async def register_user(
+        db: AsyncSession,
+        current_user_id: int,
+        create_request: CreateStaffAdmin | CreateStudentAdmin,
     ) -> User:
-        if create_request.role == UserRole.SYSTEM_ADMIN:
+        is_student = isinstance(create_request, CreateStudentAdmin)
+
+        if not is_student and create_request.role in BLOCKED_ROLES_VIA_STAFF_ENDPOINT:
+            denial_reason = {
+                UserRole.SYSTEM_ADMIN: "system_admin_creation_via_api_is_forbidden",
+                UserRole.DIRECTOR: "director_creation_via_api_is_forbidden",
+                UserRole.STUDENT: "student_creation_via_staff_endpoint_is_forbidden",
+            }[create_request.role]
+
+            exception_map = {
+                UserRole.SYSTEM_ADMIN: CannotCreateSystemAdminError,
+                UserRole.DIRECTOR: CannotCreateDirectorError,
+                UserRole.STUDENT: CannotCreateStudentError,
+            }
+
             logger.warning(
                 "user_registration_denied",
                 actor_user_id=current_user_id,
                 target_username=create_request.username,
                 requested_role=create_request.role.value,
-                denial_reason="system_admin_creation_via_api_is_forbidden",
+                denial_reason=denial_reason,
             )
-
-            raise CannotCreateSystemAdminError(
-                "System admin creation via API is forbidden"
-            )
-
-        if create_request.role == UserRole.DIRECTOR:
-            logger.warning(
-                "user_creation_denied",
-                actor_user_id=current_user_id,
-                target_username=create_request.username,
-                requested_role=create_request.role.value,
-                denial_reason="director_creation_via_api_is_forbidden",
-            )
-
-            raise CannotCreateDirectorError("Director creation via API is forbidden")
-
-        if create_request.role == UserRole.STUDENT:
-            logger.warning(
-                "user_creation_denied",
-                actor_user_id=current_user_id,
-                target_username=create_request.username,
-                requested_role=UserRole.STUDENT,
-                denial_reason="student_creation_via_staff_service_is_forbidden",
-            )
-
-            raise CannotCreateStudentError(
-                "Student creation via staff service is forbidden"
+            raise exception_map[create_request.role](
+                denial_reason.replace("_", " ").capitalize()
             )
 
         await _check_contact_limit(
             db,
             current_user_id,
             create_request,
-            role=None,
-            max_allowed=STAFF_MAX_SHARED_CONTACT,
+            role=UserRole.STUDENT if is_student else None,
+            max_allowed=STUDENT_MAX_SHARED_CONTACT
+            if is_student
+            else STAFF_MAX_SHARED_CONTACT,
         )
 
         raw_invite_token, hashed_invite_token = generate_invite_token()
         invite_token_expires_at = datetime.now(UTC) + timedelta(
             hours=settings.INVITE_TOKEN_EXPIRES_HOURS
         )
+
+        resolved_role = UserRole.STUDENT if is_student else create_request.role
 
         try:
             new_user = User(
@@ -145,14 +151,15 @@ class UserServiceAdmin:
                 middlename=create_request.middlename,
                 phone_number=create_request.phone_number,
                 email=create_request.email,
-                role=create_request.role,
+                role=resolved_role,
                 status=UserStatus.PENDING_ACTIVATION,
                 is_active=False,
                 created_by=current_user_id,
+                date_of_birth=create_request.date_of_birth if is_student else None,
+                address=create_request.address if is_student else None,
             )
 
             UserRepositoryBase.add_entity(db, user=new_user)
-
             await db.flush()
 
             new_user_activation = UserActivation(
@@ -185,8 +192,6 @@ class UserServiceAdmin:
                 recipient_user_id=new_user.id,
             )
 
-            print(f"Invite token: {raw_invite_token}")
-
             await db.commit()
             await db.refresh(new_user)
 
@@ -194,11 +199,12 @@ class UserServiceAdmin:
                 "user_registered",
                 new_user_id=new_user.id,
                 target_username=create_request.username,
-                role=new_user.role,
+                role=resolved_role,
                 created_by=current_user_id,
             )
 
             return new_user
+
         except IntegrityError as e:
             await db.rollback()
 
@@ -210,126 +216,103 @@ class UserServiceAdmin:
             )
 
             handle_username_integrity_error(e)
-            handle_non_student_unique_contact_error(e)
-            raise
-
-    @staticmethod
-    async def register_student(
-        db: AsyncSession, current_user_id: int, create_request: CreateStudentAdmin
-    ) -> User:
-
-        await _check_contact_limit(
-            db,
-            current_user_id,
-            create_request,
-            role=UserRole.STUDENT,
-            max_allowed=STUDENT_MAX_SHARED_CONTACT,
-        )
-
-        raw_invite_token, hashed_invite_token = generate_invite_token()
-        invite_token_expires_at = datetime.now(UTC) + timedelta(
-            hours=settings.INVITE_TOKEN_EXPIRES_HOURS
-        )
-
-        try:
-            new_user = User(
-                username=create_request.username,
-                firstname=create_request.firstname,
-                lastname=create_request.lastname,
-                middlename=create_request.middlename,
-                date_of_birth=create_request.date_of_birth,
-                phone_number=create_request.phone_number,
-                email=create_request.email,
-                address=create_request.address,
-                role=UserRole.STUDENT,
-                status=UserStatus.PENDING_ACTIVATION,
-                is_active=False,
-                created_by=current_user_id,
-            )
-
-            UserRepositoryBase.add_entity(db, user=new_user)
-
-            await db.flush()
-
-            new_user_activation = UserActivation(
-                user_id=new_user.id,
-                invite_token_hash=hashed_invite_token,
-                invite_token_expires_at=invite_token_expires_at,
-            )
-            new_user_session = UserSession(user_id=new_user.id)
-            new_user_login_lockout = UserLoginLockout(user_id=new_user.id)
-
-            UserRepositoryBase.add_entity(
-                db,
-                user_activation=new_user_activation,
-                user_session=new_user_session,
-                user_login_lockout=new_user_login_lockout,
-            )
-
-            subject, html_body, text_body = email_sender.build_invite_email(
-                raw_invite_token, new_user.email
-            )
-
-            PendingEmailRepository.add_pending_email(
-                db,
-                recipient=new_user.email,
-                subject=subject,
-                html_body=html_body,
-                text_body=text_body,
-                email_type=EmailType.INVITE,
-                triggered_by=current_user_id,
-                recipient_user_id=new_user.id,
-            )
-
-            print(f"Invite token: {raw_invite_token}")
-
-            await db.commit()
-            await db.refresh(new_user)
-
-            logger.info(
-                "user_registered",
-                new_user_id=new_user.id,
-                target_username=create_request.username,
-                role=UserRole.STUDENT,
-                created_by=current_user_id,
-            )
-
-            return new_user
-        except IntegrityError as e:
-            await db.rollback()
-
-            logger.error(
-                "user_registration_failed",
-                reason="integrity_error",
-                error=str(e.orig),
-                requested_by=current_user_id,
-            )
-
-            handle_username_integrity_error(e)
+            if not is_student:
+                handle_non_student_unique_contact_error(e)
             raise
 
     @staticmethod
     async def delete_parent(
-        db: AsyncSession, current_user_id: int, parent_id: int
+        db: AsyncSession,
+        current_user_id: int,
+        target_user_id: int,
     ) -> None:
-        user_to_be_deleted = await UserRepositoryBase.get_parent(db, parent_id)
-        ensure_exists(user_to_be_deleted, UserNotFoundError(HTTP404.USER))
-
-        UserRepositoryBase.delete_user(db, user_to_be_deleted)
-
-        deleted_user_id, deleted_user_username = (
-            user_to_be_deleted.id,
-            user_to_be_deleted.username,
+        target_user = await UserRepositoryBase.get_user_by_id(
+            db,
+            target_user_id,
+            load_session=True,
+            allowed_roles=frozenset({UserRole.PARENT}),
         )
+        ensure_exists(target_user, UserNotFoundError(HTTP404.USER))
+
+        if target_user.status == UserStatus.PENDING_DELETION:
+            logger.warning(
+                "parent_deletion_denied",
+                actor_user_id=current_user_id,
+                target_user_id=target_user_id,
+                denial_reason="parent_already_pending_deletion",
+            )
+
+            raise UserAlreadyPendingDeletionError(
+                "This parent account is already pending deletion"
+            )
+
+        deletion_scheduled_for = datetime.now(UTC) + timedelta(
+            days=DELETION_GRACE_PERIOD_DAYS
+        )
+
+        target_user.status = UserStatus.PENDING_DELETION
+        target_user.is_active = False
+        target_user.deletion_scheduled_for = deletion_scheduled_for
+
+        target_user.session.access_token_version += 1
+        target_user.session.refresh_token_hash = None
+        target_user.session.refresh_token_family = None
+        target_user.session.refresh_token_expires_at = None
+        target_user_email = target_user.email
 
         await db.commit()
 
+        asyncio.create_task(
+            email_sender.send_safe(
+                email_sender.send_account_deletion_email(target_user_email),
+                email_type=EmailType.ACCOUNT_DELETION,
+            )
+        )
+
+        await delete_cache(
+            SessionCacheKey.access_token_version_key(target_user_id),
+            UserCacheKey.user_detail_key_admin(target_user_id),
+        )
+
         logger.info(
-            "user_successfully_deleted",
-            deleted_user_id=deleted_user_id,
-            deleted_user_username=deleted_user_username,
-            deleted_user_role=UserRole.PARENT,
-            deleted_by=current_user_id,
+            "parent_deletion_scheduled",
+            actor_user_id=current_user_id,
+            target_user_id=target_user_id,
+            deletion_scheduled_for=deletion_scheduled_for.isoformat(),
+        )
+
+    @staticmethod
+    async def cancel_parent_deletion(
+        db: AsyncSession,
+        current_user_id: int,
+        target_user_id: int,
+    ) -> None:
+        target_user = await UserRepositoryBase.get_user_by_id_pending_deletion(
+            db, target_user_id
+        )
+        ensure_exists(target_user, UserNotFoundError(HTTP404.USER))
+
+        target_user.status = UserStatus.ACTIVE
+        target_user.is_active = True
+        target_user.deletion_scheduled_for = None
+
+        await db.commit()
+
+        asyncio.create_task(
+            email_sender.send_safe(
+                email_sender.send_cancel_parent_deletion_email(target_user.email),
+                email_type=EmailType.CANCEL_ACCOUNT_DELETION,
+            )
+        )
+
+        await delete_cache(
+            UserCacheKey.user_detail_key_admin(target_user_id),
+        )
+
+        logger.info(
+            "parent_deletion_cancelled",
+            actor_user_id=current_user_id,
+            target_user_id=target_user_id,
         )
 
     @staticmethod
@@ -358,6 +341,13 @@ class UserServiceAdmin:
         user.session.refresh_token_expires_at = None
 
         await db.commit()
+
+        asyncio.create_task(
+            email_sender.send_safe(
+                email_sender.send_account_deactivation_email(user.email),
+                email_type=EmailType.ACCOUNT_DEACTIVATION,
+            )
+        )
 
         await delete_cache(
             UserCacheKey.user_detail_key_admin(user_id),
@@ -393,6 +383,13 @@ class UserServiceAdmin:
 
         await db.commit()
 
+        asyncio.create_task(
+            email_sender.send_safe(
+                email_sender.send_account_activation_email(user.email),
+                email_type=EmailType.ACCOUNT_ACTIVATION,
+            )
+        )
+
         await delete_cache(UserCacheKey.user_detail_key_admin(user_id))
 
         logger.info(
@@ -418,6 +415,13 @@ class UserServiceAdmin:
 
             await db.commit()
             await db.refresh(user)
+
+            # asyncio.create_task(
+            #     email_sender.send_safe(
+            #         email_sender.send_account_activation_email(user.email),
+            #         email_type="account_activation",
+            #     )
+            # )
 
             await delete_cache(
                 UserCacheKey.user_detail_key_admin(user_id),
@@ -460,7 +464,7 @@ class UserServiceAdmin:
         ensure_exists(user, UserNotFoundError(HTTP404.USER))
 
         try:
-            # old_email = user.email
+            old_email = user.email
             user.email = update_request.new_email
 
             user.session.access_token_version += 1
@@ -473,6 +477,13 @@ class UserServiceAdmin:
             user.session.email_change_code_expires_at = None
 
             await db.commit()
+
+            asyncio.create_task(
+                email_sender.send_safe(
+                    email_sender.send_admin_email_override_notification(old_email),
+                    email_type=EmailType.ADMIN_EMAIL_OVERRIDE,
+                )
+            )
 
             await delete_cache(
                 UserCacheKey.user_detail_key_admin(user_id),
@@ -589,33 +600,3 @@ class UserServiceAdmin:
         )
 
         return result
-
-
-class UserServiceStaff:
-    @staticmethod
-    async def get_users(
-        db: AsyncSession,
-        skip: int,
-        limit: int,
-        filters: SearchUserAdmin,
-        sort_by: str,
-        order: str,
-    ) -> PaginatedResponse:
-
-        users, total = await UserRepositoryAdmin.get_users(
-            db,
-            excluded_roles=DIRECTOR_INVISIBLE_ROLES,
-            skip=skip,
-            limit=limit,
-            filters=filters,
-            sort_by=sort_by,
-            order=order,
-        )
-
-        return PaginatedResponse(
-            items=users,
-            total=total,
-            skip=skip,
-            limit=limit,
-            has_more=skip + limit < total,
-        )

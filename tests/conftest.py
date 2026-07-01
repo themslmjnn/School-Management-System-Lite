@@ -17,7 +17,7 @@ from src.core.security import create_access_token
 from src.database import Base
 from src.main import app
 from src.users.models import User
-from src.users.repositories.users_admin import UserRepositoryBase
+from users.repositories.users import UserRepositoryBase
 from src.users.schemas.users import CreateStaffAdmin, CreateStudentAdmin
 from src.utils.enums import UserRole
 from tests.factories import (
@@ -121,6 +121,7 @@ async def flush_cache():
 def mock_response():
     return MagicMock()
 
+
 @pytest.fixture(scope="function", autouse=True)
 def reset_rate_limiter():
     ip_limiter._storage.reset()
@@ -194,7 +195,7 @@ create_user_request = {
 
 
 @pytest.fixture
-def valid_create_user_request_staff():
+def valid_create_staff_request():
     return CreateStaffAdmin(
         **create_user_request,
         role=UserRole.TEACHER,
@@ -202,7 +203,7 @@ def valid_create_user_request_staff():
 
 
 @pytest.fixture
-def valid_create_user_request_student():
+def valid_create_student_request():
     return CreateStudentAdmin(
         **create_user_request,
         date_of_birth="2008-05-01",

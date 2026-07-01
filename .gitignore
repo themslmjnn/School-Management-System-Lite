@@ -4,3 +4,4 @@ __pycache__/
 pyproject.toml
 .ruff_cache
 .mypy_cache
+.pytest_cache

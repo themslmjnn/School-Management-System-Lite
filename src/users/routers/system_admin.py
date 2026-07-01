@@ -19,8 +19,8 @@ from src.users.schemas.users import (
     UserResponseAdmin,
     UserResponseAdminDetailed,
 )
-from src.users.services.user_management import UserServiceAdmin
 from src.utils.enums import OrderBy, UserSortField
+from users.services.system_admin import UserServiceAdmin
 
 router = APIRouter(
     prefix="/users",
@@ -29,44 +29,42 @@ router = APIRouter(
 
 
 @router.post(
-    "",
+    "/students",
     response_model=UserResponseAdminDetailed,
     status_code=status.HTTP_201_CREATED,
 )
 @user_limiter.limit("10/minute")
-async def register_staff(
+async def register_user(
     request: Request,
     db: async_db_dependency,
     current_user: Annotated[CurrentUser, Depends(require_system_admin)],
-    create_request: CreateStaffAdmin,
+    create_request: CreateStaffAdmin | CreateStudentAdmin,
 ):
-    return await UserServiceAdmin.register_staff(db, current_user.id, create_request)
+    return await UserServiceAdmin.register_user(db, current_user.id, create_request)
+
+
+@router.delete(
+    "/{user_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+async def delete_parent(
+    db: async_db_dependency,
+    current_user: Annotated[CurrentUser, Depends(require_system_admin)],
+    user_id: int,
+):
+    await UserServiceAdmin.delete_parent(db, current_user.id, user_id)
 
 
 @router.post(
-    "/student",
-    response_model=UserResponseAdminDetailed,
-    status_code=status.HTTP_201_CREATED,
+    "/{user_id}/cancel-deletion",
+    status_code=status.HTTP_204_NO_CONTENT,
 )
-@user_limiter.limit("10/minute")
-async def register_student(
-    request: Request,
+async def cancel_parent_deletion(
     db: async_db_dependency,
     current_user: Annotated[CurrentUser, Depends(require_system_admin)],
-    create_request: CreateStudentAdmin,
+    user_id: int,
 ):
-    return await UserServiceAdmin.register_student(db, current_user.id, create_request)
-
-
-@router.delete("/{parent_id}", status_code=status.HTTP_204_NO_CONTENT)
-@user_limiter.limit("10/minute")
-async def delete_parent(
-    request: Request,
-    db: async_db_dependency,
-    current_user: Annotated[CurrentUser, Depends(require_system_admin)],
-    parent_id: Annotated[int, Path(ge=1)],
-):
-    return await UserServiceAdmin.delete_parent(db, current_user.id, parent_id)
+    await UserServiceAdmin.cancel_parent_deletion(db, current_user.id, user_id)
 
 
 @router.patch("/{user_id}/deactivate", status_code=status.HTTP_204_NO_CONTENT)
@@ -163,19 +161,3 @@ async def get_user_by_id(
     user_id: Annotated[int, Path(ge=1)],
 ):
     return await UserServiceAdmin.get_user_by_id(db, user_id)
-
-
-@router.get("/parents")
-async def get_parents(): ...
-
-
-@router.get("/parents/{parent_id}")
-async def get_parent_by_id(): ...
-
-
-@router.get("/students")
-async def get_students(): ...
-
-
-@router.get("/students/{student_id}")
-async def get_student_by_id(): ...

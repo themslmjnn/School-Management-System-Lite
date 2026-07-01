@@ -11,11 +11,12 @@ from src.api.health import router as health_router
 from src.auth.router import router as auth_router
 from src.core.caching import redis_client
 from src.core.config import settings
-from src.core.email_worker import run_email_worker
 from src.core.limiter import ip_limiter
 from src.core.logging import get_logger, setup_logging
-from src.users.routers import router_admin as user_system_admin_router
+from src.users.routers import system_admin as user_system_admin_router
 from src.utils import exceptions as exc
+from src.workers.deletion_worker import start_deletion_worker
+from src.workers.email_worker import run_email_worker
 
 setup_logging()
 
@@ -36,18 +37,27 @@ async def lifespan(app: FastAPI):
             error=str(e),
         )
 
-    # email_worker_task = asyncio.create_task(run_email_worker())
+    email_task = asyncio.create_task(run_email_worker())
+    deletion_task = asyncio.create_task(start_deletion_worker())
 
-    # logger.info("email_worker_task_started")
+    logger.info("email_worker_task_started")
 
     yield
 
-    # email_worker_task.cancel()
-    # try:
-    #     await email_worker_task
-    # except (asyncio.CancelledError, Exception):
-    #     logger.info("email_worker_stopped")
-    #     raise
+    email_task.cancel()
+    deletion_task.cancel()
+
+    results = await asyncio.gather(email_task, deletion_task, return_exceptions=True)
+
+    for result in results:
+        if isinstance(result, BaseException) and not isinstance(
+            result, asyncio.CancelledError
+        ):
+            logger.error(
+                "worker_shutdown_error",
+                error=str(result),
+                error_type=type(result).__name__,
+            )
 
     await redis_client.aclose()
 
@@ -97,6 +107,7 @@ EXCEPTION_STATUS_MAP = {
     exc.NoChangesDetectedError: 409,
     exc.UserAlreadyInactiveError: 409,
     exc.CannotCreateStudentError: 400,
+    exc.UserAlreadyPendingDeletionError: 409,
 }
 
 

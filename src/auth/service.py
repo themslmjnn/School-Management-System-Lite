@@ -30,7 +30,7 @@ from src.core.security import (
     verify_refresh_token,
     verify_reset_password_token,
 )
-from src.users.repositories.users_admin import UserRepositoryBase
+from users.repositories.users import UserRepositoryBase
 from src.utils.cache_keys import SessionCacheKey
 from src.utils.constants import HTTP400, HTTP401, HTTP403
 from src.utils.enums import UserStatus

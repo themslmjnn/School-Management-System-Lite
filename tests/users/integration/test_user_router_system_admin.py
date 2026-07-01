@@ -8,7 +8,7 @@ from emails.repository import PendingEmailRepository
 from tests.conftest import make_auth_header
 from tests.factories import make_deactivated_user, make_system_admin, make_teacher
 from users.models.users import User
-from users.repositories.users_admin import UserRepositoryBase
+from users.repositories.users import UserRepositoryBase
 from users.schemas.users import CreateStaffAdmin, CreateStudentAdmin
 from utils.enums import UserRole
 

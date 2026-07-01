@@ -15,7 +15,7 @@ from users.schemas.users import (
     UserResponseAdmin,
     UserResponseAdminDetailed,
 )
-from users.services.user_management import UserServiceAdmin, UserServiceStaff
+from users.services.system_admin import UserServiceAdmin, UserServiceStaff
 from utils.enums import OrderBy, UserSortField
 
 router = APIRouter(
