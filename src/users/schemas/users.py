@@ -11,7 +11,7 @@ from pydantic import (
 
 from src.utils import validators
 from src.utils.base_schema import BaseSchema
-from src.utils.enums import UserRole, UserStatus
+from src.utils.enums import StudentGroup, UserRole, UserStatus
 
 
 class CreateUserBase(BaseModel):
@@ -93,6 +93,8 @@ class UserResponseAdminDetailed(UserResponseAdmin, BaseSchema):
     def format_phone_number(self) -> str:
         return validators.format_phone_for_display(self.phone_number)
 
+class UserStudentResponseAdmin(UserResponseAdmin):
+    group: StudentGroup
 
 class SearchUserBase(BaseModel):
     firstname: str | None = Field(default=None, max_length=50)
@@ -108,26 +110,17 @@ class SearchUserAdmin(SearchUserBase):
     phone_number: str | None = Field(default=None, max_length=15)
     is_active: bool | None = None
 
-
-class SearchUserDirectors(SearchUserBase):
-    pass
+class SearchStudentAdmin(SearchUserAdmin):
+    group: StudentGroup
 
 
 class UpdateUser(BaseModel):
-    username: str | None = None
     firstname: str | None = None
     lastname: str | None = None
     middlename: str | None = None
     date_of_birth: date | None = None
     phone_number: str | None = None
     address: str | None = None
-
-    @field_validator("username")
-    @classmethod
-    def validate_username(cls, v: str | None) -> str | None:
-        if v is None:
-            return None
-        return validators.validate_username(v)
 
     @field_validator("firstname")
     @classmethod
@@ -165,5 +158,13 @@ class UpdateUser(BaseModel):
         return validators.validate_phone_number(field)
 
 
-class UpdateUserEmail(BaseModel):
-    new_email: EmailStr
+class UpdateUserCredentials(BaseModel):
+    username: str | None = Field(min_length=6, max_length=20, default=None)
+    email: EmailStr | None = None
+
+    @field_validator("username")
+    @classmethod
+    def validate_username(cls, v: str | None) -> str | None:
+        if v is None:
+            return None
+        return validators.validate_username(v)

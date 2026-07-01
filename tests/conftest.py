@@ -17,7 +17,6 @@ from src.core.security import create_access_token
 from src.database import Base
 from src.main import app
 from src.users.models import User
-from users.repositories.users import UserRepositoryBase
 from src.users.schemas.users import CreateStaffAdmin, CreateStudentAdmin
 from src.utils.enums import UserRole
 from tests.factories import (
@@ -28,6 +27,7 @@ from tests.factories import (
     make_teacher,
     make_vice_director,
 )
+from users.repositories.users import UserRepositoryBase
 
 ASYNC_DB_URL = (
     f"postgresql+asyncpg://{settings.DB_USER}:{settings.DB_PSSW}"

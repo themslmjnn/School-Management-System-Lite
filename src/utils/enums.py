@@ -7,7 +7,7 @@ class UserRole(StrEnum):
     VICE_DIRECTOR = "vice_director"
     TEACHER = "teacher"
     STUDENT = "student"
-    PARENT = "parent"
+    GUARDIAN = "guardian"
 
 
 class UserStatus(StrEnum):
@@ -16,9 +16,9 @@ class UserStatus(StrEnum):
     EXPELLED = "expelled"
     WITHDRAWN = "withdrawn"
     DEACTIVATED = "deactivated"
+    PENDING_ACTIVATION = "pending_activation"
     PENDING_DELETION = "pending_deletion"
     DELETED = "deleted"
-    PENDING_ACTIVATION = "pending_activation"
 
 
 class GuardianPriority(StrEnum):
@@ -33,6 +33,7 @@ class EmailType(StrEnum):
     ACCOUNT_DEACTIVATION = "account_deactivation"
     ACCOUNT_ACTIVATION = "account_activation"
     ACCOUNT_DELETION = "account_deletion"
+    UPDATING_ACCOUNT = "updating_account"
     ADMIN_EMAIL_OVERRIDE = "admin_email_override"
 
 
@@ -43,11 +44,14 @@ class EmailSendingStatus(StrEnum):
 
 
 class UserSortField(StrEnum):
-    created_at = "created_at"
-    first_name = "first_name"
-    last_name = "last_name"
+    CREATED_AT = "created_at"
+    FIRSTNAME = "firstname"
+    LASTNAME = "lastname"
 
 
 class OrderBy(StrEnum):
-    asc = "asc"
-    desc = "desc"
+    ASC = "asc"
+    DESC = "desc"
+
+class StudentGroup(StrEnum):
+    pass

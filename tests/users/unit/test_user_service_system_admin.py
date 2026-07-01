@@ -8,7 +8,6 @@ from src.core.dependencies import CurrentUser
 from src.emails.models import EmailType
 from src.emails.repository import PendingEmailRepository
 from src.users.models.users import User
-from users.repositories.users import UserRepositoryBase
 from src.users.schemas.users import (
     CreateStaffAdmin,
     CreateStudentAdmin,
@@ -16,7 +15,6 @@ from src.users.schemas.users import (
     UpdateUser,
     UpdateUserEmail,
 )
-from users.services.system_admin import UserServiceAdmin
 from src.utils.cache_keys import SessionCacheKey, UserCacheKey
 from src.utils.enums import OrderBy, UserRole, UserSortField, UserStatus
 from src.utils.exceptions import (
@@ -39,6 +37,8 @@ from tests.factories import (
     make_teacher,
     make_user,
 )
+from users.repositories.users import UserRepositoryBase
+from users.services.system_admin import UserServiceAdmin
 
 
 class TestRegisterStaff:

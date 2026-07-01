@@ -285,3 +285,6 @@ async def send_admin_email_override_notification(email: str) -> None:
 
 
 async def send_cancel_parent_deletion_email(): ...
+
+
+async def send_user_account_info_change_notification(): ...

@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
 from src.users.models.users import User, UserActivation, UserLoginLockout, UserSession
-from src.users.schemas.users import SearchUserAdmin, SearchUserBase
+from src.users.schemas.users import SearchStudentAdmin, SearchUserAdmin, SearchUserBase
 from src.utils.enums import OrderBy, UserRole, UserSortField, UserStatus
 
 ENTITY_TYPE = User | UserSession | UserActivation | UserLoginLockout
@@ -33,27 +33,18 @@ class UserRepositoryBase:
             base_query = base_query.filter(
                 User.last_name.ilike(f"%{filters.last_name}%")
             )
-        if filters.email:
-            base_query = base_query.filter(User.email.ilike(f"%{filters.email}%"))
-        if filters.phone_number:
-            base_query = base_query.filter(
-                User.phone_number.ilike(f"%{filters.phone_number}%")
-            )
-        if filters.role:
-            base_query = base_query.filter(User.role == filters.role)
-        if filters.is_active is not None:
-            base_query = base_query.filter(User.is_active == filters.is_active)
+        
 
         return base_query
 
     @staticmethod
     def apply_sorting(base_query: Select, sort_by: str, order: str) -> Select:
         if sort_by not in UserSortField:
-            sort_by = UserSortField.created_at
+            sort_by = UserSortField.CREATED_AT
 
         sort_column = getattr(User, sort_by)
 
-        if order == OrderBy.desc:
+        if order == OrderBy.DESC:
             return base_query.order_by(sort_column.desc())
 
         return base_query.order_by(sort_column.asc())
@@ -159,18 +150,7 @@ class UserRepositoryBase:
         result = await db.execute(query)
 
         return result.scalar_one_or_none()
-
-
-class UserRepositoryAdmin:
-    @staticmethod
-    def _apply_admin_filters(base_query, filters: SearchUserAdmin) -> Select:
-        base_query = UserRepositoryBase.apply_base_filters(base_query, filters)
-
-        if filters.username:
-            base_query = base_query.filter(User.username.ilike(f"%{filters.username}%"))
-
-        return base_query
-
+    
     @staticmethod
     async def get_users(
         db: AsyncSession,
@@ -178,8 +158,8 @@ class UserRepositoryAdmin:
         excluded_roles: frozenset[UserRole] | None = None,
         allowed_roles: frozenset[UserRole] | None = None,
         filters: SearchUserBase | SearchUserAdmin | None = None,
-        sort_by: str = UserSortField.created_at,
-        order: str = OrderBy.desc,
+        sort_by: str = UserSortField.CREATED_AT,
+        order: str = OrderBy.DESC,
         skip: int = 0,
         limit: int = 10,
     ) -> tuple[list[User], int]:
@@ -195,20 +175,40 @@ class UserRepositoryAdmin:
 
         return await UserRepositoryBase.paginate(db, query, skip, limit)
 
+
+
+class UserRepositoryAdmin:
+    @staticmethod
+    def _apply_admin_filters(base_query, filters: SearchUserAdmin) -> Select:
+        base_query = UserRepositoryBase.apply_base_filters(base_query, filters)
+
+        if filters.username:
+            base_query = base_query.filter(User.username.ilike(f"%{filters.username}%"))
+        if filters.email:
+            base_query = base_query.filter(User.email.ilike(f"%{filters.email}%"))
+        if filters.phone_number:
+            base_query = base_query.filter(
+                User.phone_number.ilike(f"%{filters.phone_number}%")
+            )
+        if filters.role:
+            base_query = base_query.filter(User.role == filters.role)
+        if filters.is_active is not None:
+            base_query = base_query.filter(User.is_active == filters.is_active)
+
+        return base_query
+
     @staticmethod
     async def get_users_admin(
         db: AsyncSession,
         skip: int,
         limit: int,
         filters: SearchUserAdmin | None = None,
-        sort_by: str = UserSortField.created_at,
-        order: str = OrderBy.desc,
+        sort_by: str = UserSortField.CREATED_AT,
+        order: str = OrderBy.DESC,
     ) -> tuple[list[User], int]:
-
-        base_query = select(User).filter(User.role != UserRole.system_admin)
+        base_query = select(User).filter(User.role != UserRole.SYSTEM_ADMIN)
 
         query = UserRepositoryAdmin._apply_admin_filters(base_query, filters)
-
         query = UserRepositoryBase.apply_sorting(query, sort_by, order)
 
         return await UserRepositoryBase.paginate(

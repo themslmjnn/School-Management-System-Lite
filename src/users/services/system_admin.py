@@ -17,7 +17,7 @@ from src.users.schemas.users import (
     CreateStudentAdmin,
     SearchUserAdmin,
     UpdateUser,
-    UpdateUserEmail,
+    UpdateUserCredentials,
     UserResponseAdminDetailed,
 )
 from src.utils import email as email_sender
@@ -47,12 +47,22 @@ logger = get_logger(__name__)
 DELETION_GRACE_PERIOD_DAYS = 30
 STUDENT_MAX_SHARED_CONTACT = 3
 STAFF_MAX_SHARED_CONTACT = 1
+
 SYSTEM_ADMIN_INVISIBLE_ROLES = frozenset({UserRole.SYSTEM_ADMIN})
-DIRECTOR_INVISIBLE_ROLES = frozenset({UserRole.SYSTEM_ADMIN, UserRole.PARENT})
-VICE_DIRECTOR_INVISIBLE_ROLES = frozenset(
-    {UserRole.SYSTEM_ADMIN, UserRole.DIRECTOR, UserRole.VICE_DIRECTOR, UserRole.PARENT}
+DIRECTOR_INVISIBLE_ROLES = frozenset(
+    {
+        UserRole.SYSTEM_ADMIN,
+        UserRole.GUARDIAN,
+    }
 )
-NON_GUARDIAN_ROLES = frozenset({UserRole.STUDENT, UserRole.SYSTEM_ADMIN})
+VICE_DIRECTOR_INVISIBLE_ROLES = frozenset(
+    {
+        UserRole.SYSTEM_ADMIN,
+        UserRole.DIRECTOR,
+        UserRole.VICE_DIRECTOR,
+        UserRole.GUARDIAN,
+    }
+)
 BLOCKED_ROLES_VIA_STAFF_ENDPOINT = frozenset(
     {
         UserRole.SYSTEM_ADMIN,
@@ -122,18 +132,21 @@ class UserServiceAdmin:
                 requested_role=create_request.role.value,
                 denial_reason=denial_reason,
             )
+
             raise exception_map[create_request.role](
                 denial_reason.replace("_", " ").capitalize()
             )
+
+        max_allowed = (
+            STUDENT_MAX_SHARED_CONTACT if is_student else STAFF_MAX_SHARED_CONTACT
+        )
 
         await _check_contact_limit(
             db,
             current_user_id,
             create_request,
             role=UserRole.STUDENT if is_student else None,
-            max_allowed=STUDENT_MAX_SHARED_CONTACT
-            if is_student
-            else STAFF_MAX_SHARED_CONTACT,
+            max_allowed=max_allowed,
         )
 
         raw_invite_token, hashed_invite_token = generate_invite_token()
@@ -317,84 +330,89 @@ class UserServiceAdmin:
 
     @staticmethod
     async def deactivate_user(
-        db: AsyncSession, current_user_id: int, user_id: int
+        db: AsyncSession, current_user_id: int, target_user_id: int
     ) -> None:
-        user = await UserRepositoryBase.get_user_by_id(
-            db, user_id, load_session=True, excluded_roles=SYSTEM_ADMIN_INVISIBLE_ROLES
+        target_user = await UserRepositoryBase.get_user_by_id(
+            db,
+            target_user_id,
+            load_session=True,
+            excluded_roles=SYSTEM_ADMIN_INVISIBLE_ROLES,
         )
-        ensure_exists(user, UserNotFoundError(HTTP404.USER))
+        ensure_exists(target_user, UserNotFoundError(HTTP404.USER))
 
-        if not user.is_active:
+        if not target_user.is_active:
             logger.error(
                 "deactivate_user_failed",
-                target_user_id=user_id,
+                target_user_id=target_user_id,
                 requested_by=current_user_id,
                 reason="user_is_already_deactivated",
             )
 
             raise UserAlreadyInactiveError("User is already deactivated")
 
-        user.is_active = False
-        user.session.access_token_version += 1
-        user.session.refresh_token_hash = None
-        user.session.refresh_token_family = None
-        user.session.refresh_token_expires_at = None
+        target_user.is_active = False
+        target_user.session.access_token_version += 1
+        target_user.session.refresh_token_hash = None
+        target_user.session.refresh_token_family = None
+        target_user.session.refresh_token_expires_at = None
 
         await db.commit()
 
         asyncio.create_task(
             email_sender.send_safe(
-                email_sender.send_account_deactivation_email(user.email),
+                email_sender.send_account_deactivation_email(target_user.email),
                 email_type=EmailType.ACCOUNT_DEACTIVATION,
             )
         )
 
         await delete_cache(
-            UserCacheKey.user_detail_key_admin(user_id),
-            SessionCacheKey.access_token_version_key(user_id),
+            UserCacheKey.user_detail_key_admin(target_user_id),
+            UserCacheKey.user_detail_key_staff(target_user_id),
+            UserCacheKey.user_detail_key_self(target_user_id),
+            SessionCacheKey.access_token_version_key(target_user_id),
         )
 
         logger.info(
             "user_deactivated",
-            target_user_id=user_id,
+            target_user_id=target_user_id,
             deactivated_by=current_user_id,
         )
 
     @staticmethod
     async def activate_user(
-        db: AsyncSession, current_user_id: int, user_id: int
+        db: AsyncSession, current_user_id: int, target_user_id: int
     ) -> None:
-        user = await UserRepositoryBase.get_user_by_id(
-            db, user_id, excluded_roles=SYSTEM_ADMIN_INVISIBLE_ROLES
+        target_user = await UserRepositoryBase.get_user_by_id(
+            db, target_user_id, excluded_roles=SYSTEM_ADMIN_INVISIBLE_ROLES
         )
-        ensure_exists(user, UserNotFoundError(HTTP404.USER))
+        ensure_exists(target_user, UserNotFoundError(HTTP404.USER))
 
-        if user.is_active:
+        if target_user.is_active:
             logger.error(
                 "activate_user_failed",
-                target_user_id=user_id,
+                target_user_id=target_user_id,
                 requested_by=current_user_id,
                 reason="user_is_already_activated",
             )
 
             raise UserAlreadyActiveError("User is already activated")
 
-        user.is_active = True
+        target_user.is_active = True
 
         await db.commit()
 
         asyncio.create_task(
             email_sender.send_safe(
-                email_sender.send_account_activation_email(user.email),
+                email_sender.send_account_activation_email(target_user.email),
                 email_type=EmailType.ACCOUNT_ACTIVATION,
             )
         )
 
-        await delete_cache(UserCacheKey.user_detail_key_admin(user_id))
+        await delete_cache(UserCacheKey.user_detail_key_admin(target_user_id))
 
         logger.info(
             "user_activated",
-            target_user_id=user_id,
+            target_user_id=target_user_id,
             activated_by=current_user_id,
         )
 
@@ -402,79 +420,83 @@ class UserServiceAdmin:
     async def update_user(
         db: AsyncSession,
         current_user_id: int,
-        user_id: int,
+        target_user_id: int,
         update_request: UpdateUser,
     ) -> User:
-        user = await UserRepositoryBase.get_user_by_id(
-            db, user_id, excluded_roles=SYSTEM_ADMIN_INVISIBLE_ROLES
+        target_user = await UserRepositoryBase.get_user_by_id(
+            db, target_user_id, excluded_roles=SYSTEM_ADMIN_INVISIBLE_ROLES
         )
-        ensure_exists(user, UserNotFoundError(HTTP404.USER))
+        ensure_exists(target_user, UserNotFoundError(HTTP404.USER))
 
         try:
-            update_object(user, update_request)
+            update_object(target_user, update_request)
 
             await db.commit()
-            await db.refresh(user)
+            await db.refresh(target_user)
 
-            # asyncio.create_task(
-            #     email_sender.send_safe(
-            #         email_sender.send_account_activation_email(user.email),
-            #         email_type="account_activation",
-            #     )
-            # )
+            asyncio.create_task(
+                email_sender.send_safe(
+                    email_sender.send_user_account_info_change_notification(
+                        target_user.email
+                    ),
+                    email_type="updating_account",
+                )
+            )
 
             await delete_cache(
-                UserCacheKey.user_detail_key_admin(user_id),
-                UserCacheKey.user_detail_key_staff(user_id),
-                UserCacheKey.user_detail_key_self(user_id),
+                UserCacheKey.user_detail_key_admin(target_user_id),
+                UserCacheKey.user_detail_key_staff(target_user_id),
+                UserCacheKey.user_detail_key_self(target_user_id),
             )
 
             logger.info(
                 "user_updated",
-                target_user_id=user_id,
+                target_user_id=target_user_id,
                 updated_by=current_user_id,
                 method="admin_update",
             )
 
-            return user
+            return target_user
         except IntegrityError as e:
             await db.rollback()
 
             logger.error(
                 "update_user_denied",
-                target_user_id=user_id,
+                target_user_id=target_user_id,
                 requested_by=current_user_id,
                 reason=str(e.orig),
             )
 
-            handle_username_integrity_error(e)
             handle_non_student_unique_contact_error(e)
             raise
 
     @staticmethod
-    async def update_user_email(
+    async def update_user_credentials(
         db: AsyncSession,
         current_user_id: int,
-        user_id: int,
-        update_request: UpdateUserEmail,
+        target_user_id: int,
+        update_request: UpdateUserCredentials,
     ) -> None:
-        user = await UserRepositoryBase.get_user_by_id(
-            db, user_id, excluded_roles=SYSTEM_ADMIN_INVISIBLE_ROLES, load_session=True
+        target_user = await UserRepositoryBase.get_user_by_id(
+            db,
+            target_user_id,
+            excluded_roles=SYSTEM_ADMIN_INVISIBLE_ROLES,
+            load_session=True,
         )
-        ensure_exists(user, UserNotFoundError(HTTP404.USER))
+        ensure_exists(target_user, UserNotFoundError(HTTP404.USER))
 
         try:
-            old_email = user.email
-            user.email = update_request.new_email
+            old_email = target_user.email
+            update_object(target_user, update_request)
 
-            user.session.access_token_version += 1
-            user.session.refresh_token_hash = None
-            user.session.refresh_token_family = None
-            user.session.refresh_token_expires_at = None
+            target_user.session.access_token_version += 1
+            target_user.session.refresh_token_hash = None
+            target_user.session.refresh_token_family = None
+            target_user.session.refresh_token_expires_at = None
 
-            user.session.pending_new_email = None
-            user.session.email_change_code_hash = None
-            user.session.email_change_code_expires_at = None
+            target_user.session.pending_new_email = None
+            target_user.session.email_change_code_hash = None
+            target_user.session.email_change_code_expires_at = None
 
             await db.commit()
 
@@ -486,15 +508,15 @@ class UserServiceAdmin:
             )
 
             await delete_cache(
-                UserCacheKey.user_detail_key_admin(user_id),
-                UserCacheKey.user_detail_key_staff(user_id),
-                UserCacheKey.user_detail_key_self(user_id),
-                SessionCacheKey.access_token_version_key(user_id),
+                UserCacheKey.user_detail_key_admin(target_user_id),
+                UserCacheKey.user_detail_key_staff(target_user_id),
+                UserCacheKey.user_detail_key_self(target_user_id),
+                SessionCacheKey.access_token_version_key(target_user_id),
             )
 
             logger.info(
                 "admin_email_override",
-                target_user_id=user_id,
+                target_user_id=target_user_id,
                 updated_by=current_user_id,
             )
 
@@ -503,11 +525,12 @@ class UserServiceAdmin:
 
             logger.error(
                 "admin_email_override_failed",
-                target_user_id=user_id,
+                target_user_id=target_user_id,
                 requested_by=current_user_id,
                 reason=str(e.orig),
             )
 
+            handle_username_integrity_error(e)
             handle_non_student_unique_contact_error(e)
             raise
 
@@ -515,24 +538,23 @@ class UserServiceAdmin:
     async def create_reset_password_request(
         db: AsyncSession,
         current_user: CurrentUser,
-        user_id: int,
+        target_user_id: int,
     ) -> None:
 
-        user = await UserRepositoryBase.get_user_by_id(
+        target_user = await UserRepositoryBase.get_user_by_id(
             db,
-            user_id,
+            target_user_id,
             excluded_roles=SYSTEM_ADMIN_INVISIBLE_ROLES,
             load_session=True,
         )
-
-        ensure_exists(user, UserNotFoundError(HTTP404.USER))
+        ensure_exists(target_user, UserNotFoundError(HTTP404.USER))
 
         raw_reset_token, hashed_reset_token = generate_reset_password_token()
 
-        user.session.reset_password_token_hash = hashed_reset_token
-        user.session.reset_password_token_expires_at = datetime.now(UTC) + timedelta(
-            minutes=settings.RESET_PASSWORD_EXPIRES_MINUTES
-        )
+        target_user.session.reset_password_token_hash = hashed_reset_token
+        target_user.session.reset_password_token_expires_at = datetime.now(
+            UTC
+        ) + timedelta(minutes=settings.RESET_PASSWORD_EXPIRES_MINUTES)
 
         subject, html_body, text_body = email_sender.build_reset_password_email(
             raw_reset_token
@@ -540,24 +562,24 @@ class UserServiceAdmin:
 
         PendingEmailRepository.create(
             db,
-            recipient=user.email,
+            recipient=target_user.email,
             subject=subject,
             html_body=html_body,
             text_body=text_body,
-            email_type=EmailType.password_reset_admin,
+            email_type=EmailType.PASSWORD_RESET_ADMIN,
             triggered_by=current_user.id,
-            recipient_user_id=user.id,
+            recipient_user_id=target_user_id,
         )
 
         await db.commit()
 
         logger.info(
             "reset_password_request_created",
-            user_id=user.id,
+            target_user_ider_id=target_user_id,
         )
 
     @staticmethod
-    async def get_users(
+    async def get_staff(
         db: AsyncSession,
         skip: int,
         limit: int,
@@ -579,16 +601,62 @@ class UserServiceAdmin:
         )
 
     @staticmethod
-    async def get_user_by_id(
-        db: AsyncSession, user_id: int
+    async def get_staff_by_id(
+        db: AsyncSession, target_user_id: int
     ) -> UserResponseAdminDetailed | dict:
-        cache_key = UserCacheKey.user_detail_key_admin(user_id)
+        cache_key = UserCacheKey.user_detail_key_admin(target_user_id)
         cached = await get_cache(cache_key)
         if cached is not None:
             return cached
 
         user = await UserRepositoryBase.get_user_by_id(
-            db, user_id, excluded_roles=SYSTEM_ADMIN_INVISIBLE_ROLES
+            db, target_user_id, allowed_roles=frozenset({UserRole.DIRECTOR, UserRole.VICE_DIRECTOR, UserRole.TEACHER})
+        )
+        ensure_exists(user, UserNotFoundError(HTTP404.USER))
+
+        result = UserResponseAdminDetailed.model_validate(user)
+        await set_cache(
+            cache_key,
+            result.model_dump(mode="json"),
+            900,
+        )
+
+        return result
+
+    @staticmethod
+    async def get_guardians(
+        db: AsyncSession,
+        skip: int,
+        limit: int,
+        filters: SearchUserAdmin,
+        sort_by: str,
+        order: str,
+    ) -> PaginatedResponse:
+        filters.role = UserRole.GUARDIAN
+
+        users, total = await UserRepositoryAdmin.get_users_admin(
+            db, skip, limit, filters, sort_by, order
+        )
+
+        return PaginatedResponse(
+            items=users,
+            total=total,
+            skip=skip,
+            limit=limit,
+            has_more=skip + limit < total,
+        )
+    
+    @staticmethod
+    async def get_guardian_by_id(
+        db: AsyncSession, target_user_id: int
+    ) -> UserResponseAdminDetailed | dict:
+        cache_key = UserCacheKey.user_detail_key_admin(target_user_id)
+        cached = await get_cache(cache_key)
+        if cached is not None:
+            return cached
+
+        user = await UserRepositoryBase.get_user_by_id(
+            db, target_user_id, allowed_roles=frozenset({UserRole.GUARDIAN})
         )
         ensure_exists(user, UserNotFoundError(HTTP404.USER))
 
