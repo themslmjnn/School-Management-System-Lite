@@ -2,7 +2,7 @@ from collections.abc import AsyncGenerator
 from dataclasses import dataclass
 from typing import Annotated
 
-from fastapi import Depends, Query
+from fastapi import Depends, Query, Request
 from fastapi.security import OAuth2PasswordBearer
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -42,7 +42,7 @@ class CurrentUser:
 
 
 async def get_current_user(
-    db: async_db_dependency, token: str = Depends(oauth2_scheme)
+    request: Request, db: async_db_dependency, token: str = Depends(oauth2_scheme)
 ) -> CurrentUser:
     try:
         payload = decode_access_token(token)
@@ -82,10 +82,14 @@ async def get_current_user(
         ttl_seconds=300,
     )
 
-    return CurrentUser(
+    current_user = CurrentUser(
         id=user_id,
         role=UserRole(payload.get("role")),
     )
+
+    request.state.user = current_user
+
+    return current_user
 
 
 current_user_dependency = Annotated[CurrentUser, Depends(get_current_user)]
