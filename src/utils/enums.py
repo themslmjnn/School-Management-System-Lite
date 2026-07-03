@@ -34,7 +34,7 @@ class EmailType(StrEnum):
     ACCOUNT_ACTIVATION = "account_activation"
     ACCOUNT_DELETION = "account_deletion"
     UPDATING_ACCOUNT = "updating_account"
-    ADMIN_EMAIL_OVERRIDE = "admin_email_override"
+    ADMIN_CREDENTIALS_OVERRIDE = "admin_credentials_override"
 
 
 class EmailSendingStatus(StrEnum):
@@ -52,6 +52,7 @@ class UserSortField(StrEnum):
 class OrderBy(StrEnum):
     ASC = "asc"
     DESC = "desc"
+
 
 class StudentGroup(StrEnum):
     pass

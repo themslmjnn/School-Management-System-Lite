@@ -108,14 +108,14 @@ def build_invite_email(invite_token: str, username: str) -> tuple[str, str, str]
         f"&username={encoded_username}"
     )
 
-    subject = "Activate your Library account"
+    subject = "Activate your LFGS account"
 
     html = f"""
         <!DOCTYPE html>
         <html lang="en">
         <body style="font-family: Arial, sans-serif; background:#f4f4f5; padding:40px;">
             <div style="max-width:560px;margin:auto;background:white;padding:40px;border-radius:8px;">
-                <h1 style="color:#1d4ed8;">Library Management System</h1>
+                <h1 style="color:#1d4ed8;">SGM | LFGS</h1>
                 <h2>You have been invited</h2>
                 <p>An administrator created an account for you.</p>
                 <p>
@@ -139,7 +139,7 @@ def build_invite_email(invite_token: str, username: str) -> tuple[str, str, str]
     """
 
     text = (
-        f"You have been invited to the Library Management System.\n\n"
+        f"You have been invited to the SGM | LFGS.\n\n"
         f"Activate your account using the link below:\n\n"
         f"{activation_link}\n\n"
         f"This invitation expires in {settings.INVITE_TOKEN_EXPIRES_HOURS} hours.\n\n"
@@ -155,7 +155,102 @@ async def send_invite_email(email: str, raw_invite_token: str) -> None:
     await send(subject=subject, to_email=email, html_body=html, text_body=text)
 
 
-async def send_user_deletion_email(): ...
+async def send_account_deletion_email(email: str) -> None:
+    html = """
+        <!DOCTYPE html>
+        <html lang="en">
+        <body style="font-family: Arial, sans-serif; background:#f4f4f5; padding:40px;">
+            <div style="max-width:560px;margin:auto;background:white;
+                        padding:40px;border-radius:8px;">
+                <h1 style="color:#1d4ed8;">SGM | LFGS</h1>
+                <h2>Your account is scheduled for deletion</h2>
+                <p>
+                    A school administrator has scheduled your account for deletion.
+                    Your account will be <strong>permanently deleted in 30 days</strong>.
+                </p>
+                <p>
+                    You can still log in and use your account normally during this
+                    30-day period.
+                </p>
+                <p>
+                    If you believe this was done in error, please contact
+                    your school administrator before the deletion date.
+                </p>
+            </div>
+        </body>
+        </html>
+    """
+
+    text = (
+        "SGM | LFGS\n\n"
+        "A school administrator has scheduled your account for deletion. "
+        "Your account will be permanently deleted in 30 days.\n\n"
+        "You can still log in and use your account normally during this "
+        "30-day period.\n\n"
+        "If you believe this was done in error, please contact "
+        "your school administrator before the deletion date."
+    )
+
+    await send(
+        subject="Your LFGS account is scheduled for deletion",
+        to_email=email,
+        html_body=html,
+        text_body=text,
+    )
+
+
+async def send_account_deletion_canceled_email(email: str) -> None:
+    login_link = f"{settings.APP_URL}/auth/login"
+
+    html = f"""
+        <!DOCTYPE html>
+        <html lang="en">
+        <body style="font-family: Arial, sans-serif; background:#f4f4f5; padding:40px;">
+            <div style="max-width:560px;margin:auto;background:white;
+                        padding:40px;border-radius:8px;">
+                <h1 style="color:#1d4ed8;">SGM | LFGS</h1>
+                <h2>Your account deletion has been canceled</h2>
+                <p>
+                    The scheduled deletion of your account has been
+                    <strong>canceled</strong> by a school administrator.
+                </p>
+                <p>
+                    Your account remains active and you can continue logging in
+                    and using it as normal.
+                </p>
+                <div style="margin:40px 0;text-align:center;">
+                    <a href="{login_link}"
+                        style="background:#1d4ed8;color:white;padding:14px 28px;
+                            border-radius:6px;text-decoration:none;font-weight:bold;">
+                        Log In
+                    </a>
+                </div>
+                <p>
+                    If you have any questions, please contact
+                    your school administrator.
+                </p>
+            </div>
+        </body>
+        </html>
+    """
+
+    text = (
+        "SGM | LFGS.\n\n"
+        "The scheduled deletion of your account has been canceled by a "
+        "school administrator.\n\n"
+        "Your account remains active and you can continue logging in "
+        "and using it as normal.\n\n"
+        f"Log in at: {login_link}\n\n"
+        "If you have any questions, please contact "
+        "your school administrator."
+    )
+
+    await send(
+        subject="Your LFGS account deletion has been canceled",
+        to_email=email,
+        html_body=html,
+        text_body=text,
+    )
 
 
 async def send_account_deactivation_email(email: str) -> None:
@@ -165,7 +260,7 @@ async def send_account_deactivation_email(email: str) -> None:
         <body style="font-family: Arial, sans-serif; background:#f4f4f5; padding:40px;">
             <div style="max-width:560px;margin:auto;background:white;
                         padding:40px;border-radius:8px;">
-                <h1 style="color:#1d4ed8;">Library Management System</h1>
+                <h1 style="color:#1d4ed8;">SGM | LFGS</h1>
                 <h2>Your account has been deactivated</h2>
                 <p>
                     An administrator has deactivated your account.
@@ -173,7 +268,7 @@ async def send_account_deactivation_email(email: str) -> None:
                 </p>
                 <p>
                     If you believe this was done in error, please contact
-                    your library administrator.
+                    your LFGS administrator.
                 </p>
             </div>
         </body>
@@ -181,15 +276,15 @@ async def send_account_deactivation_email(email: str) -> None:
     """
 
     text = (
-        "Library Management System.\n\n"
+        "SGM | LFGS.\n\n"
         "An administrator has deactivated your account. "
         "You will no longer be able to log in.\n\n"
         "If you believe this was done in error, please contact "
-        "your library administrator."
+        "your LFGS administrator."
     )
 
     await send(
-        subject="Your Library account has been deactivated",
+        subject="Your LFGS account has been deactivated",
         to_email=email,
         html_body=html,
         text_body=text,
@@ -205,7 +300,7 @@ async def send_account_activation_email(email: str) -> None:
         <body style="font-family: Arial, sans-serif; background:#f4f4f5; padding:40px;">
             <div style="max-width:560px;margin:auto;background:white;
                         padding:40px;border-radius:8px;">
-                <h1 style="color:#1d4ed8;">Library Management System</h1>
+                <h1 style="color:#1d4ed8;">SGM | LFGS</h1>
                 <h2>Your account has been activated</h2>
                 <p>
                     An administrator has activated your account.
@@ -227,7 +322,7 @@ async def send_account_activation_email(email: str) -> None:
     """
 
     text = (
-        "Library Management System.\n\n"
+        "SGM | LFGS.\n\n"
         "An administrator has activated your account. "
         "You can now log in and access the system.\n\n"
         f"Log in at: {login_link}\n\n"
@@ -235,28 +330,106 @@ async def send_account_activation_email(email: str) -> None:
     )
 
     await send(
-        subject="Your Library account has been activated",
+        subject="Your LFGS account has been activated",
         to_email=email,
         html_body=html,
         text_body=text,
     )
 
 
-async def send_admin_email_override_notification(email: str) -> None:
+async def send_account_info_updated_email(email: str) -> None:
     html = """
         <!DOCTYPE html>
         <html lang="en">
         <body style="font-family: Arial, sans-serif; background:#f4f4f5; padding:40px;">
             <div style="max-width:560px;margin:auto;background:white;
                         padding:40px;border-radius:8px;">
-                <h1 style="color:#1d4ed8;">Library Management System</h1>
-                <h2>Your email address was changed</h2>
+                <h1 style="color:#1d4ed8;">SGM | LFGS</h1>
+                <h2>Your account information has been updated</h2>
                 <p>
-                    An administrator has updated the email address on your account.
+                    A school administrator has updated some information
+                    associated with your account.
                 </p>
                 <p>
+                    If you did not request this change, please contact
+                    your school administration as soon as possible.
+                </p>
+            </div>
+        </body>
+        </html>
+    """
+
+    text = (
+        "SGM | LFGS.\n\n"
+        "A school administrator has updated some information associated "
+        "with your account.\n\n"
+        "If you did not request this change, please contact "
+        "your school administration as soon as possible."
+    )
+
+    await send(
+        subject="Your account information has been updated",
+        to_email=email,
+        html_body=html,
+        text_body=text,
+    )
+
+
+async def send_admin_credentials_override_notification(
+    email: str,
+    old_username: str | None = None,
+    new_username: str | None = None,
+    old_email: str | None = None,
+    new_email: str | None = None,
+) -> None:
+    changes_html = ""
+    changes_text = ""
+
+    if old_username is not None and new_username is not None:
+        changes_html += f"""
+                    <tr>
+                        <td style="padding:8px 0;color:#6b7280;font-size:13px;">Old username</td>
+                        <td style="padding:8px 0;font-weight:bold;">{old_username}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding:8px 0;color:#6b7280;font-size:13px;">New username</td>
+                        <td style="padding:8px 0;font-weight:bold;">{new_username}</td>
+                    </tr>
+        """
+        changes_text += (
+            f"Old username: {old_username}\nNew username: {new_username}\n\n"
+        )
+
+    if old_email is not None and new_email is not None:
+        changes_html += f"""
+                    <tr>
+                        <td style="padding:8px 0;color:#6b7280;font-size:13px;">Old email</td>
+                        <td style="padding:8px 0;font-weight:bold;">{old_email}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding:8px 0;color:#6b7280;font-size:13px;">New email</td>
+                        <td style="padding:8px 0;font-weight:bold;">{new_email}</td>
+                    </tr>
+        """
+        changes_text += f"Old email: {old_email}\nNew email: {new_email}\n\n"
+
+    html = f"""
+        <!DOCTYPE html>
+        <html lang="en">
+        <body style="font-family: Arial, sans-serif; background:#f4f4f5; padding:40px;">
+            <div style="max-width:560px;margin:auto;background:white;
+                        padding:40px;border-radius:8px;">
+                <h1 style="color:#1d4ed8;">SGM | LFGS</h1>
+                <h2>Your account credentials were changed</h2>
+                <p>
+                    An administrator has updated the credentials on your account.
+                </p>
+                <table style="width:100%;margin:24px 0;border-collapse:collapse;">
+                    {changes_html}
+                </table>
+                <p>
                     If you were expecting this change, no action is needed.
-                    You will need to log in again using your new email address.
+                    You will need to log in again using your new credentials.
                 </p>
                 <p>
                     If you were not expecting this change, contact your
@@ -268,23 +441,69 @@ async def send_admin_email_override_notification(email: str) -> None:
     """
 
     text = (
-        "Library Management System.\n\n"
-        "An administrator has updated the email address on your account.\n\n"
+        "SGM | LFGS.\n\n"
+        "An administrator has updated the credentials on your account.\n\n"
+        f"{changes_text}"
         "If you were expecting this change, no action is needed. "
-        "You will need to log in again using your new email address.\n\n"
+        "You will need to log in again using your new credentials.\n\n"
         "If you were not expecting this change, contact your "
         "administrator immediately."
     )
 
     await send(
-        subject="Your Library account email was changed",
+        subject="Your LFGS account credentials were changed",
         to_email=email,
         html_body=html,
         text_body=text,
     )
 
 
-async def send_cancel_parent_deletion_email(): ...
+def build_reset_password_email(reset_password_token: str) -> tuple[str, str, str]:
+    reset_link = f"{settings.APP_URL}/auth/reset_password?token={reset_password_token}"
+
+    subject = "Your LFGS password reset link"
+
+    html = f"""
+        <!DOCTYPE html>
+        <html lang="en">
+        <body style="font-family: Arial, sans-serif; background:#f4f4f5; padding:40px;">
+            <div style="max-width:560px;margin:auto;background:white;
+                        padding:40px;border-radius:8px;">
+                <h1 style="color:#1d4ed8;">SGM | LFGS</h1>
+                <p>
+                    An administrator has requested a password reset for your account.
+                    Click the button below to set a new password.
+                    This link expires in
+                    <strong>{settings.RESET_PASSWORD_EXPIRES_MINUTES} minutes</strong>.
+                </p>
+                <div style="margin:40px 0;text-align:center;">
+                    <a href="{reset_link}"
+                        style="background:#1d4ed8;color:white;padding:14px 28px;
+                            border-radius:6px;text-decoration:none;font-weight:bold;">
+                        Reset Password
+                    </a>
+                </div>
+                <p style="font-size:13px;color:#6b7280;">
+                    If you were not expecting this, contact your administrator.
+                </p>
+            </div>
+        </body>
+        </html>
+    """
+
+    text = (
+        f"SGM | LFGS\n\n"
+        f"An administrator has requested a password reset for your account.\n\n"
+        f"Reset your password using the link below:\n\n"
+        f"{reset_link}\n\n"
+        f"This link expires in {settings.RESET_PASSWORD_EXPIRES_MINUTES} minutes.\n\n"
+        f"If you were not expecting this, contact your administrator."
+    )
+
+    return subject, html, text
 
 
-async def send_user_account_info_change_notification(): ...
+async def send_reset_password_token(email: str, raw_reset_token: str) -> None:
+    subject, html, text = build_reset_password_email(raw_reset_token)
+
+    await send(subject=subject, to_email=email, html_body=html, text_body=text)

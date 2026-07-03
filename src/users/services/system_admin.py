@@ -12,6 +12,10 @@ from src.core.security import generate_invite_token, generate_reset_password_tok
 from src.emails.repository import PendingEmailRepository
 from src.pagination import PaginatedResponse
 from src.users.models.users import User, UserActivation, UserLoginLockout, UserSession
+from src.users.repositories.users import (
+    UserRepositoryAdmin,
+    UserRepositoryBase,
+)
 from src.users.schemas.users import (
     CreateStaffAdmin,
     CreateStudentAdmin,
@@ -37,10 +41,6 @@ from src.utils.exceptions import (
     handle_username_integrity_error,
 )
 from src.utils.helpers import ensure_exists, update_object
-from users.repositories.users import (
-    UserRepositoryAdmin,
-    UserRepositoryBase,
-)
 
 logger = get_logger(__name__)
 
@@ -295,7 +295,7 @@ class UserServiceAdmin:
         )
 
     @staticmethod
-    async def cancel_parent_deletion(
+    async def cancel_guardian_deletion(
         db: AsyncSession,
         current_user_id: int,
         target_user_id: int,
@@ -313,7 +313,7 @@ class UserServiceAdmin:
 
         asyncio.create_task(
             email_sender.send_safe(
-                email_sender.send_cancel_parent_deletion_email(target_user.email),
+                email_sender.send_account_deletion_canceled_email(target_user.email),
                 email_type=EmailType.CANCEL_ACCOUNT_DELETION,
             )
         )
@@ -341,7 +341,7 @@ class UserServiceAdmin:
         ensure_exists(target_user, UserNotFoundError(HTTP404.USER))
 
         if not target_user.is_active:
-            logger.error(
+            logger.warning(
                 "deactivate_user_failed",
                 target_user_id=target_user_id,
                 requested_by=current_user_id,
@@ -351,6 +351,7 @@ class UserServiceAdmin:
             raise UserAlreadyInactiveError("User is already deactivated")
 
         target_user.is_active = False
+        target_user.status = UserStatus.DEACTIVATED
         target_user.session.access_token_version += 1
         target_user.session.refresh_token_hash = None
         target_user.session.refresh_token_family = None
@@ -436,9 +437,7 @@ class UserServiceAdmin:
 
             asyncio.create_task(
                 email_sender.send_safe(
-                    email_sender.send_user_account_info_change_notification(
-                        target_user.email
-                    ),
+                    email_sender.send_account_info_updated_email(target_user.email),
                     email_type="updating_account",
                 )
             )
@@ -502,8 +501,10 @@ class UserServiceAdmin:
 
             asyncio.create_task(
                 email_sender.send_safe(
-                    email_sender.send_admin_email_override_notification(old_email),
-                    email_type=EmailType.ADMIN_EMAIL_OVERRIDE,
+                    email_sender.send_admin_credentials_override_notification(
+                        old_email
+                    ),
+                    email_type=EmailType.ADMIN_CREDENTIALS_OVERRIDE,
                 )
             )
 
@@ -560,7 +561,7 @@ class UserServiceAdmin:
             raw_reset_token
         )
 
-        PendingEmailRepository.create(
+        PendingEmailRepository.add_pending_email(
             db,
             recipient=target_user.email,
             subject=subject,
@@ -575,7 +576,7 @@ class UserServiceAdmin:
 
         logger.info(
             "reset_password_request_created",
-            target_user_ider_id=target_user_id,
+            target_user_id=target_user_id,
         )
 
     @staticmethod
@@ -609,19 +610,24 @@ class UserServiceAdmin:
         if cached is not None:
             return cached
 
-        user = await UserRepositoryBase.get_user_by_id(
-            db, target_user_id, allowed_roles=frozenset({UserRole.DIRECTOR, UserRole.VICE_DIRECTOR, UserRole.TEACHER})
+        target_user = await UserRepositoryBase.get_user_by_id(
+            db,
+            target_user_id,
+            allowed_roles=frozenset(
+                {UserRole.DIRECTOR, UserRole.VICE_DIRECTOR, UserRole.TEACHER}
+            ),
         )
-        ensure_exists(user, UserNotFoundError(HTTP404.USER))
+        ensure_exists(target_user, UserNotFoundError(HTTP404.USER))
 
-        result = UserResponseAdminDetailed.model_validate(user)
         await set_cache(
             cache_key,
-            result.model_dump(mode="json"),
+            UserResponseAdminDetailed.model_validate(target_user).model_dump(
+                mode="json"
+            ),
             900,
         )
 
-        return result
+        return target_user
 
     @staticmethod
     async def get_guardians(
@@ -645,26 +651,26 @@ class UserServiceAdmin:
             limit=limit,
             has_more=skip + limit < total,
         )
-    
+
     @staticmethod
     async def get_guardian_by_id(
         db: AsyncSession, target_user_id: int
-    ) -> UserResponseAdminDetailed | dict:
+    ) -> UserResponseAdminDetailed:
         cache_key = UserCacheKey.user_detail_key_admin(target_user_id)
         cached = await get_cache(cache_key)
         if cached is not None:
             return cached
 
-        user = await UserRepositoryBase.get_user_by_id(
+        target_user = await UserRepositoryBase.get_user_by_id(
             db, target_user_id, allowed_roles=frozenset({UserRole.GUARDIAN})
         )
-        ensure_exists(user, UserNotFoundError(HTTP404.USER))
-
-        result = UserResponseAdminDetailed.model_validate(user)
+        ensure_exists(target_user, UserNotFoundError(HTTP404.USER))
         await set_cache(
             cache_key,
-            result.model_dump(mode="json"),
+            UserResponseAdminDetailed.model_validate(target_user).model_dump(
+                mode="json"
+            ),
             900,
         )
 
-        return result
+        return target_user

@@ -19,8 +19,8 @@ from src.users.schemas.users import (
     UserResponseAdmin,
     UserResponseAdminDetailed,
 )
+from src.users.services.system_admin import UserServiceAdmin
 from src.utils.enums import OrderBy, UserSortField
-from users.services.system_admin import UserServiceAdmin
 
 router = APIRouter(
     prefix="/users",
@@ -29,7 +29,7 @@ router = APIRouter(
 
 
 @router.post(
-    "/students",
+    "",
     response_model=UserResponseAdminDetailed,
     status_code=status.HTTP_201_CREATED,
 )
@@ -59,12 +59,12 @@ async def delete_parent(
     "/{target_user_id}/cancel-deletion",
     status_code=status.HTTP_204_NO_CONTENT,
 )
-async def cancel_parent_deletion(
+async def cancel_guardian_deletion(
     db: async_db_dependency,
     current_user: Annotated[CurrentUser, Depends(require_system_admin)],
     target_user_id: int,
 ):
-    await UserServiceAdmin.cancel_parent_deletion(db, current_user.id, target_user_id)
+    await UserServiceAdmin.cancel_guardian_deletion(db, current_user.id, target_user_id)
 
 
 @router.patch("/{target_user_id}/deactivate", status_code=status.HTTP_204_NO_CONTENT)
@@ -105,7 +105,7 @@ async def update_user(
     "/{target_user_id}/email",
     status_code=status.HTTP_204_NO_CONTENT,
 )
-async def update_user_email(
+async def update_user_credentials(
     db: async_db_dependency,
     current_user: Annotated[CurrentUser, Depends(require_system_admin)],
     target_user_id: Annotated[int, Path(ge=1)],

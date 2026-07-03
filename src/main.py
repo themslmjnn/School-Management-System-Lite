@@ -13,6 +13,7 @@ from src.core.caching import redis_client
 from src.core.config import settings
 from src.core.limiter import ip_limiter
 from src.core.logging import get_logger, setup_logging
+from src.core.middleware import RequestIDMiddleware
 from src.users.routers import system_admin as user_system_admin_router
 from src.utils import exceptions as exc
 from src.workers.deletion_worker import start_deletion_worker
@@ -40,7 +41,8 @@ async def lifespan(app: FastAPI):
     email_task = asyncio.create_task(run_email_worker())
     deletion_task = asyncio.create_task(start_deletion_worker())
 
-    logger.info("email_worker_task_started")
+    logger.info("email_task_started")
+    logger.info("deletion_task_started")
 
     yield
 
@@ -70,6 +72,8 @@ app = FastAPI(
     docs_url=None if settings.ENVIRONMENT == "production" else "/docs",
     redoc_url=None if settings.ENVIRONMENT == "production" else "/redoc",
 )
+
+app.add_middleware(RequestIDMiddleware)
 
 app.state.limiter = ip_limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
@@ -128,7 +132,9 @@ async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONR
     logger.error(
         "unhandled_exception",
         error=str(exc),
+        error_type=type(exc).__name__,
         path=request.url.path,
+        exc_info=exc,
     )
 
     return JSONResponse(

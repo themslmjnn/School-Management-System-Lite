@@ -33,7 +33,6 @@ class UserRepositoryBase:
             base_query = base_query.filter(
                 User.last_name.ilike(f"%{filters.last_name}%")
             )
-        
 
         return base_query
 
@@ -150,7 +149,7 @@ class UserRepositoryBase:
         result = await db.execute(query)
 
         return result.scalar_one_or_none()
-    
+
     @staticmethod
     async def get_users(
         db: AsyncSession,
@@ -174,7 +173,6 @@ class UserRepositoryBase:
         query = UserRepositoryBase.apply_sorting(query, sort_by, order)
 
         return await UserRepositoryBase.paginate(db, query, skip, limit)
-
 
 
 class UserRepositoryAdmin:

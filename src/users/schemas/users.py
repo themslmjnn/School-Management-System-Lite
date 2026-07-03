@@ -93,8 +93,10 @@ class UserResponseAdminDetailed(UserResponseAdmin, BaseSchema):
     def format_phone_number(self) -> str:
         return validators.format_phone_for_display(self.phone_number)
 
+
 class UserStudentResponseAdmin(UserResponseAdmin):
     group: StudentGroup
+
 
 class SearchUserBase(BaseModel):
     firstname: str | None = Field(default=None, max_length=50)
@@ -109,6 +111,7 @@ class SearchUserAdmin(SearchUserBase):
     email: str | None = Field(default=None, max_length=20)
     phone_number: str | None = Field(default=None, max_length=15)
     is_active: bool | None = None
+
 
 class SearchStudentAdmin(SearchUserAdmin):
     group: StudentGroup

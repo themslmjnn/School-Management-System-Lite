@@ -6,6 +6,9 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.dependencies import async_db_dependency
+from src.core.logging import get_logger
+
+logger = get_logger(__name__)
 
 router = APIRouter(
     prefix="/health",
@@ -22,16 +25,25 @@ async def check_postgres(session: AsyncSession) -> dict:
     try:
         async with asyncio.timeout(2.0):
             await session.execute(text("SELECT 1"))
+
         return {"status": "ok"}
     except TimeoutError:
+        logger.warning("health_check_postgres_timeout")
+
         return {
             "status": "error",
             "detail": "timed out",
         }
     except Exception as e:
+        logger.warning(
+            "health_check_postgres_failed",
+            error=str(e),
+            error_type=type(e).__name__,
+        )
+
         return {
             "status": "error",
-            "detail": str(e),
+            "detail": "unavailable",
         }
 
 
@@ -39,16 +51,25 @@ async def check_redis(redis_client: redis.Redis) -> dict:
     try:
         async with asyncio.timeout(2.0):
             pong = await redis_client.ping()
+
         return {"status": "ok" if pong else "error"}
     except TimeoutError:
+        logger.warning("health_check_redis_timeout")
+
         return {
             "status": "error",
             "detail": "timed out",
         }
     except Exception as e:
+        logger.warning(
+            "health_check_redis_failed",
+            error=str(e),
+            error_type=type(e).__name__,
+        )
+
         return {
             "status": "error",
-            "detail": str(e),
+            "detail": "unavailable",
         }
 
 
@@ -69,11 +90,24 @@ async def readiness(
     checks = {
         "postgres": pg_result
         if not isinstance(pg_result, Exception)
-        else {"status": "error", "detail": str(pg_result)},
+        else {"status": "error", "detail": "unavailable"},
         "redis": redis_result
         if not isinstance(redis_result, Exception)
-        else {"status": "error", "detail": str(redis_result)},
+        else {"status": "error", "detail": "unavailable"},
     }
+
+    if isinstance(pg_result, Exception):
+        logger.error(
+            "health_check_postgres_unhandled",
+            error=str(pg_result),
+            error_type=type(pg_result).__name__,
+        )
+    if isinstance(redis_result, Exception):
+        logger.error(
+            "health_check_redis_unhandled",
+            error=str(redis_result),
+            error_type=type(redis_result).__name__,
+        )
 
     critical_ok = checks["postgres"]["status"] == "ok"
     overall_ok = critical_ok and checks["redis"]["status"] == "ok"
