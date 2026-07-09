@@ -5,4 +5,3 @@ pyproject.toml
 .ruff_cache
 .mypy_cache
 .pytest_cache
-alembic/__pycache__
