@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
 from src.users.models.users import User, UserActivation, UserLoginLockout, UserSession
-from src.users.schemas.users import SearchStudentAdmin, SearchUserAdmin, SearchUserBase
+from src.users.schemas.users import SearchUserAdmin, SearchUserBase
 from src.utils.enums import OrderBy, UserRole, UserSortField, UserStatus
 
 ENTITY_TYPE = User | UserSession | UserActivation | UserLoginLockout

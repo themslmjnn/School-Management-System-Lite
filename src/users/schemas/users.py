@@ -1,4 +1,5 @@
 from datetime import date, datetime
+from typing import Annotated, Literal
 
 from pydantic import (
     BaseModel,
@@ -11,7 +12,7 @@ from pydantic import (
 
 from src.utils import validators
 from src.utils.base_schema import BaseSchema
-from src.utils.enums import StudentGroup, UserRole, UserStatus
+from src.utils.enums import UserRole, UserStatus
 
 
 class CreateUserBase(BaseModel):
@@ -50,11 +51,8 @@ class CreateUserBase(BaseModel):
         return validators.parse_and_validate_mobile_number(v)
 
 
-class CreateStaffAdmin(CreateUserBase):
-    role: UserRole
-
-
 class CreateStudentAdmin(CreateUserBase):
+    type: Literal["student"] = "student"
     date_of_birth: date
     address: str | None = Field(min_length=15, max_length=100, default=None)
 
@@ -62,6 +60,21 @@ class CreateStudentAdmin(CreateUserBase):
     @classmethod
     def validate_date_of_birth(cls, v: date) -> date:
         return validators.validate_date_of_birth(v)
+
+
+class CreateStaffAdmin(CreateUserBase):
+    type: Literal["staff"] = "staff"
+    role: UserRole
+
+
+class CreateGuardianAdmin(CreateUserBase):
+    type: Literal["guardian"] = "guardian"
+
+
+CreateRequest = Annotated[
+    CreateStudentAdmin | CreateStaffAdmin | CreateGuardianAdmin,
+    Field(discriminator="type"),
+]
 
 
 class UserResponseAdmin(BaseModel):
@@ -75,7 +88,7 @@ class UserResponseAdminDetailed(UserResponseAdmin, BaseSchema):
     id: int
     username: str
     date_of_birth: date | None
-    phone_number: str
+    phone_number: str = Field(exclude=True)
     email: EmailStr
     address: str | None
     status: UserStatus
@@ -94,10 +107,6 @@ class UserResponseAdminDetailed(UserResponseAdmin, BaseSchema):
         return validators.format_phone_for_display(self.phone_number)
 
 
-class UserStudentResponseAdmin(UserResponseAdmin):
-    group: StudentGroup
-
-
 class SearchUserBase(BaseModel):
     firstname: str | None = Field(default=None, max_length=50)
     lastname: str | None = Field(default=None, max_length=50)
@@ -113,17 +122,11 @@ class SearchUserAdmin(SearchUserBase):
     is_active: bool | None = None
 
 
-class SearchStudentAdmin(SearchUserAdmin):
-    group: StudentGroup
-
-
-class UpdateUser(BaseModel):
+class UpdateStaffAndGuardianAdmin(BaseModel):
     firstname: str | None = None
     lastname: str | None = None
     middlename: str | None = None
-    date_of_birth: date | None = None
     phone_number: str | None = None
-    address: str | None = None
 
     @field_validator("firstname")
     @classmethod
@@ -146,19 +149,24 @@ class UpdateUser(BaseModel):
             return None
         return validators.validate_middlename(v)
 
+    @field_validator("phone_number", mode="after")
+    @classmethod
+    def validate_phone_number(cls, field: str | None) -> str | None:
+        if field is None:
+            return None
+        return validators.parse_and_validate_mobile_number(field)
+
+
+class UpdateStudentAdmin(UpdateStaffAndGuardianAdmin):
+    date_of_birth: date | None = None
+    address: str | None = None
+
     @field_validator("date_of_birth", mode="after")
     @classmethod
     def validate_date_of_birth(cls, field: date | None) -> date | None:
         if field is None:
             return None
         return validators.validate_date_of_birth(field)
-
-    @field_validator("phone_number", mode="after")
-    @classmethod
-    def validate_phone_number(cls, field: str | None) -> str | None:
-        if field is None:
-            return None
-        return validators.validate_phone_number(field)
 
 
 class UpdateUserCredentials(BaseModel):

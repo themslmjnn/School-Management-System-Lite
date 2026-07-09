@@ -11,8 +11,7 @@ from src.core.dependencies import (
 from src.core.limiter import user_limiter
 from src.pagination import PaginatedResponse
 from src.users.schemas.users import (
-    CreateStaffAdmin,
-    CreateStudentAdmin,
+    CreateRequest,
     SearchUserAdmin,
     UpdateUser,
     UpdateUserCredentials,
@@ -38,7 +37,7 @@ async def register_user(
     request: Request,
     db: async_db_dependency,
     current_user: Annotated[CurrentUser, Depends(require_system_admin)],
-    create_request: CreateStaffAdmin | CreateStudentAdmin,
+    create_request: CreateRequest,
 ):
     return await UserServiceAdmin.register_user(db, current_user.id, create_request)
 

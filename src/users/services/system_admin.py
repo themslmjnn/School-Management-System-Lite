@@ -1,9 +1,11 @@
 import asyncio
 from datetime import UTC, datetime, timedelta
+from typing import assert_never
 
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.core.advisory_locks import acquire_student_contact_lock
 from src.core.caching import delete_cache, get_cache, set_cache
 from src.core.config import settings
 from src.core.dependencies import CurrentUser
@@ -17,6 +19,8 @@ from src.users.repositories.users import (
     UserRepositoryBase,
 )
 from src.users.schemas.users import (
+    CreateGuardianAdmin,
+    CreateRequest,
     CreateStaffAdmin,
     CreateStudentAdmin,
     SearchUserAdmin,
@@ -30,7 +34,6 @@ from src.utils.constants import HTTP404
 from src.utils.enums import EmailType, UserRole, UserStatus
 from src.utils.exceptions import (
     CannotCreateDirectorError,
-    CannotCreateStudentError,
     CannotCreateSystemAdminError,
     MaxNumberOfIdenticalContactsError,
     UserAlreadyActiveError,
@@ -46,7 +49,7 @@ logger = get_logger(__name__)
 
 DELETION_GRACE_PERIOD_DAYS = 30
 STUDENT_MAX_SHARED_CONTACT = 3
-STAFF_MAX_SHARED_CONTACT = 1
+STAFF_AND_GUARDIAN_MAX_SHARED_CONTACT = 1
 
 SYSTEM_ADMIN_INVISIBLE_ROLES = frozenset({UserRole.SYSTEM_ADMIN})
 DIRECTOR_INVISIBLE_ROLES = frozenset(
@@ -63,11 +66,10 @@ VICE_DIRECTOR_INVISIBLE_ROLES = frozenset(
         UserRole.GUARDIAN,
     }
 )
-BLOCKED_ROLES_VIA_STAFF_ENDPOINT = frozenset(
+BLOCKED_ROLES_VIA_API = frozenset(
     {
         UserRole.SYSTEM_ADMIN,
         UserRole.DIRECTOR,
-        UserRole.STUDENT,
     }
 )
 
@@ -75,9 +77,10 @@ BLOCKED_ROLES_VIA_STAFF_ENDPOINT = frozenset(
 async def _check_contact_limit(
     db: AsyncSession,
     current_user_id: int,
-    create_request: CreateStaffAdmin | CreateStudentAdmin,
+    create_request: CreateStaffAdmin | CreateGuardianAdmin | CreateStudentAdmin,
     *,
     role: UserRole | None,
+    resolved_role: UserRole,
     max_allowed: int,
 ) -> None:
     existing_count = await UserRepositoryBase.count_users_with_contact(
@@ -92,14 +95,14 @@ async def _check_contact_limit(
             "user_registration_denied",
             actor_user_id=current_user_id,
             target_username=create_request.username,
-            requested_role=UserRole.STUDENT
-            if role == UserRole.STUDENT
-            else create_request.role,
+            requested_role=resolved_role,
             denial_reason="maximum_number_of_identical_contacts_reached",
         )
 
         raise MaxNumberOfIdenticalContactsError(
-            f"Maximum number of {'students' if role == UserRole.STUDENT else 'staff'} with identical contact details reached"
+            f"Maximum number of "
+            f"{'students' if role == UserRole.STUDENT else 'staff or guardian'} "
+            f"with identical contact details reached"
         )
 
 
@@ -108,44 +111,64 @@ class UserServiceAdmin:
     async def register_user(
         db: AsyncSession,
         current_user_id: int,
-        create_request: CreateStaffAdmin | CreateStudentAdmin,
+        create_request: CreateRequest,
     ) -> User:
-        is_student = isinstance(create_request, CreateStudentAdmin)
+        match create_request:
+            case CreateStaffAdmin():
+                if create_request.role in BLOCKED_ROLES_VIA_API:
+                    denial_reason = {
+                        UserRole.SYSTEM_ADMIN: "system_admin_creation_via_api_is_forbidden",
+                        UserRole.DIRECTOR: "director_creation_via_api_is_forbidden",
+                    }[create_request.role]
 
-        if not is_student and create_request.role in BLOCKED_ROLES_VIA_STAFF_ENDPOINT:
-            denial_reason = {
-                UserRole.SYSTEM_ADMIN: "system_admin_creation_via_api_is_forbidden",
-                UserRole.DIRECTOR: "director_creation_via_api_is_forbidden",
-                UserRole.STUDENT: "student_creation_via_staff_endpoint_is_forbidden",
-            }[create_request.role]
+                    exception_map = {
+                        UserRole.SYSTEM_ADMIN: CannotCreateSystemAdminError,
+                        UserRole.DIRECTOR: CannotCreateDirectorError,
+                    }
 
-            exception_map = {
-                UserRole.SYSTEM_ADMIN: CannotCreateSystemAdminError,
-                UserRole.DIRECTOR: CannotCreateDirectorError,
-                UserRole.STUDENT: CannotCreateStudentError,
-            }
+                    logger.warning(
+                        "user_registration_denied",
+                        actor_user_id=current_user_id,
+                        target_username=create_request.username,
+                        requested_role=create_request.role.value,
+                        denial_reason=denial_reason,
+                    )
 
-            logger.warning(
-                "user_registration_denied",
-                actor_user_id=current_user_id,
-                target_username=create_request.username,
-                requested_role=create_request.role.value,
-                denial_reason=denial_reason,
+                    raise exception_map[create_request.role](
+                        denial_reason.replace("_", " ").capitalize()
+                    )
+
+                resolved_role = create_request.role
+                contact_limit_role = None
+                max_allowed = STAFF_AND_GUARDIAN_MAX_SHARED_CONTACT
+
+            case CreateGuardianAdmin():
+                resolved_role = UserRole.GUARDIAN
+                contact_limit_role = None
+                max_allowed = STAFF_AND_GUARDIAN_MAX_SHARED_CONTACT
+
+            case CreateStudentAdmin():
+                resolved_role = UserRole.STUDENT
+                contact_limit_role = UserRole.STUDENT
+                max_allowed = STUDENT_MAX_SHARED_CONTACT
+
+            case _:
+                assert_never(create_request)
+
+        is_student = resolved_role == UserRole.STUDENT
+
+        if is_student:
+            await acquire_student_contact_lock(
+                db,
+                phone_number=create_request.phone_number,
+                email=create_request.email,
             )
-
-            raise exception_map[create_request.role](
-                denial_reason.replace("_", " ").capitalize()
-            )
-
-        max_allowed = (
-            STUDENT_MAX_SHARED_CONTACT if is_student else STAFF_MAX_SHARED_CONTACT
-        )
 
         await _check_contact_limit(
             db,
             current_user_id,
             create_request,
-            role=UserRole.STUDENT if is_student else None,
+            role=contact_limit_role,
             max_allowed=max_allowed,
         )
 
@@ -153,8 +176,6 @@ class UserServiceAdmin:
         invite_token_expires_at = datetime.now(UTC) + timedelta(
             hours=settings.INVITE_TOKEN_EXPIRES_HOURS
         )
-
-        resolved_role = UserRole.STUDENT if is_student else create_request.role
 
         try:
             new_user = User(
