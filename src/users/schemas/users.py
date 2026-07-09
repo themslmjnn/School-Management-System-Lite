@@ -49,6 +49,11 @@ class CreateUserBase(BaseModel):
     @classmethod
     def validate_phone_number(cls, v: str) -> str:
         return validators.parse_and_validate_mobile_number(v)
+    
+    @field_validator("email", mode="after")
+    @classmethod
+    def normalize_email(cls, v: EmailStr) -> str:
+        return v.strip().lower()
 
 
 class CreateStudentAdmin(CreateUserBase):
@@ -179,3 +184,10 @@ class UpdateUserCredentials(BaseModel):
         if v is None:
             return None
         return validators.validate_username(v)
+    
+    @field_validator("email", mode="after")
+    @classmethod
+    def normalize_email(cls, v: EmailStr | None) -> str | None:
+        if v is None:
+            return None
+        return v.strip().lower()

@@ -77,28 +77,31 @@ BLOCKED_ROLES_VIA_API = frozenset(
 async def _check_contact_limit(
     db: AsyncSession,
     current_user_id: int,
-    create_request: CreateStaffAdmin | CreateGuardianAdmin | CreateStudentAdmin,
     *,
+    target_username: str,
+    phone_number: str | None,
+    email: str | None,
     role: UserRole | None,
     resolved_role: UserRole,
     max_allowed: int,
+    exclude_user_id: int | None = None,
 ) -> None:
     existing_count = await UserRepositoryBase.count_users_with_contact(
         db,
         role,
-        phone_number=create_request.phone_number,
-        email=create_request.email,
+        phone_number=phone_number,
+        email=email,
+        exclude_user_id=exclude_user_id,
     )
 
     if existing_count >= max_allowed:
         logger.warning(
             "user_registration_denied",
             actor_user_id=current_user_id,
-            target_username=create_request.username,
+            target_username=target_username,
             requested_role=resolved_role,
             denial_reason="maximum_number_of_identical_contacts_reached",
         )
-
         raise MaxNumberOfIdenticalContactsError(
             f"Maximum number of "
             f"{'students' if role == UserRole.STUDENT else 'staff or guardian'} "
@@ -167,8 +170,11 @@ class UserServiceAdmin:
         await _check_contact_limit(
             db,
             current_user_id,
-            create_request,
+            target_username=create_request.username,
+            phone_number=create_request.phone_number,
+            email=create_request.email,
             role=contact_limit_role,
+            resolved_role=resolved_role,
             max_allowed=max_allowed,
         )
 
@@ -450,6 +456,28 @@ class UserServiceAdmin:
         )
         ensure_exists(target_user, UserNotFoundError(HTTP404.USER))
 
+        is_student = target_user.role == UserRole.STUDENT
+        phone_number_changing = (
+            update_request.phone_number is not None
+            and update_request.phone_number != target_user.phone_number
+        )
+
+        if is_student and phone_number_changing:
+            await acquire_student_contact_lock(
+                db, phone_number=update_request.phone_number, email=None
+            )
+            await _check_contact_limit(
+                db,
+                current_user_id,
+                target_username=target_user.username,
+                phone_number=update_request.phone_number,
+                email=None,
+                role=UserRole.STUDENT,
+                resolved_role=UserRole.STUDENT,
+                max_allowed=STUDENT_MAX_SHARED_CONTACT,
+                exclude_user_id=target_user_id,
+            )
+
         try:
             update_object(target_user, update_request)
 
@@ -487,7 +515,8 @@ class UserServiceAdmin:
                 reason=str(e.orig),
             )
 
-            handle_non_student_unique_contact_error(e)
+            if not is_student:
+                handle_non_student_unique_contact_error(e)
             raise
 
     @staticmethod
@@ -498,12 +527,31 @@ class UserServiceAdmin:
         update_request: UpdateUserCredentials,
     ) -> None:
         target_user = await UserRepositoryBase.get_user_by_id(
-            db,
-            target_user_id,
-            excluded_roles=SYSTEM_ADMIN_INVISIBLE_ROLES,
-            load_session=True,
+            db, target_user_id, excluded_roles=SYSTEM_ADMIN_INVISIBLE_ROLES, load_session=True
         )
         ensure_exists(target_user, UserNotFoundError(HTTP404.USER))
+
+        is_student = target_user.role == UserRole.STUDENT
+        email_changing = (
+            update_request.email is not None
+            and update_request.email != target_user.email
+        )
+
+        if is_student and email_changing:
+            await acquire_student_contact_lock(
+                db, phone_number=None, email=update_request.email
+            )
+            await _check_contact_limit(
+                db,
+                current_user_id,
+                target_username=target_user.username,
+                phone_number=None,
+                email=update_request.email,
+                role=UserRole.STUDENT,
+                resolved_role=UserRole.STUDENT,
+                max_allowed=STUDENT_MAX_SHARED_CONTACT,
+                exclude_user_id=target_user_id,
+            )
 
         try:
             old_email = target_user.email
@@ -553,7 +601,8 @@ class UserServiceAdmin:
             )
 
             handle_username_integrity_error(e)
-            handle_non_student_unique_contact_error(e)
+            if not is_student:
+                handle_non_student_unique_contact_error(e)
             raise
 
     @staticmethod
