@@ -1,7 +1,7 @@
 from datetime import UTC, datetime
 
 from pydantic import EmailStr
-from sqlalchemy import Select, func, or_, select
+from sqlalchemy import Select, delete, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
@@ -215,3 +215,42 @@ class UserRepositoryAdmin:
             skip=skip,
             limit=limit,
         )
+
+    @staticmethod
+    async def delete_user_if_due(db: AsyncSession, user_id: int) -> bool:
+        result = await db.execute(
+            delete(User).where(
+                User.id == user_id,
+                User.status == UserStatus.PENDING_DELETION,
+                User.deletion_scheduled_for <= datetime.now(UTC),
+            )
+        )
+        return result.rowcount > 0
+
+
+    @staticmethod
+    async def get_user_ids_due_for_hard_deletion(db: AsyncSession) -> list[int]:
+        query = select(User.id).where(
+            User.status == UserStatus.PENDING_DELETION,
+            User.deletion_scheduled_for <= datetime.now(UTC),
+        )
+        result = await db.execute(query)
+        return list(result.scalars().all())
+
+
+    @staticmethod
+    async def reactivate_pending_deletion_user(db: AsyncSession, user_id: int) -> bool:
+        result = await db.execute(
+            update(User)
+            .where(
+                User.id == user_id,
+                User.role == UserRole.PARENT,
+                User.status == UserStatus.PENDING_DELETION,
+            )
+            .values(
+                status=UserStatus.ACTIVE,
+                is_active=True,
+                deletion_scheduled_for=None,
+            )
+        )
+        return result.rowcount > 0

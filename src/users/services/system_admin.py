@@ -261,7 +261,7 @@ class UserServiceAdmin:
             raise
 
     @staticmethod
-    async def delete_parent(
+    async def request_guardian_deletion(
         db: AsyncSession,
         current_user_id: int,
         target_user_id: int,
@@ -322,7 +322,7 @@ class UserServiceAdmin:
         )
 
     @staticmethod
-    async def cancel_guardian_deletion(
+    async def cancel_guardian_deletion_request(
         db: AsyncSession,
         current_user_id: int,
         target_user_id: int,
@@ -330,17 +330,30 @@ class UserServiceAdmin:
         target_user = await UserRepositoryBase.get_user_by_id_pending_deletion(
             db, target_user_id
         )
-        ensure_exists(target_user, UserNotFoundError(HTTP404.USER))
+        ensure_exists(target_user, GuardianAlreadyDeletedError(HTTP404.USER))
+        target_user_email = target_user.email
 
-        target_user.status = UserStatus.ACTIVE
-        target_user.is_active = True
-        target_user.deletion_scheduled_for = None
+        reactivated = await UserRepositoryBase.reactivate_pending_deletion_user(
+            db, target_user_id
+        )
+
+        if not reactivated:
+            await db.rollback()
+
+            logger.warning(
+                "guardian_deletion_cancel_lost_race",
+                actor_user_id=current_user_id,
+                target_user_id=target_user_id,
+                denial_reason="user_hard_deleted_before_cancel_committed",
+            )
+
+            raise UserNotFoundError(HTTP404.USER)
 
         await db.commit()
 
         asyncio.create_task(
             email_sender.send_safe(
-                email_sender.send_account_deletion_canceled_email(target_user.email),
+                email_sender.send_account_deletion_canceled_email(target_user_email),
                 email_type=EmailType.CANCEL_ACCOUNT_DELETION,
             )
         )

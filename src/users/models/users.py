@@ -1,7 +1,9 @@
+import uuid
 from datetime import date, datetime
 
 from sqlalchemy import DateTime, ForeignKey, Index, String, text
 from sqlalchemy import Enum as SQLEnum
+from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.database import Base
@@ -10,6 +12,14 @@ from src.utils.enums import UserRole, UserStatus
 
 class User(Base):
     __tablename__ = "users"
+
+    public_id: Mapped[uuid.UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
+        unique=True,
+        nullable=False,
+        default=uuid.uuid4,
+        index=True,
+    )
 
     username: Mapped[str] = mapped_column(String(20), unique=True, nullable=False)
     firstname: Mapped[str] = mapped_column(String(50), index=True, nullable=False)

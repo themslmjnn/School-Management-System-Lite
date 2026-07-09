@@ -13,7 +13,8 @@ from src.pagination import PaginatedResponse
 from src.users.schemas.users import (
     CreateRequest,
     SearchUserAdmin,
-    UpdateUser,
+    UpdateStaffAndGuardianAdmin,
+    UpdateStudentAdmin,
     UpdateUserCredentials,
     UserResponseAdmin,
     UserResponseAdminDetailed,
@@ -93,7 +94,7 @@ async def update_user(
     db: async_db_dependency,
     current_user: Annotated[CurrentUser, Depends(require_system_admin)],
     target_user_id: Annotated[int, Path(ge=1)],
-    update_request: UpdateUser,
+    update_request: UpdateStaffAndGuardianAdmin | UpdateStudentAdmin,
 ):
     return await UserServiceAdmin.update_user(
         db, current_user.id, target_user_id, update_request
@@ -101,7 +102,7 @@ async def update_user(
 
 
 @router.patch(
-    "/{target_user_id}/email",
+    "/{target_user_id}/credentials",
     status_code=status.HTTP_204_NO_CONTENT,
 )
 async def update_user_credentials(
@@ -110,7 +111,7 @@ async def update_user_credentials(
     target_user_id: Annotated[int, Path(ge=1)],
     update_request: UpdateUserCredentials,
 ):
-    await UserServiceAdmin.update_user_email(
+    await UserServiceAdmin.update_user_credentials(
         db, current_user.id, target_user_id, update_request
     )
 
