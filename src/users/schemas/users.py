@@ -15,6 +15,7 @@ from src.utils.base_schema import BaseSchema
 from src.utils.enums import UserRole, UserStatus
 
 
+# COMPLETED!!!
 class CreateUserBase(BaseModel):
     username: str = Field(min_length=6, max_length=20)
     firstname: str = Field(min_length=2, max_length=50)
@@ -55,7 +56,7 @@ class CreateUserBase(BaseModel):
     def normalize_email(cls, v: EmailStr) -> str:
         return v.strip().lower()
 
-
+# COMPLETED!!!
 class CreateStudentAdmin(CreateUserBase):
     type: Literal["student"] = "student"
     date_of_birth: date
@@ -66,29 +67,29 @@ class CreateStudentAdmin(CreateUserBase):
     def validate_date_of_birth(cls, v: date) -> date:
         return validators.validate_date_of_birth(v)
 
-
+# COMPLETED!!!
 class CreateStaffAdmin(CreateUserBase):
     type: Literal["staff"] = "staff"
     role: UserRole
 
-
+# COMPLETED!!!
 class CreateGuardianAdmin(CreateUserBase):
     type: Literal["guardian"] = "guardian"
 
-
+# COMPLETED!!!
 CreateRequest = Annotated[
     CreateStudentAdmin | CreateStaffAdmin | CreateGuardianAdmin,
     Field(discriminator="type"),
 ]
 
-
+# COMPLETED!!!
 class UserResponseAdmin(BaseModel):
     firstname: str
     lastname: str
     middlename: str | None
     role: UserRole
 
-
+# COMPLETED!!!
 class UserResponseAdminDetailed(UserResponseAdmin, BaseSchema):
     id: int
     username: str
@@ -111,83 +112,3 @@ class UserResponseAdminDetailed(UserResponseAdmin, BaseSchema):
     def format_phone_number(self) -> str:
         return validators.format_phone_for_display(self.phone_number)
 
-
-class SearchUserBase(BaseModel):
-    firstname: str | None = Field(default=None, max_length=50)
-    lastname: str | None = Field(default=None, max_length=50)
-    middlename: str | None = Field(default=None, max_length=50)
-    role: UserRole | None = None
-    status: UserStatus | None = None
-
-
-class SearchUserAdmin(SearchUserBase):
-    username: str | None = Field(default=None, max_length=15)
-    email: str | None = Field(default=None, max_length=20)
-    phone_number: str | None = Field(default=None, max_length=15)
-    is_active: bool | None = None
-
-
-class UpdateStaffAndGuardianAdmin(BaseModel):
-    firstname: str | None = None
-    lastname: str | None = None
-    middlename: str | None = None
-    phone_number: str | None = None
-
-    @field_validator("firstname")
-    @classmethod
-    def validate_firstname(cls, v: str | None) -> str | None:
-        if v is None:
-            return None
-        return validators.validate_firstname(v)
-
-    @field_validator("lastname")
-    @classmethod
-    def validate_lastname(cls, v: str | None) -> str | None:
-        if v is None:
-            return None
-        return validators.validate_lastname(v)
-
-    @field_validator("middlename")
-    @classmethod
-    def validate_middlename(cls, v: str | None) -> str | None:
-        if v is None:
-            return None
-        return validators.validate_middlename(v)
-
-    @field_validator("phone_number", mode="after")
-    @classmethod
-    def validate_phone_number(cls, field: str | None) -> str | None:
-        if field is None:
-            return None
-        return validators.parse_and_validate_mobile_number(field)
-
-
-class UpdateStudentAdmin(UpdateStaffAndGuardianAdmin):
-    date_of_birth: date | None = None
-    address: str | None = None
-
-    @field_validator("date_of_birth", mode="after")
-    @classmethod
-    def validate_date_of_birth(cls, field: date | None) -> date | None:
-        if field is None:
-            return None
-        return validators.validate_date_of_birth(field)
-
-
-class UpdateUserCredentials(BaseModel):
-    username: str | None = Field(min_length=6, max_length=20, default=None)
-    email: EmailStr | None = None
-
-    @field_validator("username")
-    @classmethod
-    def validate_username(cls, v: str | None) -> str | None:
-        if v is None:
-            return None
-        return validators.validate_username(v)
-    
-    @field_validator("email", mode="after")
-    @classmethod
-    def normalize_email(cls, v: EmailStr | None) -> str | None:
-        if v is None:
-            return None
-        return v.strip().lower()

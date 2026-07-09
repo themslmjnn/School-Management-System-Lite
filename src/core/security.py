@@ -128,3 +128,23 @@ def verify_reset_password_token(raw_reset_token: str, hashed_reset_token: str) -
         hashlib.sha256(raw_reset_token.encode()).hexdigest(),
         hashed_reset_token,
     )
+
+def generate_email_change_code() -> tuple[str, str]:
+    """
+    Mirrors generate_invite_token()'s raw/hashed pair pattern.
+    NOTE: uses the same urlsafe-token shape as invite tokens. If this is
+    meant to be a short numeric code the user types in manually (rather
+    than a link-embedded token), swap secrets.token_urlsafe(32) for
+    something like f"{secrets.randbelow(1_000_000):06d}" instead --
+    I don't know which UX you're building, so adjust to match.
+    """
+    raw_code = secrets.token_urlsafe(32)
+    hashed_code = hashlib.sha256(raw_code.encode()).hexdigest()
+    return raw_code, hashed_code
+
+
+def verify_email_change_code(raw_code: str, hashed_code: str) -> bool:
+    return hmac.compare_digest(
+        hashlib.sha256(raw_code.encode()).hexdigest(),
+        hashed_code,
+    )
