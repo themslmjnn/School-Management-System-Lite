@@ -107,7 +107,6 @@ EXCEPTION_STATUS_MAP = {
     exc.UserNotFoundError: 404,
     exc.NoChangesDetectedError: 409,
     exc.UserAlreadyInactiveError: 409,
-    exc.CannotCreateStudentError: 400,
     exc.UserAlreadyPendingDeletionError: 409,
 }
 

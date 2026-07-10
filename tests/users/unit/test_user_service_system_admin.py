@@ -18,6 +18,10 @@ from src.utils.exceptions import (
     DuplicateValueError,
     MaxNumberOfIdenticalContactsError,
     UsernameAlreadyTakenError,
+    MaxStaffOrGuardianPerPhoneNumberError,
+    MaxStaffOrGuardianPerEmailError,
+    MaxStudentsPerEmailError,
+    MaxStudentsPerPhoneNumberError,
 )
 from tests.factories import make_guardian, make_student, make_teacher
 
@@ -52,9 +56,14 @@ class TestRegisterStaff:
                 UsernameAlreadyTakenError,
             ),
             (
-                {"email": "taken@example.com", "phone_number": "+992555111222"},
-                {"email": "taken@example.com", "phone_number": "+992555111222"},
-                MaxNumberOfIdenticalContactsError,
+                {"email": "taken@example.com"},
+                {"email": "taken@example.com"},
+                MaxStaffOrGuardianPerEmailError,
+            ),
+            (
+                {"phone_number": "+992555111222"},
+                {"phone_number": "+992555111222"},
+                MaxStaffOrGuardianPerPhoneNumberError,
             ),
         ],
     )
@@ -230,23 +239,40 @@ class TestRegisterStudent:
                 test_db, system_admin.id, valid_create_student_request
             )
 
-    async def test_reject_when_contact_limit_reached(
-        self, test_db, system_admin, valid_create_student_request: CreateStudentAdmin
+    @pytest.mark.parametrize(
+        ("field", "value", "expected_exception"),
+        [
+            ("email", "shared@example.com", MaxStudentsPerEmailError),
+            (
+                "phone_number",
+                "+992555333444",
+                MaxStudentsPerPhoneNumberError,
+            ),
+        ],
+    )
+    async def test_reject_when_student_contact_limit_reached(
+        self,
+        test_db,
+        system_admin,
+        valid_create_student_request: CreateStudentAdmin,
+        field,
+        value,
+        expected_exception,
     ):
         for i in range(3):
             await make_student(
                 test_db,
-                email="shared@example.com",
-                phone_number="+992555333444",
                 username=f"existing_student_{i}",
+                **{field: value},
             )
 
-        valid_create_student_request.email = "shared@example.com"
-        valid_create_student_request.phone_number = "+992555333444"
+        setattr(valid_create_student_request, field, value)
 
-        with pytest.raises(MaxNumberOfIdenticalContactsError):
+        with pytest.raises(expected_exception):
             await UserServiceAdmin.register_user(
-                test_db, system_admin.id, valid_create_student_request
+                test_db,
+                system_admin.id,
+                valid_create_student_request,
             )
 
     async def test_create_user_session_table_successfully(
