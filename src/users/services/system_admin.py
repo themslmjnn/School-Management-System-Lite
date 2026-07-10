@@ -75,6 +75,7 @@ async def _check_contact_limit(
             f"with identical contact details reached"
         )
 
+
 # COMPLETED!!!
 class UserServiceAdmin:
     @staticmethod
@@ -125,7 +126,7 @@ class UserServiceAdmin:
             case _:
                 assert_never(create_request)
 
-        is_student = (resolved_role == UserRole.STUDENT)
+        is_student = resolved_role == UserRole.STUDENT
 
         if is_student:
             await acquire_student_contact_lock(
@@ -153,9 +154,12 @@ class UserServiceAdmin:
         try:
             new_user = User(
                 username=create_request.username,
-                firstname=create_request.firstname,
-                lastname=create_request.lastname,
-                middlename=create_request.middlename,
+                firstname=create_request.firstname.capitalize(),
+                lastname=create_request.lastname.capitalize(),
+                middlename=(
+                    create_request.middlename,
+                    create_request.middlename.capitalize(),
+                )[create_request.middlename is not None],
                 phone_number=create_request.phone_number,
                 email=create_request.email,
                 role=resolved_role,
@@ -185,7 +189,7 @@ class UserServiceAdmin:
             )
 
             subject, html_body, text_body = email_sender.build_invite_email(
-                raw_invite_token, new_user.email
+                raw_invite_token, new_user.username
             )
 
             PendingEmailRepository.add_pending_email(

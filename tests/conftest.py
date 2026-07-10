@@ -17,7 +17,11 @@ from src.core.security import create_access_token
 from src.database import Base
 from src.main import app
 from src.users.models import User
-from src.users.schemas.users import CreateStaffAdmin, CreateStudentAdmin
+from src.users.schemas.users import (
+    CreateGuardianAdmin,
+    CreateStaffAdmin,
+    CreateStudentAdmin,
+)
 from src.utils.enums import UserRole
 from tests.factories import (
     make_director,
@@ -198,7 +202,17 @@ create_user_request = {
 def valid_create_staff_request():
     return CreateStaffAdmin(
         **create_user_request,
+        type="staff",
         role=UserRole.TEACHER,
+    )
+
+
+@pytest.fixture
+def valid_create_guardian_request():
+    return CreateGuardianAdmin(
+        **create_user_request,
+        type="guardian",
+        role=UserRole.GUARDIAN,
     )
 
 
@@ -206,7 +220,7 @@ def valid_create_staff_request():
 def valid_create_student_request():
     return CreateStudentAdmin(
         **create_user_request,
+        type="student",
         date_of_birth="2008-05-01",
-        address=None,
         role=UserRole.STUDENT,
     )

@@ -18,8 +18,8 @@ from src.utils.enums import UserRole, UserStatus
 # COMPLETED!!!
 class CreateUserBase(BaseModel):
     username: str = Field(min_length=6, max_length=20)
-    firstname: str = Field(min_length=2, max_length=50)
-    lastname: str = Field(min_length=2, max_length=50)
+    firstname: str = Field(min_length=3, max_length=50)
+    lastname: str = Field(min_length=3, max_length=50)
     middlename: str | None = Field(min_length=2, max_length=50, default=None)
     phone_number: str
     email: EmailStr
@@ -50,11 +50,12 @@ class CreateUserBase(BaseModel):
     @classmethod
     def validate_phone_number(cls, v: str) -> str:
         return validators.parse_and_validate_mobile_number(v)
-    
+
     @field_validator("email", mode="after")
     @classmethod
     def normalize_email(cls, v: EmailStr) -> str:
         return v.strip().lower()
+
 
 # COMPLETED!!!
 class CreateStudentAdmin(CreateUserBase):
@@ -67,14 +68,17 @@ class CreateStudentAdmin(CreateUserBase):
     def validate_date_of_birth(cls, v: date) -> date:
         return validators.validate_date_of_birth(v)
 
+
 # COMPLETED!!!
 class CreateStaffAdmin(CreateUserBase):
     type: Literal["staff"] = "staff"
     role: UserRole
 
+
 # COMPLETED!!!
 class CreateGuardianAdmin(CreateUserBase):
     type: Literal["guardian"] = "guardian"
+
 
 # COMPLETED!!!
 CreateRequest = Annotated[
@@ -82,12 +86,14 @@ CreateRequest = Annotated[
     Field(discriminator="type"),
 ]
 
+
 # COMPLETED!!!
 class UserResponseAdmin(BaseModel):
     firstname: str
     lastname: str
     middlename: str | None
     role: UserRole
+
 
 # COMPLETED!!!
 class UserResponseAdminDetailed(UserResponseAdmin, BaseSchema):
@@ -111,4 +117,3 @@ class UserResponseAdminDetailed(UserResponseAdmin, BaseSchema):
     @property
     def format_phone_number(self) -> str:
         return validators.format_phone_for_display(self.phone_number)
-

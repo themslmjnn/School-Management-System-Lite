@@ -129,6 +129,7 @@ def verify_reset_password_token(raw_reset_token: str, hashed_reset_token: str) -
         hashed_reset_token,
     )
 
+
 def generate_email_change_code() -> tuple[str, str]:
     """
     Mirrors generate_invite_token()'s raw/hashed pair pattern.

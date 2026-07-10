@@ -40,7 +40,7 @@ async def lifespan(app: FastAPI):
     email_task = asyncio.create_task(run_email_worker())
 
     logger.info("email_task_started")
-    logger.info("deletion_task_started")
+    # logger.info("deletion_task_started")
 
     yield
 

@@ -17,6 +17,7 @@ class Grade(Base):
 
     student: Mapped["User"] = relationship("User", foreign_keys="[Grade.student_id]")
 
+
 class GradeComment(Base):
     __tablename__ = "grade_comments"
 

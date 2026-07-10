@@ -4,10 +4,8 @@ from datetime import UTC, date, datetime, timedelta
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.security import generate_invite_token, hash_password
-from src.users.models.guardian_link import StudentGuardianLink
 from src.users.models.users import User, UserActivation, UserLoginLockout, UserSession
-from src.users.repositories.guardian_link import GuardianLinkRepository
-from src.utils.enums import GuardianPriority, UserRole, UserStatus
+from src.utils.enums import UserRole, UserStatus
 from users.repositories.users import UserRepositoryBase
 
 _counter = itertools.count(1)
@@ -159,19 +157,19 @@ async def make_parent_pending_deletion(test_db: AsyncSession, **kwargs) -> User:
     return await make_parent(test_db, **kwargs)
 
 
-async def make_guardian_link(
-    test_db: AsyncSession,
-    *,
-    guardian: User,
-    student: User,
-    priority: GuardianPriority = GuardianPriority.SECONDARY,
-) -> StudentGuardianLink:
-    link = StudentGuardianLink(
-        parent_id=guardian.id,
-        student_id=student.id,
-        priority=priority,
-    )
-    GuardianLinkRepository.add_link(test_db, link)
-    await test_db.commit()
+# async def make_guardian_link(
+#     test_db: AsyncSession,
+#     *,
+#     guardian: User,
+#     student: User,
+#     priority: GuardianPriority = GuardianPriority.SECONDARY,
+# ) -> StudentGuardianLink:
+#     link = StudentGuardianLink(
+#         parent_id=guardian.id,
+#         student_id=student.id,
+#         priority=priority,
+#     )
+#     GuardianLinkRepository.add_link(test_db, link)
+#     await test_db.commit()
 
-    return link
+#     return link

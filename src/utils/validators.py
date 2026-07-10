@@ -1,3 +1,4 @@
+import re
 from datetime import date
 
 import phonenumbers
@@ -6,16 +7,28 @@ from pydantic_core import PydanticCustomError
 
 
 def validate_username(username: str) -> str:
-    if any(symbol in "\\~`!@#$%^&*()-=+{}[]|;:'<>,/?\"" for symbol in username):
-        raise PydanticCustomError(
-            "invalid_username_symbols",
-            "Username can only contain (.) and (_) symbols",
-        )
-
-    if not username.replace(".", "").replace("_", "").isalnum():
+    if not re.fullmatch(r"[a-z0-9._]+", username):
         raise PydanticCustomError(
             "invalid_username_characters",
-            "Username can only contain lowercase letters and numbers",
+            "Username can only contain lowercase letters, numbers, (.) and (_)",
+        )
+
+    if not username[0].isalpha():
+        raise PydanticCustomError(
+            "invalid_username_start",
+            "Username must start with a letter",
+        )
+
+    if username[-1] in (".", "_"):
+        raise PydanticCustomError(
+            "invalid_username_end",
+            "Username cannot end with (.) or (_)",
+        )
+
+    if re.search(r"[._]{2}", username):
+        raise PydanticCustomError(
+            "invalid_username_consecutive",
+            "Username cannot contain consecutive (.) or (_) characters",
         )
 
     return username
