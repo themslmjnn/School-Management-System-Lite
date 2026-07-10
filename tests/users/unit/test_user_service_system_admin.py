@@ -4,7 +4,7 @@ import pytest
 
 from src.emails.models import EmailType
 from src.emails.repository import PendingEmailRepository
-from src.users.schemas.users import CreateStaffAdmin
+from src.users.schemas.users import CreateStaffAdmin, CreateStudentAdmin
 from src.utils.enums import UserRole, UserStatus
 from src.utils.exceptions import (
     CannotCreateDirectorError,
@@ -13,7 +13,7 @@ from src.utils.exceptions import (
     MaxNumberOfIdenticalContactsError,
     UsernameAlreadyTakenError,
 )
-from tests.factories import make_teacher
+from tests.factories import make_student, make_teacher
 from users.repositories.users import UserRepositoryBase
 from users.services.system_admin import UserServiceAdmin
 
@@ -194,3 +194,133 @@ class TestRegisterStaff:
             await UserServiceAdmin.register_user(
                 test_db, system_admin.id, valid_create_staff_request
             )
+
+
+class TestRegisterStudent:
+    @pytest.mark.parametrize(
+        ("existing_user_data", "request_override", "expected_exception"),
+        [
+            (
+                {"username": "taken_username"},
+                {"username": "taken_username"},
+                UsernameAlreadyTakenError,
+            ),
+        ],
+    )
+    async def test_reject_duplicate_username(
+        self,
+        test_db,
+        system_admin,
+        valid_create_student_request: CreateStudentAdmin,
+        existing_user_data: dict,
+        request_override: dict,
+        expected_exception,
+    ):
+        await make_teacher(test_db, **existing_user_data)
+
+        for field, value in request_override.items():
+            setattr(valid_create_student_request, field, value)
+
+        with pytest.raises(expected_exception):
+            await UserServiceAdmin.register_user(
+                test_db, system_admin.id, valid_create_student_request
+            )
+
+    async def test_reject_when_contact_limit_reached(
+        self, test_db, system_admin, valid_create_student_request: CreateStudentAdmin
+    ):
+        for i in range(3):
+            await make_student(
+                test_db,
+                email="shared@example.com",
+                phone_number="+992555333444",
+                username=f"existing_student_{i}",
+            )
+
+        valid_create_student_request.email = "shared@example.com"
+        valid_create_student_request.phone_number = "+992555333444"
+
+        with pytest.raises(MaxNumberOfIdenticalContactsError):
+            await UserServiceAdmin.register_user(
+                test_db, system_admin.id, valid_create_student_request
+            )
+
+    async def test_create_user_session_table_successfully(
+        self, test_db, system_admin, valid_create_student_request: CreateStudentAdmin
+    ):
+        user = await UserServiceAdmin.register_user(
+            test_db, system_admin.id, valid_create_student_request
+        )
+
+        user_with_session = await UserRepositoryBase.get_user_by_id(
+            test_db, user.id, load_session=True
+        )
+        session = user_with_session.session
+
+        assert session.id is not None
+        assert session.user_id == user.id
+        assert session.access_token_version == 1
+        assert session.refresh_token_hash is None
+
+    async def test_create_user_login_lockout_table_successfully(
+        self, test_db, system_admin, valid_create_student_request: CreateStudentAdmin
+    ):
+        user = await UserServiceAdmin.register_user(
+            test_db, system_admin.id, valid_create_student_request
+        )
+
+        user_with_lockout = await UserRepositoryBase.get_user_by_id(
+            test_db, user.id, load_login_lockout=True
+        )
+        lockout = user_with_lockout.login_lockout
+
+        assert lockout.failed_login_attempts == 0
+        assert lockout.locked_until is None
+
+    async def test_create_user_activation_table_successfully(
+        self, test_db, system_admin, valid_create_student_request: CreateStudentAdmin
+    ):
+        user = await UserServiceAdmin.register_user(
+            test_db, system_admin.id, valid_create_student_request
+        )
+
+        user_with_activation = await UserRepositoryBase.get_user_by_id(
+            test_db, user.id, load_activation=True
+        )
+        activation = user_with_activation.activation
+
+        assert activation.invite_token_hash is not None
+        assert activation.invite_token_expires_at is not None
+        assert activation.invite_token_expires_at > datetime.now(UTC)
+
+    async def test_create_pending_email_successfully(
+        self, test_db, system_admin, valid_create_student_request: CreateStudentAdmin
+    ):
+        user = await UserServiceAdmin.register_user(
+            test_db, system_admin.id, valid_create_student_request
+        )
+
+        pending_emails = await PendingEmailRepository.get_pending_email_by_triggered_by(
+            test_db, system_admin.id
+        )
+        email = pending_emails[0]
+
+        assert len(pending_emails) == 1
+        assert email.recipient == user.email
+        assert email.email_type == EmailType.INVITE
+        assert email.recipient_user_id == user.id
+
+    async def test_create_user_successfully(
+        self, test_db, system_admin, valid_create_student_request: CreateStudentAdmin
+    ):
+        user = await UserServiceAdmin.register_user(
+            test_db, system_admin.id, valid_create_student_request
+        )
+
+        assert user.id is not None
+        assert user.role == UserRole.STUDENT
+        assert user.status == UserStatus.PENDING_ACTIVATION
+        assert user.is_active is False
+        assert user.password_hash is None
+        assert user.date_of_birth == valid_create_student_request.date_of_birth
+        assert user.created_by == system_admin.id

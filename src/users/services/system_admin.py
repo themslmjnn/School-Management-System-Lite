@@ -156,10 +156,9 @@ class UserServiceAdmin:
                 username=create_request.username,
                 firstname=create_request.firstname.capitalize(),
                 lastname=create_request.lastname.capitalize(),
-                middlename=(
-                    create_request.middlename,
-                    create_request.middlename.capitalize(),
-                )[create_request.middlename is not None],
+                middlename=create_request.middlename.capitalize()
+                if create_request.middlename
+                else None,
                 phone_number=create_request.phone_number,
                 email=create_request.email,
                 role=resolved_role,
