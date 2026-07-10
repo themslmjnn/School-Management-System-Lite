@@ -25,7 +25,7 @@ from src.users.schemas.users import (
 from src.utils.enums import UserRole
 from tests.factories import (
     make_director,
-    make_parent,
+    make_guardian,
     make_student,
     make_system_admin,
     make_teacher,
@@ -175,8 +175,8 @@ async def student(test_db):
 
 
 @pytest_asyncio.fixture
-async def parent(test_db):
-    return await make_parent(test_db)
+async def guardian(test_db):
+    return await make_guardian(test_db)
 
 
 @pytest.fixture

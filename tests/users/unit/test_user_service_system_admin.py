@@ -4,7 +4,11 @@ import pytest
 
 from src.emails.models import EmailType
 from src.emails.repository import PendingEmailRepository
-from src.users.schemas.users import CreateStaffAdmin, CreateStudentAdmin
+from src.users.schemas.users import (
+    CreateGuardianAdmin,
+    CreateStaffAdmin,
+    CreateStudentAdmin,
+)
 from src.utils.enums import UserRole, UserStatus
 from src.utils.exceptions import (
     CannotCreateDirectorError,
@@ -13,7 +17,7 @@ from src.utils.exceptions import (
     MaxNumberOfIdenticalContactsError,
     UsernameAlreadyTakenError,
 )
-from tests.factories import make_student, make_teacher
+from tests.factories import make_guardian, make_student, make_teacher
 from users.repositories.users import UserRepositoryBase
 from users.services.system_admin import UserServiceAdmin
 
@@ -324,3 +328,66 @@ class TestRegisterStudent:
         assert user.password_hash is None
         assert user.date_of_birth == valid_create_student_request.date_of_birth
         assert user.created_by == system_admin.id
+
+
+class TestRegisterGuardian:
+    async def test_reject_when_contact_limit_reached(
+        self, test_db, system_admin, valid_create_guardian_request: CreateGuardianAdmin
+    ):
+        await make_teacher(
+            test_db,
+            email=valid_create_guardian_request.email,
+            phone_number=valid_create_guardian_request.phone_number,
+        )
+
+        with pytest.raises(MaxNumberOfIdenticalContactsError):
+            await UserServiceAdmin.register_user(
+                test_db, system_admin.id, valid_create_guardian_request
+            )
+
+    async def test_staff_and_guardian_share_contact_pool(
+        self, test_db, system_admin, valid_create_guardian_request: CreateGuardianAdmin
+    ):
+        await make_guardian(
+            test_db,
+            email=valid_create_guardian_request.email,
+            phone_number=valid_create_guardian_request.phone_number,
+        )
+
+        with pytest.raises(MaxNumberOfIdenticalContactsError):
+            await UserServiceAdmin.register_user(
+                test_db, system_admin.id, valid_create_guardian_request
+            )
+
+    async def test_create_user_successfully(
+        self, test_db, system_admin, valid_create_guardian_request: CreateGuardianAdmin
+    ):
+        user = await UserServiceAdmin.register_user(
+            test_db, system_admin.id, valid_create_guardian_request
+        )
+
+        assert user.id is not None
+        assert user.role == UserRole.GUARDIAN
+        assert user.status == UserStatus.PENDING_ACTIVATION
+        assert user.is_active is False
+        assert user.password_hash is None
+        assert user.date_of_birth is None
+        assert user.address is None
+        assert user.created_by == system_admin.id
+
+    async def test_create_pending_email_successfully(
+        self, test_db, system_admin, valid_create_guardian_request: CreateGuardianAdmin
+    ):
+        user = await UserServiceAdmin.register_user(
+            test_db, system_admin.id, valid_create_guardian_request
+        )
+
+        pending_emails = await PendingEmailRepository.get_pending_email_by_triggered_by(
+            test_db, system_admin.id
+        )
+        email = pending_emails[0]
+
+        assert len(pending_emails) == 1
+        assert email.recipient == user.email
+        assert email.email_type == EmailType.INVITE
+        assert email.recipient_user_id == user.id

@@ -111,8 +111,8 @@ async def make_student(test_db: AsyncSession, **kwargs) -> User:
     return await make_user(test_db, role=UserRole.STUDENT, **kwargs)
 
 
-async def make_parent(test_db: AsyncSession, **kwargs) -> User:
-    return await make_user(test_db, role=UserRole.PARENT, **kwargs)
+async def make_guardian(test_db: AsyncSession, **kwargs) -> User:
+    return await make_user(test_db, role=UserRole.GUARDIAN, **kwargs)
 
 
 async def make_user_pending_activation(
