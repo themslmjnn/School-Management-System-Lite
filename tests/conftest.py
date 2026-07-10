@@ -194,7 +194,7 @@ create_user_request = {
     "firstname": "New",
     "lastname": "User",
     "email": "new_test_email@gmail.com",
-    "phone_number": "+992555000000",
+    "phone_number": "+992 111 111 111",
 }
 
 
@@ -212,7 +212,6 @@ def valid_create_guardian_request():
     return CreateGuardianAdmin(
         **create_user_request,
         type="guardian",
-        role=UserRole.GUARDIAN,
     )
 
 
@@ -222,5 +221,4 @@ def valid_create_student_request():
         **create_user_request,
         type="student",
         date_of_birth="2008-05-01",
-        role=UserRole.STUDENT,
     )

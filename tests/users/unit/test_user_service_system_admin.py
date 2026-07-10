@@ -392,9 +392,14 @@ class TestRegisterGuardian:
         assert email.email_type == EmailType.INVITE
         assert email.recipient_user_id == user.id
 
+
 class TestAdvisoryLock:
     async def test_advisory_lock_acquired_for_student(
-        self, test_db, system_admin, valid_create_student_request: CreateStudentAdmin, mocker
+        self,
+        test_db,
+        system_admin,
+        valid_create_student_request: CreateStudentAdmin,
+        mocker,
     ):
         mock_lock = mocker.patch(
             "src.users.services.system_admin.acquire_student_contact_lock",
@@ -412,7 +417,11 @@ class TestAdvisoryLock:
         )
 
     async def test_advisory_lock_not_acquired_for_staff(
-        self, test_db, system_admin, valid_create_staff_request: CreateStaffAdmin, mocker
+        self,
+        test_db,
+        system_admin,
+        valid_create_staff_request: CreateStaffAdmin,
+        mocker,
     ):
         mock_lock = mocker.patch(
             "src.users.services.system_admin.acquire_student_contact_lock",
@@ -426,7 +435,11 @@ class TestAdvisoryLock:
         mock_lock.assert_not_called()
 
     async def test_advisory_lock_not_acquired_for_guardian(
-        self, test_db, system_admin, valid_create_guardian_request: CreateGuardianAdmin, mocker
+        self,
+        test_db,
+        system_admin,
+        valid_create_guardian_request: CreateGuardianAdmin,
+        mocker,
     ):
         mock_lock = mocker.patch(
             "src.users.services.system_admin.acquire_student_contact_lock",

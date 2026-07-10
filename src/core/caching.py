@@ -34,7 +34,11 @@ async def get_cache(key: str) -> Any | None:
 
 async def set_cache(key: str, value: Any, ttl_seconds: int = 60) -> None:
     try:
-        await redis_client.setex(key, ttl_seconds, json.dumps(value))
+        await redis_client.set(
+            key,
+            json.dumps(value),
+            ex=ttl_seconds,
+        )
     except Exception as e:
         logger.warning(
             "cache_set_failed",

@@ -142,9 +142,7 @@ def parse_and_validate_mobile_number(phone_number: str) -> str:
             "Phone number must be a mobile number",
         )
 
-    return phonenumbers.format_number(
-        parsed, phonenumbers.PhoneNumberFormat.E164
-    ).lstrip("+")
+    return phonenumbers.format_number(parsed, phonenumbers.PhoneNumberFormat.E164)
 
 
 def format_phone_for_display(canonical_digits: str) -> str:
