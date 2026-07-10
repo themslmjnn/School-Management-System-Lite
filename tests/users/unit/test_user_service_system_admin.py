@@ -4,11 +4,13 @@ import pytest
 
 from src.emails.models import EmailType
 from src.emails.repository import PendingEmailRepository
+from src.users.repositories.users import UserRepositoryBase
 from src.users.schemas.users import (
     CreateGuardianAdmin,
     CreateStaffAdmin,
     CreateStudentAdmin,
 )
+from src.users.services.system_admin import UserServiceAdmin
 from src.utils.enums import UserRole, UserStatus
 from src.utils.exceptions import (
     CannotCreateDirectorError,
@@ -18,8 +20,6 @@ from src.utils.exceptions import (
     UsernameAlreadyTakenError,
 )
 from tests.factories import make_guardian, make_student, make_teacher
-from users.repositories.users import UserRepositoryBase
-from users.services.system_admin import UserServiceAdmin
 
 
 class TestRegisterStaff:
@@ -391,3 +391,50 @@ class TestRegisterGuardian:
         assert email.recipient == user.email
         assert email.email_type == EmailType.INVITE
         assert email.recipient_user_id == user.id
+
+class TestAdvisoryLock:
+    async def test_advisory_lock_acquired_for_student(
+        self, test_db, system_admin, valid_create_student_request: CreateStudentAdmin, mocker
+    ):
+        mock_lock = mocker.patch(
+            "src.users.services.system_admin.acquire_student_contact_lock",
+            return_value=None,
+        )
+
+        await UserServiceAdmin.register_user(
+            test_db, system_admin.id, valid_create_student_request
+        )
+
+        mock_lock.assert_called_once_with(
+            test_db,
+            phone_number=valid_create_student_request.phone_number,
+            email=valid_create_student_request.email,
+        )
+
+    async def test_advisory_lock_not_acquired_for_staff(
+        self, test_db, system_admin, valid_create_staff_request: CreateStaffAdmin, mocker
+    ):
+        mock_lock = mocker.patch(
+            "src.users.services.system_admin.acquire_student_contact_lock",
+            return_value=None,
+        )
+
+        await UserServiceAdmin.register_user(
+            test_db, system_admin.id, valid_create_staff_request
+        )
+
+        mock_lock.assert_not_called()
+
+    async def test_advisory_lock_not_acquired_for_guardian(
+        self, test_db, system_admin, valid_create_guardian_request: CreateGuardianAdmin, mocker
+    ):
+        mock_lock = mocker.patch(
+            "src.users.services.system_admin.acquire_student_contact_lock",
+            return_value=None,
+        )
+
+        await UserServiceAdmin.register_user(
+            test_db, system_admin.id, valid_create_guardian_request
+        )
+
+        mock_lock.assert_not_called()

@@ -152,9 +152,9 @@ async def make_deactivated_user(test_db: AsyncSession, **kwargs) -> User:
     return await make_user(test_db, **kwargs)
 
 
-async def make_parent_pending_deletion(test_db: AsyncSession, **kwargs) -> User:
-    kwargs.setdefault("status", UserStatus.PENDING_DELETION)
-    return await make_parent(test_db, **kwargs)
+# async def make_parent_pending_deletion(test_db: AsyncSession, **kwargs) -> User:
+#     kwargs.setdefault("status", UserStatus.PENDING_DELETION)
+#     return await make_parent(test_db, **kwargs)
 
 
 # async def make_guardian_link(
