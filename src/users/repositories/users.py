@@ -27,16 +27,13 @@ class UserRepositoryBase:
             User.role != UserRole.STUDENT if role is None else User.role == role
         )
 
-        conditions = [role_filter]
+        contact_condition = (
+            User.phone_number == phone_number
+            if phone_number is not None
+            else User.email == email
+        )
 
-        contact_conditions = []
-
-        if phone_number is not None:
-            contact_conditions.append(User.phone_number == phone_number)
-        if email is not None:
-            contact_conditions.append(User.email == email)
-
-        conditions.append(or_(*contact_conditions))
+        conditions = [role_filter, contact_condition]
 
         if exclude_user_id is not None:
             conditions.append(User.id != exclude_user_id)

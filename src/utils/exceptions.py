@@ -118,15 +118,27 @@ class UserAlreadyInactiveError(AppException):
     pass
 
 
-class CannotCreateStudentError(AppException):
-    pass
-
-
 class UserAlreadyActiveError(AppException):
     pass
 
 
 class UserAlreadyPendingDeletionError(AppException):
+    pass
+
+
+class MaxStudentsPerEmailError(AppException):
+    pass
+
+
+class MaxStaffOrGuardianPerEmailError(AppException):
+    pass
+
+
+class MaxStaffOrGuardianPerPhoneNumberError(AppException):
+    pass
+
+
+class MaxStudentsPerPhoneNumberError(AppException):
     pass
 
 
