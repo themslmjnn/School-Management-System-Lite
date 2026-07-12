@@ -1,3 +1,4 @@
+import asyncio
 from datetime import UTC, datetime, timedelta
 from typing import assert_never
 
@@ -5,6 +6,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.advisory_locks import acquire_student_contact_lock
+from src.core.caching import delete_cache
 from src.core.config import settings
 from src.core.logging import get_logger
 from src.core.security import generate_invite_token
@@ -18,20 +20,25 @@ from src.users.schemas.users import (
     CreateRequest,
     CreateStaffAdmin,
     CreateStudentAdmin,
+    UpdateUser,
 )
 from src.utils import email as email_sender
+from src.utils.cache_keys import UserCacheKey
+from src.utils.constants import HTTP404
 from src.utils.enums import EmailType, UserRole, UserStatus
 from src.utils.exceptions import (
     CannotCreateDirectorError,
     CannotCreateSystemAdminError,
-    MaxNumberOfIdenticalContactsError,
     MaxStaffOrGuardianPerEmailError,
     MaxStaffOrGuardianPerPhoneNumberError,
     MaxStudentsPerEmailError,
     MaxStudentsPerPhoneNumberError,
+    UserNotFoundError,
     handle_non_student_unique_contact_error,
     handle_username_integrity_error,
+    raise_unhandled_integrity_error,
 )
+from src.utils.helpers import ensure_exists, update_object
 
 logger = get_logger(__name__)
 
@@ -43,7 +50,7 @@ BLOCKED_ROLES_VIA_API = frozenset(
         UserRole.DIRECTOR,
     }
 )
-
+SYSTEM_ADMIN_INVISIBLE_ROLES = frozenset({UserRole.SYSTEM_ADMIN})
 
 async def _check_contact_limit(
     db: AsyncSession,
@@ -260,4 +267,79 @@ class UserServiceAdmin:
             handle_username_integrity_error(e)
             if not is_student:
                 handle_non_student_unique_contact_error(e)
-            raise
+            raise_unhandled_integrity_error(e)
+
+    @staticmethod
+    async def update_user(
+        db: AsyncSession,
+        current_user_id: int,
+        target_user_id: int,
+        update_request: UpdateUser,
+    ) -> User:
+        target_user = await UserRepositoryBase.get_user_by_id(
+            db, target_user_id, excluded_roles=SYSTEM_ADMIN_INVISIBLE_ROLES
+        )
+        ensure_exists(target_user, UserNotFoundError(HTTP404.USER))
+
+        is_student = target_user.role == UserRole.STUDENT
+        phone_number_changing = (
+            update_request.phone_number is not None
+            and update_request.phone_number != target_user.phone_number
+        )
+
+        if is_student and phone_number_changing:
+            await acquire_student_contact_lock(
+                db, phone_number=update_request.phone_number, email=None
+            )
+            await _check_contact_limit(
+                db,
+                current_user_id,
+                target_username=target_user.username,
+                phone_number=update_request.phone_number,
+                email=None,
+                role=UserRole.STUDENT,
+                resolved_role=UserRole.STUDENT,
+                max_allowed=STUDENT_MAX_SHARED_CONTACT,
+                exclude_user_id=target_user_id,
+            )
+
+        try:
+            update_object(target_user, update_request)
+
+            await db.commit()
+            await db.refresh(target_user)
+
+            asyncio.create_task(
+                email_sender.send_safe(
+                    email_sender.send_account_info_updated_email(target_user.email),
+                    email_type="updating_account",
+                )
+            )
+
+            await delete_cache(
+                UserCacheKey.user_detail_key_admin(target_user_id),
+                UserCacheKey.user_detail_key_staff(target_user_id),
+                UserCacheKey.user_detail_key_self(target_user_id),
+            )
+
+            logger.info(
+                "user_updated",
+                target_user_id=target_user_id,
+                updated_by=current_user_id,
+                method="admin_update",
+            )
+
+            return target_user
+        except IntegrityError as e:
+            await db.rollback()
+
+            logger.error(
+                "update_user_denied",
+                target_user_id=target_user_id,
+                requested_by=current_user_id,
+                reason=str(e.orig),
+            )
+
+            if not is_student:
+                handle_non_student_unique_contact_error(e)
+            raise_unhandled_integrity_error(e)

@@ -117,3 +117,59 @@ class UserResponseAdminDetailed(UserResponseAdmin, BaseSchema):
     @property
     def format_phone_number(self) -> str:
         return validators.format_phone_for_display(self.phone_number)
+
+
+class UpdateUserBase(BaseModel):
+    firstname: str | None = None
+    lastname: str | None = None
+    middlename: str | None = None
+    phone_number: str | None = None
+
+    @field_validator("firstname")
+    @classmethod
+    def validate_firstname(cls, v: str | None) -> str | None:
+        if v is None:
+            return None
+        return validators.validate_firstname(v)
+
+    @field_validator("lastname")
+    @classmethod
+    def validate_lastname(cls, v: str | None) -> str | None:
+        if v is None:
+            return None
+        return validators.validate_lastname(v)
+
+    @field_validator("middlename")
+    @classmethod
+    def validate_middlename(cls, v: str | None) -> str | None:
+        if v is None:
+            return None
+        return validators.validate_middlename(v)
+
+    @field_validator("phone_number", mode="after")
+    @classmethod
+    def validate_phone_number(cls, field: str | None) -> str | None:
+        if field is None:
+            return None
+        return validators.parse_and_validate_mobile_number(field)
+    
+class UpdateStaffAndGuardianAdmin(UpdateUserBase):
+    type: Literal["staff_or_guardian"] = "staff_or_guardian"
+    
+
+class UpdateStudentAdmin(UpdateUserBase):
+    type: Literal["student"] = "student"
+    date_of_birth: date | None = None
+    address: str | None = None
+
+    @field_validator("date_of_birth", mode="after")
+    @classmethod
+    def validate_date_of_birth(cls, field: date | None) -> date | None:
+        if field is None:
+            return None
+        return validators.validate_date_of_birth(field)
+    
+UpdateUser = Annotated[
+    UpdateStaffAndGuardianAdmin | UpdateStudentAdmin,
+    Field(discriminator="type"),
+]
