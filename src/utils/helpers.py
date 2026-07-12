@@ -14,7 +14,7 @@ def ensure_exists(obj: Any, exception: AppException) -> None:
 def update_object(instance: Any, request: BaseModel) -> None:
     changed = False
 
-    for field, value in request.model_dump(exclude_unset=True).items():
+    for field, value in request.model_dump(exclude_unset=True, exclude={"type"}).items():
         if getattr(instance, field) != value:
             setattr(instance, field, value)
             changed = True

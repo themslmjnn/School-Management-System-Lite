@@ -141,16 +141,27 @@ class MaxStaffOrGuardianPerPhoneNumberError(AppException):
 class MaxStudentsPerPhoneNumberError(AppException):
     pass
 
+class DuplicatePhoneNumberError(AppException):
+    pass
+
+class DuplicateEmailError(AppException):
+    pass
+
 
 def handle_username_integrity_error(error: IntegrityError) -> None:
-    error_str = str(error.orig)
-
-    if "users_username_key" in error_str:
+    if "users_username_key" in str(error.orig):
         raise UsernameAlreadyTakenError(HTTP409.USERNAME)
 
 
 def handle_non_student_unique_contact_error(error: IntegrityError) -> None:
-    error_str = str(error.orig)
+    error_detail = str(error.orig)
 
-    if "uix_non_student_unique_contact" in error_str:
-        raise DuplicateValueError(HTTP409.DUPLICATE_VALUE)
+    if "uix_non_student_unique_phone" in error_detail:
+        raise DuplicatePhoneNumberError(HTTP409.DUPLICATE_PHONE_NUMBER)
+
+    if "uix_non_student_unique_email" in error_detail:
+        raise DuplicateEmailError(HTTP409.DUPLICATE_EMAIL)
+
+
+def raise_unhandled_integrity_error(error: IntegrityError) -> None:
+    raise error

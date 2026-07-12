@@ -46,8 +46,13 @@ class User(Base):
 
     __table_args__ = (
         Index(
-            "uix_non_student_unique_contact",
+            "uix_non_student_unique_phone",
             "phone_number",
+            unique=True,
+            postgresql_where=text("role <> 'STUDENT'"),
+        ),
+        Index(
+            "uix_non_student_unique_email",
             "email",
             unique=True,
             postgresql_where=text("role <> 'STUDENT'"),
