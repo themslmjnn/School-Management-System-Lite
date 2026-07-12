@@ -9,21 +9,25 @@ from src.users.schemas.users import (
     CreateGuardianAdmin,
     CreateStaffAdmin,
     CreateStudentAdmin,
+    UpdateStaffAndGuardianAdmin,
 )
 from src.users.services.system_admin import UserServiceAdmin
 from src.utils.enums import UserRole, UserStatus
 from src.utils.exceptions import (
     CannotCreateDirectorError,
     CannotCreateSystemAdminError,
+    DuplicatePhoneNumberError,
     DuplicateValueError,
     MaxNumberOfIdenticalContactsError,
     MaxStaffOrGuardianPerEmailError,
     MaxStaffOrGuardianPerPhoneNumberError,
     MaxStudentsPerEmailError,
     MaxStudentsPerPhoneNumberError,
+    NoChangesDetectedError,
     UsernameAlreadyTakenError,
+    UserNotFoundError,
 )
-from tests.factories import make_guardian, make_student, make_teacher
+from tests.factories import make_guardian, make_student, make_system_admin, make_teacher
 
 
 class TestRegisterStaff:
@@ -477,3 +481,71 @@ class TestAdvisoryLock:
         )
 
         mock_lock.assert_not_called()
+
+
+class TestUpdateStaffAndGuardian:
+    async def test_update_user_successfully(
+        self,
+        test_db,
+        system_admin,
+        teacher,
+        mock_send_account_info_updated_email,
+    ):
+        update_request = UpdateStaffAndGuardianAdmin(firstname="UpdatedFirstName")
+ 
+        updated_user = await UserServiceAdmin.update_user(
+            test_db, system_admin.id, teacher.id, update_request
+        )
+ 
+        assert updated_user.firstname == "UpdatedFirstName"
+ 
+    async def test_update_user_not_found(self, test_db, system_admin):
+        update_request = UpdateStaffAndGuardianAdmin(firstname="DoesntMatter")
+ 
+        with pytest.raises(UserNotFoundError):
+            await UserServiceAdmin.update_user(
+                test_db, system_admin.id, 999_999, update_request
+            )
+ 
+    async def test_update_user_excludes_system_admins(self, test_db, system_admin):
+        other_admin = await make_system_admin(test_db)
+        update_request = UpdateStaffAndGuardianAdmin(firstname="DoesntMatter")
+ 
+        with pytest.raises(UserNotFoundError):
+            await UserServiceAdmin.update_user(
+                test_db, system_admin.id, other_admin.id, update_request
+            )
+ 
+    async def test_update_user_no_fields_set_raises_no_changes(
+        self, test_db, system_admin, teacher
+    ):
+        update_request = UpdateStaffAndGuardianAdmin()
+ 
+        with pytest.raises(NoChangesDetectedError):
+            await UserServiceAdmin.update_user(
+                test_db, system_admin.id, teacher.id, update_request
+            )
+ 
+    async def test_update_user_same_value_raises_no_changes(
+        self, test_db, system_admin, teacher
+    ):
+        update_request = UpdateStaffAndGuardianAdmin(firstname=teacher.firstname)
+ 
+        with pytest.raises(NoChangesDetectedError):
+            await UserServiceAdmin.update_user(
+                test_db, system_admin.id, teacher.id, update_request
+            )
+ 
+    async def test_update_non_student_duplicate_phone_raises_error(
+        self,
+        test_db,
+        system_admin,
+        teacher,
+    ):
+        existing = await make_teacher(test_db, phone_number="+992555111333")
+        update_request = UpdateStaffAndGuardianAdmin(phone_number=existing.phone_number)
+ 
+        with pytest.raises(DuplicatePhoneNumberError):
+            await UserServiceAdmin.update_user(
+                test_db, system_admin.id, teacher.id, update_request
+            )

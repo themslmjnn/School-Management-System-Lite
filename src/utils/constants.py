@@ -3,6 +3,7 @@ class HTTP400:
     INVALID_INVITE_TOKEN = "Invalid invite token"
     EXPIRED_INVITE_TOKEN = "Expired invite token"
     DATE_OF_BIRTH = "Date of birth should not be None for Students"
+    NO_CHANGES_DETECTED = "No changes detected"
 
 
 class HTTP401:

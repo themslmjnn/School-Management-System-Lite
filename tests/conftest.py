@@ -1,4 +1,4 @@
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 import pytest_asyncio
@@ -221,4 +221,11 @@ def valid_create_student_request():
         **create_user_request,
         type="student",
         date_of_birth="2008-05-01",
+    )
+
+@pytest.fixture
+def mock_send_account_info_updated_email(mocker):
+    return mocker.patch(
+        "src.users.services.system_admin.email_sender.send_account_info_updated_email",
+        new_callable=AsyncMock,
     )
