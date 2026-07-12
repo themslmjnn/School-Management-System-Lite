@@ -143,8 +143,12 @@ class TestRegisterUser:
                 {"username": "taken_username"},
             ),
             (
-                {"email": "taken@example.com", "phone_number": "+992555111222"},
-                {"email": "taken@example.com", "phone_number": "+992555111222"},
+                {"email": "taken@example.com"},
+                {"email": "taken@example.com"},
+            ),
+            (
+                {"phone_number": "+992555111222"},
+                {"phone_number": "+992555111222"},
             ),
         ],
     )

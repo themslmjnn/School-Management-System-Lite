@@ -17,11 +17,11 @@ from src.utils.exceptions import (
     CannotCreateSystemAdminError,
     DuplicateValueError,
     MaxNumberOfIdenticalContactsError,
-    UsernameAlreadyTakenError,
-    MaxStaffOrGuardianPerPhoneNumberError,
     MaxStaffOrGuardianPerEmailError,
+    MaxStaffOrGuardianPerPhoneNumberError,
     MaxStudentsPerEmailError,
     MaxStudentsPerPhoneNumberError,
+    UsernameAlreadyTakenError,
 )
 from tests.factories import make_guardian, make_student, make_teacher
 
