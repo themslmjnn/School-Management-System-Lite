@@ -173,3 +173,40 @@ async def get_staff_by_id(
     target_user_id: Annotated[int, Path(ge=1)],
 ):
     return await UserServiceAdmin.get_staff_by_id(db, target_user_id)
+
+@router.get(
+    "/guardians",
+    response_model=PaginatedResponse[UserResponseAdmin],
+    status_code=status.HTTP_200_OK,
+)
+@user_limiter.limit("15/minute")
+async def get_guardians(
+    request: Request,
+    db: async_db_dependency,
+    _: Annotated[CurrentUser, Depends(require_system_admin)],
+    pagination: pagination_dependency,
+    filters: Annotated[SearchUserAdmin, Depends()],
+    sort_by: str = UserSortField.CREATED_AT,
+    order: str = OrderBy.DESC,
+):
+    return await UserServiceAdmin.get_guardians(
+        db,
+        pagination.skip,
+        pagination.limit,
+        filters,
+        sort_by,
+        order,
+    )
+
+@router.get(
+    "/guardians/{target_user_id}",
+    response_model=UserResponseAdminDetailed | dict,
+    status_code=status.HTTP_200_OK,
+)
+async def get_guardian_by_id(
+    db: async_db_dependency,
+    _: Annotated[CurrentUser, Depends(require_system_admin)],
+    target_user_id: Annotated[int, Path(ge=1)],
+):
+    return await UserServiceAdmin.get_guardian_by_id(db, target_user_id)
+

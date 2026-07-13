@@ -842,3 +842,49 @@ class UserServiceAdmin:
         )
 
         return target_user
+    
+    @staticmethod
+    async def get_guardians(
+        db: AsyncSession,
+        skip: int,
+        limit: int,
+        filters: SearchUserAdmin,
+        sort_by: str,
+        order: str,
+    ) -> PaginatedResponse:
+        filters.role = UserRole.GUARDIAN
+
+        users, total = await UserRepositoryAdmin.get_users_admin(
+            db, skip, limit, filters, sort_by, order
+        )
+
+        return PaginatedResponse(
+            items=users,
+            total=total,
+            skip=skip,
+            limit=limit,
+            has_more=skip + limit < total,
+        )
+
+    @staticmethod
+    async def get_guardian_by_id(
+        db: AsyncSession, target_user_id: int
+    ) -> UserResponseAdminDetailed:
+        cache_key = UserCacheKey.user_detail_key_admin(target_user_id)
+        cached = await get_cache(cache_key)
+        if cached is not None:
+            return cached
+
+        target_user = await UserRepositoryBase.get_user_by_id(
+            db, target_user_id, allowed_roles=frozenset({UserRole.GUARDIAN})
+        )
+        ensure_exists(target_user, UserNotFoundError(HTTP404.USER))
+        await set_cache(
+            cache_key,
+            UserResponseAdminDetailed.model_validate(target_user).model_dump(
+                mode="json"
+            ),
+            900,
+        )
+
+        return target_user
