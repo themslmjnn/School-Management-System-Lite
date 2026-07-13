@@ -113,6 +113,9 @@ EXCEPTION_STATUS_MAP = {
     exc.UserTypeMismatchError: 400,
     exc.UserNotPendingActivationError: 404,
     exc.ProfileFieldsNotEditableForRoleError: 403,
+    exc.NoPendingEmailChangeError: 404,
+    exc.EmailChangeCodeExpiredError: 400,
+    exc.InvalidEmailChangeCodeError: 400,
     exc.CannotCreateDirectorError: 403,
     exc.CannotCreateSystemAdminError: 403,
 }

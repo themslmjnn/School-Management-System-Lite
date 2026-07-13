@@ -4,18 +4,27 @@ from datetime import UTC, datetime, timedelta
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.core.advisory_locks import acquire_student_contact_lock
 from src.core.caching import delete_cache
 from src.core.config import settings
 from src.core.logging import get_logger
-from src.core.security import generate_email_change_code
+from src.core.security import generate_email_change_code, verify_email_change_code
 from src.users.models.users import User
 from src.users.repositories.users import UserRepositoryBase
-from src.users.schemas.users import UpdateMeCredentials, UpdateMeProfile
+from src.users.schemas.users import (
+    ConfirmEmailChange,
+    UpdateMeCredentials,
+    UpdateMeProfile,
+)
+from src.users.services.system_admin import check_contact_limit
 from src.utils import email as email_sender
 from src.utils.cache_keys import UserCacheKey
 from src.utils.constants import HTTP404
 from src.utils.enums import EmailType, UserRole
 from src.utils.exceptions import (
+    EmailChangeCodeExpiredError,
+    InvalidEmailChangeCodeError,
+    NoPendingEmailChangeError,
     ProfileFieldsNotEditableForRoleError,
     UserNotFoundError,
     handle_non_student_unique_contact_error,
@@ -27,7 +36,7 @@ from src.utils.helpers import ensure_exists, update_object
 logger = get_logger(__name__)
 
 PROFILE_EDITABLE_ROLES = frozenset({UserRole.SYSTEM_ADMIN, UserRole.GUARDIAN})
-
+STUDENT_MAX_SHARED_CONTACT = 3
 
 class UserServiceSelf:
     @staticmethod
@@ -147,4 +156,83 @@ class UserServiceSelf:
             )
             
             handle_username_integrity_error(e)
+            raise_unhandled_integrity_error(e)
+
+
+    @staticmethod
+    async def confirm_email_change(
+        db: AsyncSession,
+        current_user_id: int,
+        confirm_request: ConfirmEmailChange,
+    ) -> None:
+        current_user = await UserRepositoryBase.get_user_by_id(
+            db, current_user_id, load_session=True
+        )
+        ensure_exists(current_user, UserNotFoundError(HTTP404.USER))
+
+        session = current_user.session
+        if session.pending_new_email is None or session.email_change_code_hash is None:
+            raise NoPendingEmailChangeError("No email change is currently pending")
+
+        if session.email_change_code_expires_at < datetime.now(UTC):
+            raise EmailChangeCodeExpiredError("Email change code has expired")
+
+        if not verify_email_change_code(
+            confirm_request.code, session.email_change_code_hash
+        ):
+            logger.warning(
+                "email_change_confirmation_denied",
+                target_user_id=current_user_id,
+                denial_reason="invalid_code",
+            )
+            raise InvalidEmailChangeCodeError("Invalid email change code")
+
+        new_email = session.pending_new_email
+        is_student = current_user.role == UserRole.STUDENT
+
+        if is_student:
+            await acquire_student_contact_lock(db, phone_number=None, email=new_email)
+            await check_contact_limit(
+                db,
+                current_user_id,
+                target_username=current_user.username,
+                phone_number=None,
+                email=new_email,
+                role=UserRole.STUDENT,
+                resolved_role=UserRole.STUDENT,
+                max_allowed=STUDENT_MAX_SHARED_CONTACT,
+                exclude_user_id=current_user_id,
+            )
+
+        try:
+            old_email = current_user.email
+            current_user.email = new_email
+
+            session.pending_new_email = None
+            session.email_change_code_hash = None
+            session.email_change_code_expires_at = None
+
+            await db.commit()
+
+            asyncio.create_task(
+                email_sender.send_safe(
+                    email_sender.send_email_changed_notification(old_email),
+                    email_type=EmailType.EMAIL_CHANGED,
+                )
+            )
+
+            await delete_cache(UserCacheKey.user_detail_key_self(current_user_id))
+
+            logger.info("user_email_changed", target_user_id=current_user_id)
+
+        except IntegrityError as e:
+            await db.rollback()
+
+            logger.error(
+                "email_change_confirmation_failed",
+                target_user_id=current_user_id,
+                reason=str(e.orig),
+            )
+            if not is_student:
+                handle_non_student_unique_contact_error(e)
             raise_unhandled_integrity_error(e)

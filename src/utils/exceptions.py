@@ -124,6 +124,15 @@ class UserNotPendingActivationError(AppException):
 class ProfileFieldsNotEditableForRoleError(AppException):
     pass
 
+class NoPendingEmailChangeError(AppException):
+    pass
+
+class EmailChangeCodeExpiredError(AppException):
+    pass
+
+class InvalidEmailChangeCodeError(AppException):
+    pass
+
 
 # ROLE RESTRICTIONS
 class CannotCreateDirectorError(AppException):

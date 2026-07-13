@@ -72,7 +72,7 @@ SYSTEM_ADMIN_INVISIBLE_ROLES = frozenset({UserRole.SYSTEM_ADMIN})
 DELETION_GRACE_PERIOD_DAYS = 30
 
 
-async def _check_contact_limit(
+async def check_contact_limit(
     db: AsyncSession,
     current_user_id: int,
     *,
@@ -194,7 +194,7 @@ class UserServiceAdmin:
                 email=create_request.email,
             )
 
-        await _check_contact_limit(
+        await check_contact_limit(
             db,
             current_user_id,
             target_username=create_request.username,
@@ -327,7 +327,7 @@ class UserServiceAdmin:
             await acquire_student_contact_lock(
                 db, phone_number=update_request.phone_number, email=None
             )
-            await _check_contact_limit(
+            await check_contact_limit(
                 db,
                 current_user_id,
                 target_username=target_user.username,
@@ -409,7 +409,7 @@ class UserServiceAdmin:
             await acquire_student_contact_lock(
                 db, phone_number=None, email=update_request.email
             )
-            await _check_contact_limit(
+            await check_contact_limit(
                 db,
                 current_user_id,
                 target_username=target_user.username,

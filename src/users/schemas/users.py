@@ -279,3 +279,6 @@ class UpdateMeCredentials(BaseModel):
         if v is None:
             return None
         return v.strip().lower()
+    
+class ConfirmEmailChange(BaseModel):
+    code: str
