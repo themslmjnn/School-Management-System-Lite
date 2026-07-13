@@ -161,3 +161,15 @@ async def get_staff(
         sort_by,
         order,
     )
+
+@router.get(
+    "/staff/{target_user_id}",
+    response_model=UserResponseAdminDetailed | dict,
+    status_code=status.HTTP_200_OK,
+)
+async def get_staff_by_id(
+    db: async_db_dependency,
+    _: Annotated[CurrentUser, Depends(require_system_admin)],
+    target_user_id: Annotated[int, Path(ge=1)],
+):
+    return await UserServiceAdmin.get_staff_by_id(db, target_user_id)

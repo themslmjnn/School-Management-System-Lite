@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from pagination import PaginatedResponse
 from src.core.advisory_locks import acquire_student_contact_lock
-from src.core.caching import delete_cache
+from src.core.caching import delete_cache, get_cache, set_cache
 from src.core.config import settings
 from src.core.dependencies import CurrentUser
 from src.core.logging import get_logger
@@ -27,6 +27,7 @@ from src.users.schemas.users import (
     UpdateStudentAdmin,
     UpdateUser,
     UpdateUserCredentials,
+    UserResponseAdminDetailed,
 )
 from src.utils import email as email_sender
 from src.utils.cache_keys import SessionCacheKey, UserCacheKey
@@ -813,3 +814,31 @@ class UserServiceAdmin:
             limit=limit,
             has_more=skip + limit < total,
         )
+    
+    @staticmethod
+    async def get_staff_by_id(
+        db: AsyncSession, target_user_id: int
+    ) -> UserResponseAdminDetailed | dict:
+        cache_key = UserCacheKey.user_detail_key_admin(target_user_id)
+        cached = await get_cache(cache_key)
+        if cached is not None:
+            return cached
+
+        target_user = await UserRepositoryBase.get_user_by_id(
+            db,
+            target_user_id,
+            allowed_roles=frozenset(
+                {UserRole.DIRECTOR, UserRole.VICE_DIRECTOR, UserRole.TEACHER}
+            ),
+        )
+        ensure_exists(target_user, UserNotFoundError(HTTP404.USER))
+
+        await set_cache(
+            cache_key,
+            UserResponseAdminDetailed.model_validate(target_user).model_dump(
+                mode="json"
+            ),
+            900,
+        )
+
+        return target_user
