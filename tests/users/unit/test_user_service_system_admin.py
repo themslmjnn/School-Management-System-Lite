@@ -914,3 +914,79 @@ class TestUpdateUserCredentials:
             await UserServiceAdmin.update_user_credentials(
                 test_db, system_admin.id, teacher.id, update_request
             )
+
+class TestUpdateUserCredentialsStudentEmailLock:
+    async def test_student_email_change_acquires_advisory_lock(
+        self,
+        test_db: AsyncSession,
+        system_admin: User,
+        student: User,
+        mock_send_admin_credentials_override_notification,
+        mock_acquire_student_contact_lock,
+    ):
+        update_request = UpdateUserCredentials(email="new.student@example.com")
+ 
+        await UserServiceAdmin.update_user_credentials(
+            test_db, system_admin.id, student.id, update_request
+        )
+ 
+        mock_acquire_student_contact_lock.assert_called_once_with(
+            test_db, phone_number=None, email="new.student@example.com"
+        )
+ 
+    async def test_student_email_unchanged_skips_lock_and_limit(
+        self,
+        test_db: AsyncSession,
+        system_admin: User,
+        student: User,
+        mock_acquire_student_contact_lock,
+        mock_check_contact_limit
+    ):
+        update_request = UpdateUserCredentials(email=student.email)
+ 
+        with pytest.raises(NoChangesDetectedError):
+            await UserServiceAdmin.update_user_credentials(
+                test_db, system_admin.id, student.id, update_request
+            )
+ 
+        mock_acquire_student_contact_lock.assert_not_called()
+        mock_check_contact_limit.assert_not_called()
+ 
+    async def test_non_student_email_change_skips_advisory_lock(
+        self,
+        test_db: AsyncSession,
+        system_admin: User,
+        teacher: User,
+        mock_send_admin_credentials_override_notification,
+        mock_acquire_student_contact_lock,
+    ):
+        update_request = UpdateUserCredentials(email="new.teacher@example.com")
+ 
+        await UserServiceAdmin.update_user_credentials(
+            test_db, system_admin.id, teacher.id, update_request
+        )
+ 
+        mock_acquire_student_contact_lock.assert_not_called()
+ 
+    async def test_student_email_contact_limit_reached(
+        self,
+        test_db: AsyncSession,
+        system_admin: User,
+        student: User,
+    ):
+        shared_email = "shared@example.com"
+ 
+        for i in range(3):
+            await make_student(
+                test_db,
+                email=shared_email,
+                phone_number=f"+99255511{i:04d}",
+                username=f"other_student_{i}",
+            )
+ 
+        update_request = UpdateUserCredentials(email=shared_email)
+ 
+        with pytest.raises(MaxStudentsPerEmailError):
+            await UserServiceAdmin.update_user_credentials(
+                test_db, system_admin.id, student.id, update_request
+            )

@@ -225,6 +225,13 @@ def mock_advisory_lock(mocker):
         return_value=None,
     )
 
+@pytest.fixture
+def mock_check_contact_limit(mocker):
+    return mocker.patch(
+        "src.users.services.system_admin._check_contact_limit",
+        return_value=None,
+    )
+
 
 @pytest.fixture
 def mock_acquire_student_contact_lock(mocker):
