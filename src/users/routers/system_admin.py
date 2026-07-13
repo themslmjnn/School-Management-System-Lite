@@ -73,6 +73,7 @@ async def update_user_credentials(
         db, current_user.id, target_user_id, update_request
     )
 
+
 @router.post(
     "/{target_user_id}/guardian-deletion",
     status_code=status.HTTP_204_NO_CONTENT,
@@ -82,7 +83,9 @@ async def create_guardian_deletion_request(
     current_user: Annotated[CurrentUser, Depends(require_system_admin)],
     target_user_id: int,
 ):
-    await UserServiceAdmin.create_guardian_deletion_request(db, current_user.id, target_user_id)
+    await UserServiceAdmin.create_guardian_deletion_request(
+        db, current_user.id, target_user_id
+    )
 
 
 @router.post(
@@ -94,7 +97,9 @@ async def cancel_guardian_deletion(
     current_user: Annotated[CurrentUser, Depends(require_system_admin)],
     target_user_id: int,
 ):
-    await UserServiceAdmin.cancel_guardian_deletion_request(db, current_user.id, target_user_id)
+    await UserServiceAdmin.cancel_guardian_deletion_request(
+        db, current_user.id, target_user_id
+    )
 
 
 @router.patch("/{target_user_id}/deactivation", status_code=status.HTTP_204_NO_CONTENT)
@@ -105,6 +110,7 @@ async def deactivate_user(
 ):
     return await UserServiceAdmin.deactivate_user(db, current_user.id, target_user_id)
 
+
 @router.patch("/{target_user_id}/activation", status_code=status.HTTP_204_NO_CONTENT)
 async def activate_user(
     db: async_db_dependency,
@@ -112,6 +118,7 @@ async def activate_user(
     target_user_id: Annotated[int, Path(ge=1)],
 ):
     return await UserServiceAdmin.activate_user(db, current_user.id, target_user_id)
+
 
 @router.post("/{target_user_id}/password", status_code=status.HTTP_204_NO_CONTENT)
 @user_limiter.limit("5/minute")
@@ -125,6 +132,7 @@ async def create_reset_password_request(
         db, current_user, target_user_id
     )
 
+
 @router.post(
     "/{target_user_id}/resend-invite",
     status_code=status.HTTP_204_NO_CONTENT,
@@ -134,9 +142,8 @@ async def resend_activation_invite(
     current_user: Annotated[CurrentUser, Depends(require_system_admin)],
     target_user_id: Annotated[int, Path(ge=1)],
 ):
-    await UserServiceAdmin.resend_activation_invite(
-        db, current_user.id, target_user_id
-    )
+    await UserServiceAdmin.resend_activation_invite(db, current_user.id, target_user_id)
+
 
 @router.get(
     "/staff",
@@ -162,6 +169,7 @@ async def get_staff(
         order,
     )
 
+
 @router.get(
     "/staff/{target_user_id}",
     response_model=UserResponseAdminDetailed | dict,
@@ -173,6 +181,7 @@ async def get_staff_by_id(
     target_user_id: Annotated[int, Path(ge=1)],
 ):
     return await UserServiceAdmin.get_staff_by_id(db, target_user_id)
+
 
 @router.get(
     "/guardians",
@@ -198,6 +207,7 @@ async def get_guardians(
         order,
     )
 
+
 @router.get(
     "/guardians/{target_user_id}",
     response_model=UserResponseAdminDetailed | dict,
@@ -209,4 +219,3 @@ async def get_guardian_by_id(
     target_user_id: Annotated[int, Path(ge=1)],
 ):
     return await UserServiceAdmin.get_guardian_by_id(db, target_user_id)
-

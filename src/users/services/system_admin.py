@@ -65,6 +65,7 @@ BLOCKED_ROLES_VIA_API = frozenset(
 SYSTEM_ADMIN_INVISIBLE_ROLES = frozenset({UserRole.SYSTEM_ADMIN})
 DELETION_GRACE_PERIOD_DAYS = 30
 
+
 async def _check_contact_limit(
     db: AsyncSession,
     current_user_id: int,
@@ -310,7 +311,6 @@ class UserServiceAdmin:
                 "Submitted update payload type does not match the target user's role"
             )
 
-
         is_student = target_user.role == UserRole.STUDENT
         phone_number_changing = (
             update_request.phone_number is not None
@@ -552,7 +552,6 @@ class UserServiceAdmin:
             deletion_scheduled_for=deletion_scheduled_for.isoformat(),
         )
 
-
     @staticmethod
     async def cancel_guardian_deletion_request(
         db: AsyncSession,
@@ -656,7 +655,10 @@ class UserServiceAdmin:
         db: AsyncSession, current_user_id: int, target_user_id: int
     ) -> None:
         target_user = await UserRepositoryBase.get_user_by_id(
-            db, target_user_id, excluded_roles=SYSTEM_ADMIN_INVISIBLE_ROLES, load_login_lockout=True
+            db,
+            target_user_id,
+            excluded_roles=SYSTEM_ADMIN_INVISIBLE_ROLES,
+            load_login_lockout=True,
         )
         ensure_exists(target_user, UserNotFoundError(HTTP404.USER))
 
@@ -734,7 +736,6 @@ class UserServiceAdmin:
             "reset_password_request_created",
             target_user_id=target_user_id,
         )
-
 
     @staticmethod
     async def resend_activation_invite(
@@ -814,7 +815,7 @@ class UserServiceAdmin:
             limit=limit,
             has_more=skip + limit < total,
         )
-    
+
     @staticmethod
     async def get_staff_by_id(
         db: AsyncSession, target_user_id: int
@@ -842,7 +843,7 @@ class UserServiceAdmin:
         )
 
         return target_user
-    
+
     @staticmethod
     async def get_guardians(
         db: AsyncSession,

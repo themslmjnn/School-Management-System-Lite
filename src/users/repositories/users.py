@@ -74,7 +74,7 @@ class UserRepositoryBase:
         result = await db.execute(query)
 
         return result.scalar_one_or_none()
-    
+
     @staticmethod
     def apply_base_filters(
         base_query: Select, filters: SearchUserBase | SearchUserAdmin | None
@@ -123,8 +123,6 @@ class UserRepositoryBase:
 
         return result.scalars().all(), total
 
-
-
     @staticmethod
     async def get_users(
         db: AsyncSession,
@@ -148,22 +146,18 @@ class UserRepositoryBase:
         query = UserRepositoryBase.apply_sorting(query, sort_by, order)
 
         return await UserRepositoryBase.paginate(db, query, skip, limit)
-    
+
     @staticmethod
     async def delete_user_if_due(db: AsyncSession, user_id: int) -> bool:
-        query = (
-                delete(User)
-                .where(
-                    User.id == user_id,
-                    User.status == UserStatus.PENDING_DELETION,
-                    User.deletion_scheduled_for <= datetime.now(UTC),
-                )
-            )
-        
+        query = delete(User).where(
+            User.id == user_id,
+            User.status == UserStatus.PENDING_DELETION,
+            User.deletion_scheduled_for <= datetime.now(UTC),
+        )
+
         result = await db.execute(query)
 
         return result.rowcount > 0
-
 
     @staticmethod
     async def get_user_ids_due_for_hard_deletion(db: AsyncSession) -> list[int]:
@@ -175,7 +169,6 @@ class UserRepositoryBase:
         result = await db.execute(query)
 
         return list(result.scalars().all())
-
 
     @staticmethod
     async def reactivate_pending_deletion_user(db: AsyncSession, user_id: int) -> bool:
@@ -194,8 +187,9 @@ class UserRepositoryBase:
         )
 
         result = await db.execute(query)
-        
+
         return result.rowcount > 0
+
 
 class UserRepositoryAdmin:
     @staticmethod

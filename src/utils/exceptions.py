@@ -112,8 +112,10 @@ class MaxStaffOrGuardianPerEmailError(AppException):
 class MaxStaffOrGuardianPerPhoneNumberError(AppException):
     pass
 
+
 class UserTypeMismatchError(AppException):
     pass
+
 
 class UserNotPendingActivationError(AppException):
     pass

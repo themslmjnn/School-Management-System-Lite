@@ -199,6 +199,7 @@ class UpdateUserCredentials(BaseModel):
             return None
         return v.strip().lower()
 
+
 class SearchUserBase(BaseModel):
     firstname: str | None = Field(default=None, max_length=50)
     lastname: str | None = Field(default=None, max_length=50)
