@@ -40,6 +40,7 @@ from src.utils.exceptions import (
     CannotCreateDirectorError,
     CannotCreateSystemAdminError,
     GuardianLinkAlreadyExistsError,
+    GuardianLinkNotFoundError,
     GuardianSlotAlreadyFilledError,
     InvalidGuardianLinkError,
     MaxStaffOrGuardianPerEmailError,
@@ -982,3 +983,22 @@ class GuardianLinkServiceAdmin:
         )
 
         return new_link
+    
+    @staticmethod
+    async def unlink_guardian(
+        db: AsyncSession, current_user_id: int, guardian_id: int, student_id: int
+    ) -> None:
+        link = await GuardianLinkRepositoryAdmin.get_guardian_link(db, guardian_id, student_id)
+
+        if link is None:
+            raise GuardianLinkNotFoundError("This guardian link does not exist")
+
+        await db.delete(link)
+        await db.commit()
+
+        logger.info(
+            "guardian_unlinked",
+            actor_user_id=current_user_id,
+            guardian_id=guardian_id,
+            student_id=student_id,
+        )

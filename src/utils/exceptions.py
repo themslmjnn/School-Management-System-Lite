@@ -153,6 +153,9 @@ class GuardianLinkAlreadyExistsError(AppException):
 class InvalidGuardianLinkError(AppException):
     pass
 
+class GuardianLinkNotFoundError(AppException):
+    pass
+
 
 # ROLE RESTRICTIONS
 class CannotCreateDirectorError(AppException):

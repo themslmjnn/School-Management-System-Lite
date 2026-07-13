@@ -30,3 +30,13 @@ async def link_guardian(
     return await GuardianLinkServiceAdmin.link_guardian(
         db, current_user.id, link_request
     )
+
+
+@router.delete("/{guardian_id}/{student_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def unlink_guardian(
+    db: async_db_dependency,
+    current_user: Annotated[CurrentUser, Depends(require_system_admin)],
+    guardian_id: int,
+    student_id: int,
+):
+    await GuardianLinkServiceAdmin.unlink_guardian(db, current_user.id, guardian_id, student_id)

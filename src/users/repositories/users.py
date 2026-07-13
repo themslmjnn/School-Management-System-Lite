@@ -259,3 +259,16 @@ class GuardianLinkRepositoryAdmin:
     @staticmethod
     def add_link(db: AsyncSession, link: StudentGuardianLink) -> None:
         db.add(link)
+
+    @staticmethod
+    async def get_guardian_link(
+        db: AsyncSession, parent_id: int, student_id: int
+    ) -> StudentGuardianLink | None:
+        query = select(StudentGuardianLink).where(
+            StudentGuardianLink.parent_id == parent_id,
+            StudentGuardianLink.student_id == student_id,
+        )
+        
+        result = await db.execute(query)
+
+        return result.scalar_one_or_none()

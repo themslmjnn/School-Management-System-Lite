@@ -122,6 +122,7 @@ EXCEPTION_STATUS_MAP = {
     exc.GuardianSlotAlreadyFilledError: 409,
     exc.GuardianLinkAlreadyExistsError: 409,
     exc.InvalidGuardianLinkError: 400,
+    exc.GuardianLinkNotFoundError: 404,
 }
 
 
