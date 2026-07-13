@@ -8,7 +8,7 @@ from src.core.dependencies import (
     require_system_admin_and_guardian,
     current_user_dependency,
 )
-from src.users.schemas.users import UpdateMeCredentials, UpdateMeProfile, UserResponseSelf
+from src.users.schemas.users import ConfirmEmailChange, UpdateMeCredentials, UpdateMePassword, UpdateMeProfile, UserResponseSelf
 from src.users.services.shared import UserServiceSelf
 
 router = APIRouter(
@@ -39,5 +39,32 @@ async def update_me_credentials(
     update_request: UpdateMeCredentials,
 ):
     await UserServiceSelf.update_me_credentials(
+        db, current_user.id, update_request
+    )
+
+@router.post(
+    "/me/credentials/confirm-email",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+async def confirm_email_change(
+    db: async_db_dependency,
+    current_user: current_user_dependency,
+    confirm_request: ConfirmEmailChange,
+):
+    await UserServiceSelf.confirm_email_change(
+        db, current_user.id, confirm_request
+    )
+
+
+@router.patch(
+    "/me/password",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+async def update_me_password(
+    db: async_db_dependency,
+    current_user: current_user_dependency,
+    update_request: UpdateMePassword,
+):
+    await UserServiceSelf.update_me_password(
         db, current_user.id, update_request
     )

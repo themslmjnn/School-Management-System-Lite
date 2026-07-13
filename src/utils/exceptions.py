@@ -133,6 +133,9 @@ class EmailChangeCodeExpiredError(AppException):
 class InvalidEmailChangeCodeError(AppException):
     pass
 
+class IncorrectPasswordError(AppException):
+    pass
+
 
 # ROLE RESTRICTIONS
 class CannotCreateDirectorError(AppException):

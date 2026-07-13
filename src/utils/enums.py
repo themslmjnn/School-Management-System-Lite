@@ -37,6 +37,7 @@ class EmailType(StrEnum):
     UPDATING_ACCOUNT = "updating_account"
     ADMIN_CREDENTIALS_OVERRIDE = "admin_credentials_override"
     EMAIL_CHANGE_CODE = "email_change_code"
+    PASSWORD_CHANGED = "password_changed"
 
 
 class EmailSendingStatus(StrEnum):

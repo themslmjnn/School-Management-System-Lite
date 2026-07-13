@@ -282,3 +282,12 @@ class UpdateMeCredentials(BaseModel):
     
 class ConfirmEmailChange(BaseModel):
     code: str
+
+class UpdateMePassword(BaseModel):
+    current_password: str
+    new_password: str = Field(min_length=8, max_length=100)
+
+    @field_validator("new_password")
+    @classmethod
+    def validate_password_strength(cls, v: str) -> str:
+        return validators.validate_password(v)

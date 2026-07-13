@@ -116,6 +116,7 @@ EXCEPTION_STATUS_MAP = {
     exc.NoPendingEmailChangeError: 404,
     exc.EmailChangeCodeExpiredError: 400,
     exc.InvalidEmailChangeCodeError: 400,
+    exc.IncorrectPasswordError: 400,
     exc.CannotCreateDirectorError: 403,
     exc.CannotCreateSystemAdminError: 403,
 }
