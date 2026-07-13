@@ -62,6 +62,12 @@ BLOCKED_ROLES_VIA_API = frozenset(
         UserRole.DIRECTOR,
     }
 )
+STAFF_ROLES = frozenset(
+    {
+        UserRole.VICE_DIRECTOR,
+        UserRole.TEACHER,
+    }
+)
 SYSTEM_ADMIN_INVISIBLE_ROLES = frozenset({UserRole.SYSTEM_ADMIN})
 DELETION_GRACE_PERIOD_DAYS = 30
 
@@ -803,9 +809,10 @@ class UserServiceAdmin:
         sort_by: str,
         order: str,
     ) -> PaginatedResponse:
+        filters.allowed_roles = STAFF_ROLES
 
         users, total = await UserRepositoryAdmin.get_users_admin(
-            db, skip, limit, filters, sort_by, order,
+            db, skip, limit, filters, sort_by, order
         )
 
         return PaginatedResponse(
@@ -818,31 +825,27 @@ class UserServiceAdmin:
 
     @staticmethod
     async def get_staff_by_id(
-        db: AsyncSession, target_user_id: int
-    ) -> UserResponseAdminDetailed | dict:
+        db: AsyncSession,
+        target_user_id: int,
+    ) -> UserResponseAdminDetailed:
         cache_key = UserCacheKey.user_detail_key_admin(target_user_id)
         cached = await get_cache(cache_key)
-        if cached is not None:
-            return cached
 
-        target_user = await UserRepositoryBase.get_user_by_id(
+        if cached is not None:
+            return UserResponseAdminDetailed(**cached)
+
+        user = await UserRepositoryBase.get_user_by_id(
             db,
             target_user_id,
-            allowed_roles=frozenset(
-                {UserRole.DIRECTOR, UserRole.VICE_DIRECTOR, UserRole.TEACHER}
-            ),
+            allowed_roles=STAFF_ROLES,
         )
-        ensure_exists(target_user, UserNotFoundError(HTTP404.USER))
+        ensure_exists(user, UserNotFoundError(HTTP404.USER))
 
-        await set_cache(
-            cache_key,
-            UserResponseAdminDetailed.model_validate(target_user).model_dump(
-                mode="json"
-            ),
-            900,
-        )
+        result = UserResponseAdminDetailed.model_validate(user)
 
-        return target_user
+        await set_cache(cache_key, result.model_dump(mode="json"), 900)
+
+        return result
 
     @staticmethod
     async def get_guardians(
@@ -853,7 +856,7 @@ class UserServiceAdmin:
         sort_by: str,
         order: str,
     ) -> PaginatedResponse:
-        filters.role = UserRole.GUARDIAN
+        filters.allowed_roles = frozenset({UserRole.GUARDIAN})
 
         users, total = await UserRepositoryAdmin.get_users_admin(
             db, skip, limit, filters, sort_by, order
@@ -869,23 +872,24 @@ class UserServiceAdmin:
 
     @staticmethod
     async def get_guardian_by_id(
-        db: AsyncSession, target_user_id: int
+        db: AsyncSession,
+        target_user_id: int,
     ) -> UserResponseAdminDetailed:
         cache_key = UserCacheKey.user_detail_key_admin(target_user_id)
         cached = await get_cache(cache_key)
+
         if cached is not None:
-            return cached
+            return UserResponseAdminDetailed(**cached)
 
-        target_user = await UserRepositoryBase.get_user_by_id(
-            db, target_user_id, allowed_roles=frozenset({UserRole.GUARDIAN})
+        user = await UserRepositoryBase.get_user_by_id(
+            db,
+            target_user_id,
+            allowed_roles=frozenset({UserRole.GUARDIAN}),
         )
-        ensure_exists(target_user, UserNotFoundError(HTTP404.USER))
-        await set_cache(
-            cache_key,
-            UserResponseAdminDetailed.model_validate(target_user).model_dump(
-                mode="json"
-            ),
-            900,
-        )
+        ensure_exists(user, UserNotFoundError(HTTP404.USER))
 
-        return target_user
+        result = UserResponseAdminDetailed.model_validate(user)
+
+        await set_cache(cache_key, result.model_dump(mode="json"), 900)
+
+        return result

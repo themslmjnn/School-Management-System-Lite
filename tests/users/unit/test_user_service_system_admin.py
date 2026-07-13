@@ -1,5 +1,6 @@
 import asyncio
 from datetime import UTC, date, datetime
+from unittest.mock import AsyncMock
 
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -28,11 +29,12 @@ from src.utils.exceptions import (
     MaxStudentsPerEmailError,
     MaxStudentsPerPhoneNumberError,
     NoChangesDetectedError,
+    UserAlreadyInactiveError,
     UserAlreadyPendingDeletionError,
     UsernameAlreadyTakenError,
     UserNotFoundError,
 )
-from tests.factories import make_guardian, make_student, make_system_admin, make_teacher
+from tests.factories import make_deactivated_user, make_guardian, make_student, make_system_admin, make_teacher
 from utils.cache_keys import SessionCacheKey, UserCacheKey
 
 
@@ -1172,3 +1174,53 @@ class TestCancelGuardianDeletionRequest:
             await UserServiceAdmin.cancel_guardian_deletion_request(
                 test_db, system_admin.id, guardian_pending.id
             )
+
+class TestDeactivateUser:
+    async def test_deactivate_user_successfully(
+        self, test_db: AsyncSession, system_admin: User, teacher: User, mock_delete_cache
+    ):
+        await UserServiceAdmin.deactivate_user(test_db, system_admin.id, teacher.id)
+ 
+        user_with_session = await UserRepositoryBase.get_user_by_id(
+            test_db, teacher.id, load_session=True
+        )
+ 
+        assert user_with_session.is_active is False
+        assert user_with_session.session.access_token_version == 2
+        assert user_with_session.session.refresh_token_hash is None
+        assert user_with_session.session.refresh_token_family is None
+        assert user_with_session.session.refresh_token_expires_at is None
+ 
+    async def test_deactivate_user_invalidates_cache(
+        self, test_db: AsyncSession, system_admin: User, teacher: User, mock_delete_cache
+    ):
+        await UserServiceAdmin.deactivate_user(test_db, system_admin.id, teacher.id)
+ 
+        mock_delete_cache.assert_called_once_with(
+            UserCacheKey.user_detail_key_admin(teacher.id),
+            UserCacheKey.user_detail_key_staff(teacher.id),
+            UserCacheKey.user_detail_key_self(teacher.id),
+            SessionCacheKey.access_token_version_key(teacher.id),
+        )
+ 
+    async def test_deactivate_user_not_found(
+        self, test_db: AsyncSession, system_admin: User
+    ):
+        with pytest.raises(UserNotFoundError):
+            await UserServiceAdmin.deactivate_user(test_db, system_admin.id, 999_999)
+ 
+    async def test_deactivate_already_inactive_user(
+        self, test_db: AsyncSession, system_admin: User
+    ):
+        deactivated = await make_deactivated_user(test_db)
+ 
+        with pytest.raises(UserAlreadyInactiveError):
+            await UserServiceAdmin.deactivate_user(test_db, system_admin.id, deactivated.id)
+ 
+    async def test_deactivate_user_excludes_system_admins(
+        self, test_db: AsyncSession, system_admin: User
+    ):
+        other_admin = await make_system_admin(test_db)
+ 
+        with pytest.raises(UserNotFoundError):
+            await UserServiceAdmin.deactivate_user(test_db, system_admin.id, other_admin.id)

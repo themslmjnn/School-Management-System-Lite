@@ -94,6 +94,8 @@ class UserRepositoryBase:
             base_query = base_query.filter(
                 User.middlename.ilike(f"%{filters.last_name}%")
             )
+        if filters.allowed_roles:
+            base_query = base_query.filter(User.role.in_(filters.allowed_roles))
 
         return base_query
 
@@ -223,8 +225,6 @@ class UserRepositoryAdmin:
             base_query = base_query.filter(
                 User.phone_number.ilike(f"%{filters.phone_number}%")
             )
-        if filters.role:
-            base_query = base_query.filter(User.role == filters.role)
         if filters.is_active is not None:
             base_query = base_query.filter(User.is_active == filters.is_active)
 

@@ -204,7 +204,7 @@ class SearchUserBase(BaseModel):
     firstname: str | None = Field(default=None, max_length=50)
     lastname: str | None = Field(default=None, max_length=50)
     middlename: str | None = Field(default=None, max_length=50)
-    role: UserRole | None = None
+    allowed_roles: set[UserRole] | None = None
     status: UserStatus | None = None
 
 
