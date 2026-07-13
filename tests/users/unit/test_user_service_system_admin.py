@@ -1,11 +1,15 @@
 import asyncio
 from datetime import UTC, date, datetime
+from urllib.parse import parse_qs, urlparse
 
 import pytest
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.dependencies import CurrentUser
-from src.emails.models import EmailType
+from core.security import verify_invite_token
+from src.core.config import settings
+from src.emails.models import EmailType, PendingEmail
 from src.emails.repository import PendingEmailRepository
 from src.users.models.users import User
 from src.users.repositories.users import UserRepositoryBase
@@ -34,6 +38,7 @@ from src.utils.exceptions import (
     UserAlreadyPendingDeletionError,
     UsernameAlreadyTakenError,
     UserNotFoundError,
+    UserNotPendingActivationError,
 )
 from tests.factories import (
     make_deactivated_user,
@@ -41,6 +46,7 @@ from tests.factories import (
     make_student,
     make_system_admin,
     make_teacher,
+    make_user,
 )
 from utils.cache_keys import SessionCacheKey, UserCacheKey
 
@@ -1294,6 +1300,7 @@ class TestActivateUser:
                 test_db, system_admin.id, other_admin.id
             )
 
+
 class TestCreateResetPasswordRequest:
     async def test_sets_reset_token_on_session(
         self,
@@ -1302,20 +1309,20 @@ class TestCreateResetPasswordRequest:
         teacher: User,
     ):
         current_user = CurrentUser(id=system_admin.id, role=UserRole.SYSTEM_ADMIN)
- 
+
         await UserServiceAdmin.create_reset_password_request(
             test_db, current_user, teacher.id
         )
- 
+
         user_with_session = await UserRepositoryBase.get_user_by_id(
             test_db, teacher.id, load_session=True
         )
         session = user_with_session.session
- 
+
         assert session.reset_password_token_hash is not None
         assert session.reset_password_token_expires_at is not None
         assert session.reset_password_token_expires_at > datetime.now(UTC)
- 
+
     async def test_queues_pending_email_with_correct_fields(
         self,
         test_db: AsyncSession,
@@ -1323,16 +1330,16 @@ class TestCreateResetPasswordRequest:
         teacher: User,
     ):
         current_user = CurrentUser(id=system_admin.id, role=UserRole.SYSTEM_ADMIN)
- 
+
         await UserServiceAdmin.create_reset_password_request(
             test_db, current_user, teacher.id
         )
- 
+
         pending_emails = await PendingEmailRepository.get_pending_email_by_triggered_by(
             test_db, system_admin.id
         )
         email = pending_emails[0]
- 
+
         assert len(pending_emails) == 1
         assert email.recipient == teacher.email
         assert email.subject is not None
@@ -1341,19 +1348,19 @@ class TestCreateResetPasswordRequest:
         assert email.email_type == EmailType.PASSWORD_RESET_ADMIN
         assert email.triggered_by == system_admin.id
         assert email.recipient_user_id == teacher.id
- 
+
     async def test_not_found_raises_user_not_found(
         self,
         test_db: AsyncSession,
         system_admin: User,
     ):
         current_user = CurrentUser(id=system_admin.id, role=UserRole.SYSTEM_ADMIN)
- 
+
         with pytest.raises(UserNotFoundError):
             await UserServiceAdmin.create_reset_password_request(
                 test_db, current_user, 999_999
             )
- 
+
     async def test_excludes_system_admins(
         self,
         test_db: AsyncSession,
@@ -1361,8 +1368,118 @@ class TestCreateResetPasswordRequest:
     ):
         other_admin = await make_system_admin(test_db)
         current_user = CurrentUser(id=system_admin.id, role=UserRole.SYSTEM_ADMIN)
- 
+
         with pytest.raises(UserNotFoundError):
             await UserServiceAdmin.create_reset_password_request(
                 test_db, current_user, other_admin.id
             )
+
+
+def _extract_raw_token_from_text_body(text_body: str) -> str:
+    for line in text_body.splitlines():
+        if "token=" in line:
+            query = parse_qs(urlparse(line.strip()).query)
+            return query["token"][0]
+    raise AssertionError("No activation link with a token= param found in text_body")
+
+
+async def _get_pending_email_for(db, recipient_user_id: int) -> PendingEmail:
+    result = await db.execute(
+        select(PendingEmail).where(PendingEmail.recipient_user_id == recipient_user_id)
+    )
+
+    return result.scalar_one()
+
+
+class TestResendActivationInvite:
+    async def test_resends_invite_and_persists_matching_token(
+        self, test_db, system_admin
+    ):
+        target = await make_user(
+            test_db, role=UserRole.TEACHER, status=UserStatus.PENDING_ACTIVATION,
+        )
+        target = await UserRepositoryBase.get_user_by_id(test_db, target.id, load_activation=True)
+        original_hash = target.activation.invite_token_hash
+
+        await UserServiceAdmin.resend_activation_invite(
+            test_db, system_admin.id, target.id
+        )
+
+        updated_target = await UserRepositoryBase.get_user_by_id(
+            test_db, target.id, load_activation=True
+        )
+        assert updated_target.activation.invite_token_hash != original_hash
+
+        pending_email = await _get_pending_email_for(test_db, target.id)
+        assert pending_email.recipient == target.email
+        assert pending_email.email_type == EmailType.INVITE
+        assert pending_email.triggered_by == system_admin.id
+        assert pending_email.recipient_user_id == target.id
+
+        raw_token = _extract_raw_token_from_text_body(pending_email.text_body)
+        assert verify_invite_token(
+            raw_token, updated_target.activation.invite_token_hash
+        )
+
+    async def test_new_expiry_is_settings_window_from_now(self, test_db, system_admin):
+        target = await make_user(
+            test_db, role=UserRole.STUDENT, status=UserStatus.PENDING_ACTIVATION
+        )
+
+        before_call = datetime.now(UTC)
+        await UserServiceAdmin.resend_activation_invite(
+            test_db, system_admin.id, target.id
+        )
+        after_call = datetime.now(UTC)
+
+        updated_target = await UserRepositoryBase.get_user_by_id(
+            test_db, target.id, load_activation=True
+        )
+        before_call + settings.INVITE_TOKEN_EXPIRES_HOURS_delta if False else None
+ 
+        expires_at = updated_target.activation.invite_token_expires_at
+        assert expires_at > before_call
+        hours_delta = (expires_at - after_call).total_seconds() / 3600
+        assert abs(hours_delta - settings.INVITE_TOKEN_EXPIRES_HOURS) < 0.01
+
+    async def test_target_user_not_found_raises(self, test_db, system_admin):
+        nonexistent_id = 999_999_999
+
+        with pytest.raises(UserNotFoundError):
+            await UserServiceAdmin.resend_activation_invite(
+                test_db, system_admin.id, nonexistent_id
+            )
+
+    async def test_target_role_excluded_from_system_admin_raises_not_found(
+        self, test_db, system_admin
+    ):
+        other_admin = await make_system_admin(
+            test_db, status=UserStatus.PENDING_ACTIVATION
+        )
+
+        with pytest.raises(UserNotFoundError):
+            await UserServiceAdmin.resend_activation_invite(
+                test_db, system_admin.id, other_admin.id
+            )
+
+    async def test_target_not_pending_activation_raises(self, test_db, system_admin):
+        active_target = await make_teacher(test_db, status=UserStatus.ACTIVE)
+
+        with pytest.raises(UserNotPendingActivationError):
+            await UserServiceAdmin.resend_activation_invite(
+                test_db, system_admin.id, active_target.id
+            )
+
+    async def test_deactivated_target_raises_not_pending(self, test_db, system_admin):
+        deactivated_target = await make_user(
+            test_db,
+            role=UserRole.GUARDIAN,
+            status=UserStatus.DEACTIVATED,
+            is_active=False,
+        )
+
+        with pytest.raises(UserNotPendingActivationError):
+            await UserServiceAdmin.resend_activation_invite(
+                test_db, system_admin.id, deactivated_target.id
+            )
+

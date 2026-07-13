@@ -950,6 +950,7 @@ class TestActivateUser:
 
         assert response.status_code == 422
 
+
 class TestCreateResetPasswordRequest:
     async def test_returns_204(
         self,
@@ -959,13 +960,11 @@ class TestCreateResetPasswordRequest:
         teacher: User,
     ):
         headers = await make_auth_header(test_db, system_admin)
- 
-        response = await client.post(
-            f"/users/{teacher.id}/password", headers=headers
-        )
- 
+
+        response = await client.post(f"/users/{teacher.id}/password", headers=headers)
+
         assert response.status_code == 204
- 
+
     async def test_returns_404_when_not_found(
         self,
         test_db: AsyncSession,
@@ -973,11 +972,11 @@ class TestCreateResetPasswordRequest:
         system_admin: User,
     ):
         headers = await make_auth_header(test_db, system_admin)
- 
+
         response = await client.post("/users/999999/password", headers=headers)
- 
+
         assert response.status_code == 404
- 
+
     async def test_returns_404_for_system_admin_target(
         self,
         test_db: AsyncSession,
@@ -986,13 +985,13 @@ class TestCreateResetPasswordRequest:
     ):
         other_admin = await make_system_admin(test_db)
         headers = await make_auth_header(test_db, system_admin)
- 
+
         response = await client.post(
             f"/users/{other_admin.id}/password", headers=headers
         )
- 
+
         assert response.status_code == 404
- 
+
     async def test_returns_403_for_non_admin(
         self,
         test_db: AsyncSession,
@@ -1001,22 +1000,20 @@ class TestCreateResetPasswordRequest:
         student: User,
     ):
         headers = await make_auth_header(test_db, teacher)
- 
-        response = await client.post(
-            f"/users/{student.id}/password", headers=headers
-        )
- 
+
+        response = await client.post(f"/users/{student.id}/password", headers=headers)
+
         assert response.status_code == 403
- 
+
     async def test_returns_401_when_unauthenticated(
         self,
         client: AsyncClient,
         teacher: User,
     ):
         response = await client.post(f"/users/{teacher.id}/password")
- 
+
         assert response.status_code == 401
- 
+
     async def test_returns_422_for_invalid_path_id(
         self,
         test_db: AsyncSession,
@@ -1024,7 +1021,83 @@ class TestCreateResetPasswordRequest:
         system_admin: User,
     ):
         headers = await make_auth_header(test_db, system_admin)
- 
+
         response = await client.post("/users/0/password", headers=headers)
- 
+
         assert response.status_code == 422
+
+
+class TestResendActivationInviteEndpoint:
+    """HTTP-level integration tests for POST /users/{id}/resend-invite."""
+
+    async def test_system_admin_resends_invite_returns_204(
+        self, test_db, client, system_admin
+    ):
+        target = await make_user(
+            test_db, role=UserRole.TEACHER, status=UserStatus.PENDING_ACTIVATION
+        )
+        headers = await make_auth_header(test_db, system_admin)
+
+        response = await client.post(
+            f"/users/{target.id}/resend-invite", headers=headers
+        )
+
+        assert response.status_code == 204
+        assert response.content == b""
+
+        pending_email = await _get_pending_email_for(test_db, target.id)
+        assert pending_email.recipient == target.email
+
+    async def test_nonexistent_target_returns_404(self, test_db, client, system_admin):
+        headers = await make_auth_header(test_db, system_admin)
+
+        response = await client.post(
+            "/users/999999999/resend-invite", headers=headers
+        )
+
+        assert response.status_code == 404
+
+    async def test_system_admin_target_returns_404(self, test_db, client, system_admin):
+        other_admin = await make_system_admin(
+            test_db, status=UserStatus.PENDING_ACTIVATION
+        )
+        headers = await make_auth_header(test_db, system_admin)
+
+        response = await client.post(
+            f"/users/{other_admin.id}/resend-invite", headers=headers
+        )
+
+        assert response.status_code == 404
+
+    async def test_target_not_pending_activation_returns_404(
+        self, test_db, client, system_admin
+    ):
+        active_target = await make_teacher(test_db, status=UserStatus.ACTIVE)
+        headers = await make_auth_header(test_db, system_admin)
+
+        response = await client.post(
+            f"/users/{active_target.id}/resend-invite", headers=headers
+        )
+
+        assert response.status_code == 404
+
+    async def test_non_admin_caller_forbidden(self, test_db, client, teacher):
+        target = await make_user(
+            test_db, role=UserRole.STUDENT, status=UserStatus.PENDING_ACTIVATION
+        )
+        headers = await make_auth_header(test_db, teacher)
+
+        response = await client.post(
+            f"/users/{target.id}/resend-invite", headers=headers
+        )
+
+        assert response.status_code == 403
+
+    async def test_unauthenticated_caller_returns_401(self, test_db, client):
+        target = await make_user(
+            test_db, role=UserRole.STUDENT, status=UserStatus.PENDING_ACTIVATION
+        )
+
+        response = await client.post(f"/users/{target.id}/resend-invite")
+
+        assert response.status_code == 401
