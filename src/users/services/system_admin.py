@@ -35,6 +35,7 @@ from src.utils.exceptions import (
     MaxStaffOrGuardianPerPhoneNumberError,
     MaxStudentsPerEmailError,
     MaxStudentsPerPhoneNumberError,
+    UserAlreadyInactiveError,
     UserAlreadyPendingDeletionError,
     UserNotFoundError,
     UserTypeMismatchError,
@@ -561,4 +562,55 @@ class UserServiceAdmin:
             "guardian_deletion_cancelled",
             actor_user_id=current_user_id,
             target_user_id=target_user_id,
+        )
+
+    @staticmethod
+    async def deactivate_user(
+        db: AsyncSession, current_user_id: int, target_user_id: int
+    ) -> None:
+        target_user = await UserRepositoryBase.get_user_by_id(
+            db,
+            target_user_id,
+            load_session=True,
+            excluded_roles=SYSTEM_ADMIN_INVISIBLE_ROLES,
+        )
+        ensure_exists(target_user, UserNotFoundError(HTTP404.USER))
+
+        if not target_user.is_active:
+            logger.warning(
+                "deactivate_user_failed",
+                target_user_id=target_user_id,
+                requested_by=current_user_id,
+                reason="user_is_already_deactivated",
+            )
+
+            raise UserAlreadyInactiveError("User is already deactivated")
+
+        target_user.is_active = False
+        target_user.status = UserStatus.DEACTIVATED
+        target_user.session.access_token_version += 1
+        target_user.session.refresh_token_hash = None
+        target_user.session.refresh_token_family = None
+        target_user.session.refresh_token_expires_at = None
+
+        await db.commit()
+
+        asyncio.create_task(
+            email_sender.send_safe(
+                email_sender.send_account_deactivation_email(target_user.email),
+                email_type=EmailType.ACCOUNT_DEACTIVATION,
+            )
+        )
+
+        await delete_cache(
+            UserCacheKey.user_detail_key_admin(target_user_id),
+            UserCacheKey.user_detail_key_staff(target_user_id),
+            UserCacheKey.user_detail_key_self(target_user_id),
+            SessionCacheKey.access_token_version_key(target_user_id),
+        )
+
+        logger.info(
+            "user_deactivated",
+            target_user_id=target_user_id,
+            deactivated_by=current_user_id,
         )

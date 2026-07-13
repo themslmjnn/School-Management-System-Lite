@@ -16,6 +16,7 @@ from src.core.logging import get_logger, setup_logging
 from src.core.middleware import RequestIDMiddleware
 from src.users.routers import system_admin as user_system_admin_router
 from src.utils import exceptions as exc
+from src.workers.deletion_worker import start_deletion_worker
 from src.workers.email_worker import run_email_worker
 
 setup_logging()
@@ -38,15 +39,16 @@ async def lifespan(app: FastAPI):
         )
 
     email_task = asyncio.create_task(run_email_worker())
+    deletion_task = asyncio.create_task(start_deletion_worker())
 
     logger.info("email_task_started")
-    # logger.info("deletion_task_started")
+    logger.info("deletion_task_started")
 
     yield
 
     email_task.cancel()
 
-    results = await asyncio.gather(email_task, return_exceptions=True)
+    results = await asyncio.gather(email_task, deletion_task, return_exceptions=True)
 
     for result in results:
         if isinstance(result, BaseException) and not isinstance(
