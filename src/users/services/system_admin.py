@@ -240,20 +240,20 @@ class UserServiceAdmin:
                 user_login_lockout=new_user_login_lockout,
             )
 
-            # subject, html_body, text_body = email_sender.build_invite_email(
-            #     raw_invite_token, new_user.username
-            # )
+            subject, html_body, text_body = email_sender.build_invite_email(
+                raw_invite_token, new_user.username
+            )
 
-            # PendingEmailRepository.add_pending_email(
-            #     db,
-            #     recipient=new_user.email,
-            #     subject=subject,
-            #     html_body=html_body,
-            #     text_body=text_body,
-            #     email_type=EmailType.INVITE,
-            #     triggered_by=current_user_id,
-            #     recipient_user_id=new_user.id,
-            # )
+            PendingEmailRepository.add_pending_email(
+                db,
+                recipient=new_user.email,
+                subject=subject,
+                html_body=html_body,
+                text_body=text_body,
+                email_type=EmailType.INVITE,
+                triggered_by=current_user_id,
+                recipient_user_id=new_user.id,
+            )
 
             await db.commit()
             await db.refresh(new_user)
@@ -339,12 +339,12 @@ class UserServiceAdmin:
             await db.commit()
             await db.refresh(target_user)
 
-            # asyncio.create_task(
-            #     email_sender.send_safe(
-            #         email_sender.send_account_info_updated_email(target_user.email),
-            #         email_type="updating_account",
-            #     )
-            # )
+            asyncio.create_task(
+                email_sender.send_safe(
+                    email_sender.send_account_info_updated_email(target_user.email),
+                    email_type="updating_account",
+                )
+            )
 
             await delete_cache(
                 UserCacheKey.user_detail_key_admin(target_user_id),

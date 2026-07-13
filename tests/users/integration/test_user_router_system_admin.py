@@ -563,7 +563,7 @@ class TestUpdateUserCredentials:
         system_admin: User,
         teacher: User,
     ):
-        existing = await make_teacher(test_db, username="taken_username")
+        await make_teacher(test_db, username="taken_username")
         headers = await make_auth_header(test_db, system_admin)
 
         response = await client.patch(
