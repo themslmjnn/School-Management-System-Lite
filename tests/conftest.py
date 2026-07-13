@@ -258,13 +258,15 @@ def mock_send_admin_credentials_override_notification(mocker):
         new_callable=AsyncMock,
     )
 
+
 @pytest.fixture
 def mock_send_account_deletion_email(mocker):
     return mocker.patch(
         "src.users.services.system_admin.email_sender.send_account_deletion_email",
         new_callable=AsyncMock,
     )
- 
+
+
 @pytest.fixture
 def mock_send_account_deletion_canceled_email(mocker):
     return mocker.patch(

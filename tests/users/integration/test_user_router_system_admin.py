@@ -1,10 +1,7 @@
-import asyncio
 from datetime import UTC, datetime
 
-import httpx
 import pytest
 from httpx import AsyncClient
-from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.emails.repository import PendingEmailRepository
@@ -16,8 +13,14 @@ from src.users.schemas.users import (
     CreateStudentAdmin,
 )
 from src.utils.enums import UserRole, UserStatus
-from tests.conftest import make_auth_header, test_engine
-from tests.factories import make_deactivated_user, make_guardian, make_student, make_system_admin, make_teacher
+from tests.conftest import make_auth_header
+from tests.factories import (
+    make_deactivated_user,
+    make_guardian,
+    make_student,
+    make_system_admin,
+    make_teacher,
+)
 
 _URL = "/users"
 
@@ -532,7 +535,7 @@ class TestUpdateUserCredentials:
         system_admin: User,
         teacher: User,
     ):
-        existing = await make_teacher(test_db, email="taken@example.com")
+        await make_teacher(test_db, email="taken@example.com")
         headers = await make_auth_header(test_db, system_admin)
 
         response = await client.patch(
@@ -636,6 +639,7 @@ class TestUpdateUserCredentials:
 
         assert response.status_code == 422
 
+
 class TestCreateGuardianDeletionRequest:
     async def test_returns_204_on_success(
         self,
@@ -647,13 +651,13 @@ class TestCreateGuardianDeletionRequest:
         mock_delete_cache,
     ):
         headers = await make_auth_header(test_db, system_admin)
- 
+
         response = await client.post(
             f"/users/{guardian.id}/guardian-deletion", headers=headers
         )
- 
+
         assert response.status_code == 204
- 
+
     async def test_returns_404_when_not_found(
         self,
         test_db: AsyncSession,
@@ -661,13 +665,11 @@ class TestCreateGuardianDeletionRequest:
         system_admin: User,
     ):
         headers = await make_auth_header(test_db, system_admin)
- 
-        response = await client.post(
-            "/users/999999/guardian-deletion", headers=headers
-        )
- 
+
+        response = await client.post("/users/999999/guardian-deletion", headers=headers)
+
         assert response.status_code == 404
- 
+
     async def test_returns_404_for_non_guardian_role(
         self,
         test_db: AsyncSession,
@@ -676,13 +678,13 @@ class TestCreateGuardianDeletionRequest:
         teacher: User,
     ):
         headers = await make_auth_header(test_db, system_admin)
- 
+
         response = await client.post(
             f"/users/{teacher.id}/guardian-deletion", headers=headers
         )
- 
+
         assert response.status_code == 404
- 
+
     async def test_returns_409_when_already_pending_deletion(
         self,
         test_db: AsyncSession,
@@ -695,13 +697,13 @@ class TestCreateGuardianDeletionRequest:
             test_db, status=UserStatus.PENDING_DELETION, is_active=False
         )
         headers = await make_auth_header(test_db, system_admin)
- 
+
         response = await client.post(
             f"/users/{guardian_pending.id}/guardian-deletion", headers=headers
         )
- 
+
         assert response.status_code == 409
- 
+
     async def test_returns_403_for_non_admin(
         self,
         test_db: AsyncSession,
@@ -710,21 +712,22 @@ class TestCreateGuardianDeletionRequest:
         guardian: User,
     ):
         headers = await make_auth_header(test_db, teacher)
- 
+
         response = await client.post(
             f"/users/{guardian.id}/guardian-deletion", headers=headers
         )
- 
+
         assert response.status_code == 403
- 
+
     async def test_returns_401_when_unauthenticated(
         self,
         client: AsyncClient,
         guardian: User,
     ):
         response = await client.post(f"/users/{guardian.id}/guardian-deletion")
- 
+
         assert response.status_code == 401
+
 
 class TestCancelGuardianDeletion:
     async def test_returns_204_on_success(
@@ -739,13 +742,13 @@ class TestCancelGuardianDeletion:
             test_db, status=UserStatus.PENDING_DELETION, is_active=False
         )
         headers = await make_auth_header(test_db, system_admin)
- 
+
         response = await client.post(
             f"/users/{guardian_pending.id}/cancel-deletion", headers=headers
         )
- 
+
         assert response.status_code == 204
- 
+
     async def test_returns_404_when_not_found(
         self,
         test_db: AsyncSession,
@@ -753,11 +756,11 @@ class TestCancelGuardianDeletion:
         system_admin: User,
     ):
         headers = await make_auth_header(test_db, system_admin)
- 
+
         response = await client.post("/users/999999/cancel-deletion", headers=headers)
- 
+
         assert response.status_code == 404
- 
+
     async def test_returns_404_for_non_pending_guardian(
         self,
         test_db: AsyncSession,
@@ -766,13 +769,13 @@ class TestCancelGuardianDeletion:
         guardian: User,
     ):
         headers = await make_auth_header(test_db, system_admin)
- 
+
         response = await client.post(
             f"/users/{guardian.id}/cancel-deletion", headers=headers
         )
- 
+
         assert response.status_code == 404
- 
+
     async def test_returns_403_for_non_admin(
         self,
         test_db: AsyncSession,
@@ -784,86 +787,100 @@ class TestCancelGuardianDeletion:
             test_db, status=UserStatus.PENDING_DELETION, is_active=False
         )
         headers = await make_auth_header(test_db, teacher)
- 
+
         response = await client.post(
             f"/users/{guardian_pending.id}/cancel-deletion", headers=headers
         )
- 
+
         assert response.status_code == 403
- 
+
     async def test_returns_401_when_unauthenticated(
         self,
         client: AsyncClient,
     ):
         response = await client.post("/users/1/cancel-deletion")
- 
+
         assert response.status_code == 401
+
 
 class TestDeactivateUser:
     async def test_deactivate_user_returns_204(
-        self, test_db: AsyncSession, client: AsyncClient, system_admin: User, teacher: User
+        self,
+        test_db: AsyncSession,
+        client: AsyncClient,
+        system_admin: User,
+        teacher: User,
     ) -> None:
         headers = await make_auth_header(test_db, system_admin)
- 
-        response = await client.patch(f"/users/{teacher.id}/deactivation", headers=headers)
- 
+
+        response = await client.patch(
+            f"/users/{teacher.id}/deactivation", headers=headers
+        )
+
         assert response.status_code == 204
         deactivated = await UserRepositoryBase.get_user_by_id(test_db, teacher.id)
         assert deactivated.is_active is False
- 
+
     async def test_deactivate_user_returns_404_when_not_found(
         self, test_db: AsyncSession, client: AsyncClient, system_admin: User
     ) -> None:
         headers = await make_auth_header(test_db, system_admin)
- 
+
         response = await client.patch("/users/999999/deactivation", headers=headers)
- 
+
         assert response.status_code == 404
- 
+
     async def test_deactivate_user_returns_409_when_already_inactive(
         self, test_db: AsyncSession, client: AsyncClient, system_admin: User
     ) -> None:
         deactivated = await make_deactivated_user(test_db)
         headers = await make_auth_header(test_db, system_admin)
- 
-        response = await client.patch(f"/users/{deactivated.id}/deactivation", headers=headers)
- 
+
+        response = await client.patch(
+            f"/users/{deactivated.id}/deactivation", headers=headers
+        )
+
         assert response.status_code == 409
- 
+
     async def test_deactivate_user_returns_404_for_system_admin_target(
         self, test_db: AsyncSession, client: AsyncClient, system_admin: User
     ) -> None:
         other_admin = await make_system_admin(test_db)
         headers = await make_auth_header(test_db, system_admin)
- 
-        response = await client.patch(f"/users/{other_admin.id}/deactivation", headers=headers)
- 
+
+        response = await client.patch(
+            f"/users/{other_admin.id}/deactivation", headers=headers
+        )
+
         assert response.status_code == 404
- 
+
     async def test_deactivate_user_returns_403_for_non_admin(
         self, test_db: AsyncSession, client: AsyncClient, teacher: User, student: User
     ) -> None:
         headers = await make_auth_header(test_db, teacher)
- 
-        response = await client.patch(f"/users/{student.id}/deactivation", headers=headers)
- 
+
+        response = await client.patch(
+            f"/users/{student.id}/deactivation", headers=headers
+        )
+
         assert response.status_code == 403
- 
+
     async def test_deactivate_user_returns_401_when_unauthenticated(
         self, client: AsyncClient, teacher: User
     ) -> None:
         response = await client.patch(f"/users/{teacher.id}/deactivation")
- 
+
         assert response.status_code == 401
- 
+
     async def test_deactivate_user_returns_422_for_invalid_path_id(
         self, test_db: AsyncSession, client: AsyncClient, system_admin: User
     ) -> None:
         headers = await make_auth_header(test_db, system_admin)
- 
+
         response = await client.patch("/users/0/deactivation", headers=headers)
- 
+
         assert response.status_code == 422
+
 
 class TestActivateUser:
     async def test_activate_user_returns_204(
@@ -871,54 +888,64 @@ class TestActivateUser:
     ) -> None:
         deactivated = await make_deactivated_user(test_db)
         headers = await make_auth_header(test_db, system_admin)
- 
-        response = await client.patch(f"/users/{deactivated.id}/activation", headers=headers)
- 
+
+        response = await client.patch(
+            f"/users/{deactivated.id}/activation", headers=headers
+        )
+
         assert response.status_code == 204
         activated = await UserRepositoryBase.get_user_by_id(test_db, deactivated.id)
         assert activated.is_active is True
- 
+
     async def test_activate_user_returns_404_when_not_found(
         self, test_db: AsyncSession, client: AsyncClient, system_admin: User
     ) -> None:
         headers = await make_auth_header(test_db, system_admin)
- 
+
         response = await client.patch("/users/999999/activation", headers=headers)
- 
+
         assert response.status_code == 404
- 
+
     async def test_activate_user_returns_409_when_already_active(
-        self, test_db: AsyncSession, client: AsyncClient, system_admin: User, teacher: User
+        self,
+        test_db: AsyncSession,
+        client: AsyncClient,
+        system_admin: User,
+        teacher: User,
     ) -> None:
         headers = await make_auth_header(test_db, system_admin)
- 
-        response = await client.patch(f"/users/{teacher.id}/activation", headers=headers)
- 
+
+        response = await client.patch(
+            f"/users/{teacher.id}/activation", headers=headers
+        )
+
         assert response.status_code == 409
- 
+
     async def test_activate_user_returns_403_for_non_admin(
         self, test_db: AsyncSession, client: AsyncClient, teacher: User
     ) -> None:
         deactivated = await make_deactivated_user(test_db)
         headers = await make_auth_header(test_db, teacher)
- 
-        response = await client.patch(f"/users/{deactivated.id}/activation", headers=headers)
- 
+
+        response = await client.patch(
+            f"/users/{deactivated.id}/activation", headers=headers
+        )
+
         assert response.status_code == 403
- 
+
     async def test_activate_user_returns_401_when_unauthenticated(
         self, client: AsyncClient
     ) -> None:
-        deactivated_id = 1 
+        deactivated_id = 1
         response = await client.patch(f"/users/{deactivated_id}/activation")
- 
+
         assert response.status_code == 401
- 
+
     async def test_activate_user_returns_422_for_invalid_path_id(
         self, test_db: AsyncSession, client: AsyncClient, system_admin: User
     ) -> None:
         headers = await make_auth_header(test_db, system_admin)
- 
+
         response = await client.patch("/users/0/activation", headers=headers)
- 
+
         assert response.status_code == 422

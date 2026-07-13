@@ -11,8 +11,8 @@ from collections.abc import Sequence
 from alembic import op
 
 # revision identifiers, used by Alembic.
-revision: str = '341b175f51e5'
-down_revision: str | Sequence[str] | None = 'd39b1ad84cc2'
+revision: str = "341b175f51e5"
+down_revision: str | Sequence[str] | None = "d39b1ad84cc2"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

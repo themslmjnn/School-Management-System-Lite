@@ -195,7 +195,7 @@ class UserRepositoryBase:
         result = await db.execute(query)
 
         return result.rowcount > 0
-    
+
     @staticmethod
     async def get_user_by_id_pending_deletion(
         db: AsyncSession,
@@ -239,7 +239,9 @@ class UserRepositoryAdmin:
         sort_by: str = UserSortField.CREATED_AT,
         order: str = OrderBy.DESC,
     ) -> tuple[list[User], int]:
-        base_query = select(User).filter(User.role.not_in({UserRole.SYSTEM_ADMIN, UserRole.DIRECTOR}))
+        base_query = select(User).filter(
+            User.role.not_in({UserRole.SYSTEM_ADMIN, UserRole.DIRECTOR})
+        )
 
         query = UserRepositoryAdmin._apply_admin_filters(base_query, filters)
         query = UserRepositoryBase.apply_sorting(query, sort_by, order)

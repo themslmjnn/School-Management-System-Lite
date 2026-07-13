@@ -1,5 +1,4 @@
 from fastapi import APIRouter, status
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.dependencies import async_db_dependency, current_user_dependency
 from src.users.services.guardian import UserServiceGuardian

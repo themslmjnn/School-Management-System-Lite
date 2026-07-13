@@ -115,8 +115,9 @@ async def make_student(test_db: AsyncSession, **kwargs) -> User:
 async def make_guardian(test_db: AsyncSession, **kwargs) -> User:
     return await make_user(test_db, role=UserRole.GUARDIAN, **kwargs)
 
+
 async def make_deactivated_user(test_db: AsyncSession, **kwargs) -> User:
     kwargs.setdefault("status", UserStatus.DEACTIVATED)
     kwargs.setdefault("is_active", False)
-    
+
     return await make_user(test_db, **kwargs)

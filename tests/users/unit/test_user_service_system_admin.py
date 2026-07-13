@@ -1,6 +1,5 @@
 import asyncio
 from datetime import UTC, date, datetime
-from unittest.mock import AsyncMock
 
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -35,7 +34,13 @@ from src.utils.exceptions import (
     UsernameAlreadyTakenError,
     UserNotFoundError,
 )
-from tests.factories import make_deactivated_user, make_guardian, make_student, make_system_admin, make_teacher
+from tests.factories import (
+    make_deactivated_user,
+    make_guardian,
+    make_student,
+    make_system_admin,
+    make_teacher,
+)
 from utils.cache_keys import SessionCacheKey, UserCacheKey
 
 
@@ -999,6 +1004,7 @@ class TestUpdateUserCredentialsStudentEmailLock:
                 test_db, system_admin.id, student.id, update_request
             )
 
+
 class TestCreateGuardianDeletionRequest:
     async def test_sets_pending_deletion_state_successfully(
         self,
@@ -1011,13 +1017,13 @@ class TestCreateGuardianDeletionRequest:
         await UserServiceAdmin.create_guardian_deletion_request(
             test_db, system_admin.id, guardian.id
         )
- 
+
         updated_user = await UserRepositoryBase.get_user_by_id(test_db, guardian.id)
- 
+
         assert updated_user.status == UserStatus.PENDING_DELETION
         assert updated_user.is_active is False
         assert updated_user.deletion_scheduled_for is not None
- 
+
     async def test_resets_session_after_deletion_request(
         self,
         test_db: AsyncSession,
@@ -1025,21 +1031,21 @@ class TestCreateGuardianDeletionRequest:
         guardian: User,
         mock_send_account_deletion_email,
         mock_delete_cache,
-    ): 
+    ):
         await UserServiceAdmin.create_guardian_deletion_request(
             test_db, system_admin.id, guardian.id
         )
- 
+
         user_with_session = await UserRepositoryBase.get_user_by_id(
             test_db, guardian.id, load_session=True
         )
         session = user_with_session.session
- 
+
         assert session.access_token_version == 2
         assert session.refresh_token_hash is None
         assert session.refresh_token_family is None
         assert session.refresh_token_expires_at is None
- 
+
     async def test_cache_invalidated_including_token_version(
         self,
         test_db: AsyncSession,
@@ -1047,16 +1053,16 @@ class TestCreateGuardianDeletionRequest:
         guardian: User,
         mock_send_account_deletion_email,
         mock_delete_cache,
-    ): 
+    ):
         await UserServiceAdmin.create_guardian_deletion_request(
             test_db, system_admin.id, guardian.id
         )
- 
+
         mock_delete_cache.assert_called_once_with(
             SessionCacheKey.access_token_version_key(guardian.id),
             UserCacheKey.user_detail_key_admin(guardian.id),
         )
- 
+
     async def test_not_found_raises_user_not_found(
         self,
         test_db: AsyncSession,
@@ -1066,7 +1072,7 @@ class TestCreateGuardianDeletionRequest:
             await UserServiceAdmin.create_guardian_deletion_request(
                 test_db, system_admin.id, 999_999
             )
- 
+
     async def test_non_guardian_role_raises_user_not_found(
         self,
         test_db: AsyncSession,
@@ -1077,7 +1083,7 @@ class TestCreateGuardianDeletionRequest:
             await UserServiceAdmin.create_guardian_deletion_request(
                 test_db, system_admin.id, teacher.id
             )
- 
+
     async def test_already_pending_deletion_raises_error(
         self,
         test_db: AsyncSession,
@@ -1088,11 +1094,12 @@ class TestCreateGuardianDeletionRequest:
         guardian_pending = await make_guardian(
             test_db, status=UserStatus.PENDING_DELETION, is_active=False
         )
- 
+
         with pytest.raises(UserAlreadyPendingDeletionError):
             await UserServiceAdmin.create_guardian_deletion_request(
                 test_db, system_admin.id, guardian_pending.id
             )
+
 
 class TestCancelGuardianDeletionRequest:
     async def test_cancels_deletion_successfully(
@@ -1105,17 +1112,17 @@ class TestCancelGuardianDeletionRequest:
         guardian_pending = await make_guardian(
             test_db, status=UserStatus.PENDING_DELETION, is_active=False
         )
- 
+
         await UserServiceAdmin.cancel_guardian_deletion_request(
             test_db, system_admin.id, guardian_pending.id
         )
- 
+
         updated_user = await UserRepositoryBase.get_user_by_id(
             test_db, guardian_pending.id
         )
- 
+
         assert updated_user.status != UserStatus.PENDING_DELETION
- 
+
     async def test_cache_invalidated_after_cancellation(
         self,
         test_db: AsyncSession,
@@ -1126,15 +1133,15 @@ class TestCancelGuardianDeletionRequest:
         guardian_pending = await make_guardian(
             test_db, status=UserStatus.PENDING_DELETION, is_active=False
         )
- 
+
         await UserServiceAdmin.cancel_guardian_deletion_request(
             test_db, system_admin.id, guardian_pending.id
         )
- 
+
         mock_delete_cache.assert_called_once_with(
             UserCacheKey.user_detail_key_admin(guardian_pending.id),
         )
- 
+
     async def test_not_found_raises_user_not_found(
         self,
         test_db: AsyncSession,
@@ -1144,7 +1151,7 @@ class TestCancelGuardianDeletionRequest:
             await UserServiceAdmin.cancel_guardian_deletion_request(
                 test_db, system_admin.id, 999_999
             )
- 
+
     async def test_non_pending_guardian_raises_user_not_found(
         self,
         test_db: AsyncSession,
@@ -1155,7 +1162,7 @@ class TestCancelGuardianDeletionRequest:
             await UserServiceAdmin.cancel_guardian_deletion_request(
                 test_db, system_admin.id, guardian.id
             )
- 
+
     async def test_lost_race_raises_user_not_found(
         self,
         test_db: AsyncSession,
@@ -1165,105 +1172,123 @@ class TestCancelGuardianDeletionRequest:
         guardian_pending = await make_guardian(
             test_db, status=UserStatus.PENDING_DELETION, is_active=False
         )
- 
+
         mocker.patch(
             "src.users.services.system_admin.UserRepositoryBase.reactivate_pending_deletion_user",
             return_value=False,
         )
- 
+
         with pytest.raises(UserNotFoundError):
             await UserServiceAdmin.cancel_guardian_deletion_request(
                 test_db, system_admin.id, guardian_pending.id
             )
 
+
 class TestDeactivateUser:
     async def test_deactivate_user_successfully(
-        self, test_db: AsyncSession, system_admin: User, teacher: User, mock_delete_cache
+        self,
+        test_db: AsyncSession,
+        system_admin: User,
+        teacher: User,
+        mock_delete_cache,
     ):
         await UserServiceAdmin.deactivate_user(test_db, system_admin.id, teacher.id)
- 
+
         user_with_session = await UserRepositoryBase.get_user_by_id(
             test_db, teacher.id, load_session=True
         )
- 
+
         assert user_with_session.is_active is False
         assert user_with_session.session.access_token_version == 2
         assert user_with_session.session.refresh_token_hash is None
         assert user_with_session.session.refresh_token_family is None
         assert user_with_session.session.refresh_token_expires_at is None
- 
+
     async def test_deactivate_user_invalidates_cache(
-        self, test_db: AsyncSession, system_admin: User, teacher: User, mock_delete_cache
+        self,
+        test_db: AsyncSession,
+        system_admin: User,
+        teacher: User,
+        mock_delete_cache,
     ):
         await UserServiceAdmin.deactivate_user(test_db, system_admin.id, teacher.id)
- 
+
         mock_delete_cache.assert_called_once_with(
             UserCacheKey.user_detail_key_admin(teacher.id),
             UserCacheKey.user_detail_key_staff(teacher.id),
             UserCacheKey.user_detail_key_self(teacher.id),
             SessionCacheKey.access_token_version_key(teacher.id),
         )
- 
+
     async def test_deactivate_user_not_found(
         self, test_db: AsyncSession, system_admin: User
     ):
         with pytest.raises(UserNotFoundError):
             await UserServiceAdmin.deactivate_user(test_db, system_admin.id, 999_999)
- 
+
     async def test_deactivate_already_inactive_user(
         self, test_db: AsyncSession, system_admin: User
     ):
         deactivated = await make_deactivated_user(test_db)
- 
+
         with pytest.raises(UserAlreadyInactiveError):
-            await UserServiceAdmin.deactivate_user(test_db, system_admin.id, deactivated.id)
- 
+            await UserServiceAdmin.deactivate_user(
+                test_db, system_admin.id, deactivated.id
+            )
+
     async def test_deactivate_user_excludes_system_admins(
         self, test_db: AsyncSession, system_admin: User
     ):
         other_admin = await make_system_admin(test_db)
- 
+
         with pytest.raises(UserNotFoundError):
-            await UserServiceAdmin.deactivate_user(test_db, system_admin.id, other_admin.id)
+            await UserServiceAdmin.deactivate_user(
+                test_db, system_admin.id, other_admin.id
+            )
+
 
 class TestActivateUser:
     async def test_activate_user_successfully(
         self, test_db: AsyncSession, system_admin: User, mock_delete_cache
     ):
         deactivated = await make_deactivated_user(test_db)
- 
+
         await UserServiceAdmin.activate_user(test_db, system_admin.id, deactivated.id)
- 
-        activated_user = await UserRepositoryBase.get_user_by_id(test_db, deactivated.id)
+
+        activated_user = await UserRepositoryBase.get_user_by_id(
+            test_db, deactivated.id
+        )
         assert activated_user.is_active is True
- 
+
     async def test_activate_user_invalidates_cache(
         self, test_db: AsyncSession, system_admin: User, mock_delete_cache
     ):
         deactivated = await make_deactivated_user(test_db)
- 
+
         await UserServiceAdmin.activate_user(test_db, system_admin.id, deactivated.id)
- 
+
         mock_delete_cache.assert_called_once_with(
             UserCacheKey.user_detail_key_admin(deactivated.id)
         )
- 
+
     async def test_activate_user_not_found(
         self, test_db: AsyncSession, system_admin: User
     ):
         with pytest.raises(UserNotFoundError):
             await UserServiceAdmin.activate_user(test_db, system_admin.id, 999_999)
- 
+
     async def test_activate_already_active_user(
         self, test_db: AsyncSession, system_admin: User, teacher: User
     ):
         with pytest.raises(UserAlreadyActiveError):
             await UserServiceAdmin.activate_user(test_db, system_admin.id, teacher.id)
- 
+
     async def test_activate_user_excludes_system_admins(
         self, test_db: AsyncSession, system_admin: User
     ):
         other_admin = await make_deactivated_user(test_db, role=UserRole.SYSTEM_ADMIN)
- 
+
         with pytest.raises(UserNotFoundError):
-            await UserServiceAdmin.activate_user(test_db, system_admin.id, other_admin.id)
+            await UserServiceAdmin.activate_user(
+                test_db, system_admin.id, other_admin.id
+            )
