@@ -124,16 +124,33 @@ class UserNotPendingActivationError(AppException):
 class ProfileFieldsNotEditableForRoleError(AppException):
     pass
 
+
 class NoPendingEmailChangeError(AppException):
     pass
+
 
 class EmailChangeCodeExpiredError(AppException):
     pass
 
+
 class InvalidEmailChangeCodeError(AppException):
     pass
 
+
 class IncorrectPasswordError(AppException):
+    pass
+
+
+# GUARDIAN LINK
+class GuardianSlotAlreadyFilledError(AppException):
+    pass
+
+
+class GuardianLinkAlreadyExistsError(AppException):
+    pass
+
+
+class InvalidGuardianLinkError(AppException):
     pass
 
 

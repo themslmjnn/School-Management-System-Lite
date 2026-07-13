@@ -262,6 +262,7 @@ class UpdateMeProfile(BaseModel):
             return None
         return validators.parse_and_validate_mobile_number(field)
 
+
 class UpdateMeCredentials(BaseModel):
     username: str | None = Field(min_length=6, max_length=20, default=None)
     email: EmailStr | None = None
@@ -279,9 +280,11 @@ class UpdateMeCredentials(BaseModel):
         if v is None:
             return None
         return v.strip().lower()
-    
+
+
 class ConfirmEmailChange(BaseModel):
     code: str
+
 
 class UpdateMePassword(BaseModel):
     current_password: str

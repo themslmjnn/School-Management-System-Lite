@@ -13,11 +13,14 @@ from src.core.logging import get_logger
 from src.core.security import generate_invite_token, generate_reset_password_token
 from src.emails.repository import PendingEmailRepository
 from src.pagination import PaginatedResponse
+from src.users.models.guardian_link import StudentGuardianLink
 from src.users.models.users import User, UserActivation, UserLoginLockout, UserSession
 from src.users.repositories.users import (
+    GuardianLinkRepositoryAdmin,
     UserRepositoryAdmin,
     UserRepositoryBase,
 )
+from src.users.schemas.guardian_link import CreateGuardianLink
 from src.users.schemas.users import (
     CreateGuardianAdmin,
     CreateRequest,
@@ -36,6 +39,9 @@ from src.utils.enums import EmailType, UserRole, UserStatus
 from src.utils.exceptions import (
     CannotCreateDirectorError,
     CannotCreateSystemAdminError,
+    GuardianLinkAlreadyExistsError,
+    GuardianSlotAlreadyFilledError,
+    InvalidGuardianLinkError,
     MaxStaffOrGuardianPerEmailError,
     MaxStaffOrGuardianPerPhoneNumberError,
     MaxStudentsPerEmailError,
@@ -70,6 +76,7 @@ STAFF_ROLES = frozenset(
 )
 SYSTEM_ADMIN_INVISIBLE_ROLES = frozenset({UserRole.SYSTEM_ADMIN})
 DELETION_GRACE_PERIOD_DAYS = 30
+NON_GUARDIAN_ROLES = frozenset({UserRole.STUDENT, UserRole.SYSTEM_ADMIN})
 
 
 async def check_contact_limit(
@@ -893,3 +900,85 @@ class UserServiceAdmin:
         await set_cache(cache_key, result.model_dump(mode="json"), 900)
 
         return result
+
+
+class GuardianLinkServiceAdmin:
+    @staticmethod
+    async def link_guardian(
+        db: AsyncSession, current_user_id: int, link_request: CreateGuardianLink
+    ) -> StudentGuardianLink:
+        guardian = await UserRepositoryBase.get_user_by_id(db, link_request.guardian_id)
+        student = await UserRepositoryBase.get_user_by_id(db, link_request.student_id)
+
+        if guardian is None or guardian.role in NON_GUARDIAN_ROLES:
+            logger.warning(
+                "guardian_link_denied",
+                actor_user_id=current_user_id,
+                target_guardian_id=link_request.guardian_id,
+                denial_reason="target_role_not_eligible_as_guardian",
+            )
+            raise InvalidGuardianLinkError(
+                "This user's role is not eligible to be a guardian"
+            )
+
+        if student is None or student.role != UserRole.STUDENT:
+            logger.warning(
+                "guardian_link_denied",
+                actor_user_id=current_user_id,
+                target_student_id=link_request.student_id,
+                denial_reason="target_is_not_a_student",
+            )
+            raise InvalidGuardianLinkError("Target student_id is not a student account")
+
+        existing_link = await GuardianLinkRepositoryAdmin.get_link(
+            db, link_request.guardian_id, link_request.student_id
+        )
+        if existing_link is not None:
+            raise GuardianLinkAlreadyExistsError(
+                "This guardian is already linked to this student"
+            )
+
+        existing_at_priority = await GuardianLinkRepositoryAdmin.get_link_by_priority(
+            db, link_request.student_id, link_request.priority
+        )
+        if existing_at_priority is not None:
+            logger.warning(
+                "guardian_link_denied",
+                actor_user_id=current_user_id,
+                target_student_id=link_request.student_id,
+                denial_reason=f"{link_request.priority.value}_guardian_slot_already_filled",
+            )
+            raise GuardianSlotAlreadyFilledError(
+                f"Student already has a {link_request.priority.value} guardian; "
+                "remove or change the existing one before adding a new one"
+            )
+
+        try:
+            new_link = StudentGuardianLink(
+                parent_id=link_request.guardian_id,
+                student_id=link_request.student_id,
+                priority=link_request.priority,
+            )
+            GuardianLinkRepositoryAdmin.add_link(db, new_link)
+            await db.commit()
+        except IntegrityError as e:
+            await db.rollback()
+            logger.error(
+                "guardian_link_failed",
+                reason="integrity_error",
+                error=str(e.orig),
+                actor_user_id=current_user_id,
+            )
+            raise GuardianSlotAlreadyFilledError(
+                "This guardian link could not be created"
+            ) from e
+
+        logger.info(
+            "guardian_linked",
+            actor_user_id=current_user_id,
+            guardian_id=link_request.guardian_id,
+            student_id=link_request.student_id,
+            priority=link_request.priority.value,
+        )
+
+        return new_link

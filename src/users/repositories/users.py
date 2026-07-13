@@ -4,6 +4,7 @@ from sqlalchemy import Select, delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
+from src.users.models.guardian_link import StudentGuardianLink
 from src.users.models.users import User, UserActivation, UserLoginLockout, UserSession
 from src.users.schemas.users import SearchUserAdmin, SearchUserBase
 from src.utils.enums import OrderBy, UserRole, UserSortField, UserStatus
@@ -252,3 +253,9 @@ class UserRepositoryAdmin:
             skip=skip,
             limit=limit,
         )
+
+
+class GuardianLinkRepositoryAdmin:
+    @staticmethod
+    def add_link(db: AsyncSession, link: StudentGuardianLink) -> None:
+        db.add(link)

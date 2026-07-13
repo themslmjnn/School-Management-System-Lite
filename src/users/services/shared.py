@@ -45,6 +45,7 @@ logger = get_logger(__name__)
 PROFILE_EDITABLE_ROLES = frozenset({UserRole.SYSTEM_ADMIN, UserRole.GUARDIAN})
 STUDENT_MAX_SHARED_CONTACT = 3
 
+
 class UserServiceSelf:
     @staticmethod
     async def update_me_profile(
@@ -161,10 +162,9 @@ class UserServiceSelf:
                 target_user_id=current_user_id,
                 reason=str(e.orig),
             )
-            
+
             handle_username_integrity_error(e)
             raise_unhandled_integrity_error(e)
-
 
     @staticmethod
     async def confirm_email_change(
@@ -289,6 +289,6 @@ class UserServiceSelf:
         )
 
         logger.info(
-            "user_password_changed", 
+            "user_password_changed",
             target_user_id=current_user_id,
         )

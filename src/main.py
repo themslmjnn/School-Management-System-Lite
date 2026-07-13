@@ -15,7 +15,7 @@ from src.core.limiter import ip_limiter
 from src.core.logging import get_logger, setup_logging
 from src.core.middleware import RequestIDMiddleware
 from src.users.routers import guardian as user_guardian_router
-from src.users.routers import system_admin as user_system_admin_router
+from src.users.routers.system_admin import users as user_system_admin_router
 from src.utils import exceptions as exc
 from src.workers.deletion_worker import start_deletion_worker
 from src.workers.email_worker import run_email_worker
@@ -119,6 +119,9 @@ EXCEPTION_STATUS_MAP = {
     exc.IncorrectPasswordError: 400,
     exc.CannotCreateDirectorError: 403,
     exc.CannotCreateSystemAdminError: 403,
+    exc.GuardianSlotAlreadyFilledError: 409,
+    exc.GuardianLinkAlreadyExistsError: 409,
+    exc.InvalidGuardianLinkError: 400,
 }
 
 
