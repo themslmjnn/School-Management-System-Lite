@@ -29,6 +29,7 @@ from src.utils.exceptions import (
     MaxStudentsPerEmailError,
     MaxStudentsPerPhoneNumberError,
     NoChangesDetectedError,
+    UserAlreadyActiveError,
     UserAlreadyInactiveError,
     UserAlreadyPendingDeletionError,
     UsernameAlreadyTakenError,
@@ -1224,3 +1225,45 @@ class TestDeactivateUser:
  
         with pytest.raises(UserNotFoundError):
             await UserServiceAdmin.deactivate_user(test_db, system_admin.id, other_admin.id)
+
+class TestActivateUser:
+    async def test_activate_user_successfully(
+        self, test_db: AsyncSession, system_admin: User, mock_delete_cache
+    ):
+        deactivated = await make_deactivated_user(test_db)
+ 
+        await UserServiceAdmin.activate_user(test_db, system_admin.id, deactivated.id)
+ 
+        activated_user = await UserRepositoryBase.get_user_by_id(test_db, deactivated.id)
+        assert activated_user.is_active is True
+ 
+    async def test_activate_user_invalidates_cache(
+        self, test_db: AsyncSession, system_admin: User, mock_delete_cache
+    ):
+        deactivated = await make_deactivated_user(test_db)
+ 
+        await UserServiceAdmin.activate_user(test_db, system_admin.id, deactivated.id)
+ 
+        mock_delete_cache.assert_called_once_with(
+            UserCacheKey.user_detail_key_admin(deactivated.id)
+        )
+ 
+    async def test_activate_user_not_found(
+        self, test_db: AsyncSession, system_admin: User
+    ):
+        with pytest.raises(UserNotFoundError):
+            await UserServiceAdmin.activate_user(test_db, system_admin.id, 999_999)
+ 
+    async def test_activate_already_active_user(
+        self, test_db: AsyncSession, system_admin: User, teacher: User
+    ):
+        with pytest.raises(UserAlreadyActiveError):
+            await UserServiceAdmin.activate_user(test_db, system_admin.id, teacher.id)
+ 
+    async def test_activate_user_excludes_system_admins(
+        self, test_db: AsyncSession, system_admin: User
+    ):
+        other_admin = await make_deactivated_user(test_db, role=UserRole.SYSTEM_ADMIN)
+ 
+        with pytest.raises(UserNotFoundError):
+            await UserServiceAdmin.activate_user(test_db, system_admin.id, other_admin.id)
