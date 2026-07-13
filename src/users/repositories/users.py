@@ -5,8 +5,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
 from src.users.models.users import User, UserActivation, UserLoginLockout, UserSession
+from src.users.schemas.users import SearchUserAdmin, SearchUserBase
 from src.utils.enums import OrderBy, UserRole, UserSortField, UserStatus
-from users.schemas.users import SearchUserAdmin, SearchUserBase
 
 ENTITY_TYPE = User | UserSession | UserActivation | UserLoginLockout
 
@@ -82,13 +82,17 @@ class UserRepositoryBase:
         if filters is None:
             return base_query
 
-        if filters.first_name:
+        if filters.firstname:
             base_query = base_query.filter(
-                User.first_name.ilike(f"%{filters.first_name}%")
+                User.firstname.ilike(f"%{filters.first_name}%")
             )
-        if filters.last_name:
+        if filters.lastname:
             base_query = base_query.filter(
-                User.last_name.ilike(f"%{filters.last_name}%")
+                User.lastname.ilike(f"%{filters.last_name}%")
+            )
+        if filters.middlename:
+            base_query = base_query.filter(
+                User.middlename.ilike(f"%{filters.last_name}%")
             )
 
         return base_query
@@ -176,7 +180,7 @@ class UserRepositoryBase:
             update(User)
             .where(
                 User.id == user_id,
-                User.role == UserRole.PARENT,
+                User.role == UserRole.GUARDIAN,
                 User.status == UserStatus.PENDING_DELETION,
             )
             .values(
@@ -189,6 +193,21 @@ class UserRepositoryBase:
         result = await db.execute(query)
 
         return result.rowcount > 0
+    
+    @staticmethod
+    async def get_user_by_id_pending_deletion(
+        db: AsyncSession,
+        user_id: int,
+    ) -> User | None:
+        query = select(User).where(
+            User.id == user_id,
+            User.role == UserRole.GUARDIAN,
+            User.status == UserStatus.PENDING_DELETION,
+        )
+
+        result = await db.execute(query)
+
+        return result.scalar_one_or_none()
 
 
 class UserRepositoryAdmin:
@@ -220,7 +239,7 @@ class UserRepositoryAdmin:
         sort_by: str = UserSortField.CREATED_AT,
         order: str = OrderBy.DESC,
     ) -> tuple[list[User], int]:
-        base_query = select(User).filter(User.role != UserRole.SYSTEM_ADMIN)
+        base_query = select(User).filter(User.role.not_in({UserRole.SYSTEM_ADMIN, UserRole.DIRECTOR}))
 
         query = UserRepositoryAdmin._apply_admin_filters(base_query, filters)
         query = UserRepositoryBase.apply_sorting(query, sort_by, order)

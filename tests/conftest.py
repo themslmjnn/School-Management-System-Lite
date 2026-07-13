@@ -101,6 +101,22 @@ async def client(test_db):
         yield async_client
 
 
+@pytest_asyncio.fixture
+async def concurrent_client():
+    async def override_get_db():
+        async with AsyncSession(bind=test_engine, expire_on_commit=False) as session:
+            yield session
+
+    app.dependency_overrides[get_db] = override_get_db
+
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test"
+    ) as async_client:
+        yield async_client
+
+    app.dependency_overrides.clear()
+
+
 @pytest_asyncio.fixture(scope="function", autouse=True)
 async def flush_cache():
     fresh_client = aioredis.Redis(

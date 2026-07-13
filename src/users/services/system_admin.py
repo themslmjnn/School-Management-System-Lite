@@ -5,7 +5,6 @@ from typing import assert_never
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from pagination import PaginatedResponse
 from src.core.advisory_locks import acquire_student_contact_lock
 from src.core.caching import delete_cache, get_cache, set_cache
 from src.core.config import settings
@@ -13,6 +12,7 @@ from src.core.dependencies import CurrentUser
 from src.core.logging import get_logger
 from src.core.security import generate_invite_token, generate_reset_password_token
 from src.emails.repository import PendingEmailRepository
+from src.pagination import PaginatedResponse
 from src.users.models.users import User, UserActivation, UserLoginLockout, UserSession
 from src.users.repositories.users import (
     UserRepositoryAdmin,
@@ -240,20 +240,20 @@ class UserServiceAdmin:
                 user_login_lockout=new_user_login_lockout,
             )
 
-            subject, html_body, text_body = email_sender.build_invite_email(
-                raw_invite_token, new_user.username
-            )
+            # subject, html_body, text_body = email_sender.build_invite_email(
+            #     raw_invite_token, new_user.username
+            # )
 
-            PendingEmailRepository.add_pending_email(
-                db,
-                recipient=new_user.email,
-                subject=subject,
-                html_body=html_body,
-                text_body=text_body,
-                email_type=EmailType.INVITE,
-                triggered_by=current_user_id,
-                recipient_user_id=new_user.id,
-            )
+            # PendingEmailRepository.add_pending_email(
+            #     db,
+            #     recipient=new_user.email,
+            #     subject=subject,
+            #     html_body=html_body,
+            #     text_body=text_body,
+            #     email_type=EmailType.INVITE,
+            #     triggered_by=current_user_id,
+            #     recipient_user_id=new_user.id,
+            # )
 
             await db.commit()
             await db.refresh(new_user)
@@ -339,12 +339,12 @@ class UserServiceAdmin:
             await db.commit()
             await db.refresh(target_user)
 
-            asyncio.create_task(
-                email_sender.send_safe(
-                    email_sender.send_account_info_updated_email(target_user.email),
-                    email_type="updating_account",
-                )
-            )
+            # asyncio.create_task(
+            #     email_sender.send_safe(
+            #         email_sender.send_account_info_updated_email(target_user.email),
+            #         email_type="updating_account",
+            #     )
+            # )
 
             await delete_cache(
                 UserCacheKey.user_detail_key_admin(target_user_id),
@@ -501,7 +501,7 @@ class UserServiceAdmin:
             db,
             target_user_id,
             load_session=True,
-            allowed_roles=frozenset({UserRole.guardian}),
+            allowed_roles=frozenset({UserRole.GUARDIAN}),
         )
         ensure_exists(target_user, UserNotFoundError(HTTP404.USER))
 
@@ -805,7 +805,7 @@ class UserServiceAdmin:
     ) -> PaginatedResponse:
 
         users, total = await UserRepositoryAdmin.get_users_admin(
-            db, skip, limit, filters, sort_by, order
+            db, skip, limit, filters, sort_by, order,
         )
 
         return PaginatedResponse(

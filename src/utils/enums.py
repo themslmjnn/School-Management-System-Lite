@@ -33,6 +33,7 @@ class EmailType(StrEnum):
     ACCOUNT_DEACTIVATION = "account_deactivation"
     ACCOUNT_ACTIVATION = "account_activation"
     ACCOUNT_DELETION = "account_deletion"
+    CANCEL_ACCOUNT_DELETION = "cancel_account_deletion"
     UPDATING_ACCOUNT = "updating_account"
     ADMIN_CREDENTIALS_OVERRIDE = "admin_credentials_override"
 

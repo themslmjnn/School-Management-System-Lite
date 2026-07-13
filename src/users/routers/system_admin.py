@@ -2,7 +2,6 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Path, Request, status
 
-from pagination import PaginatedResponse
 from src.core.dependencies import (
     CurrentUser,
     async_db_dependency,
@@ -10,6 +9,7 @@ from src.core.dependencies import (
     require_system_admin,
 )
 from src.core.limiter import user_limiter
+from src.pagination import PaginatedResponse
 from src.users.schemas.users import (
     CreateRequest,
     SearchUserAdmin,
@@ -19,7 +19,7 @@ from src.users.schemas.users import (
     UserResponseAdminDetailed,
 )
 from src.users.services.system_admin import UserServiceAdmin
-from utils.enums import OrderBy, UserSortField
+from src.utils.enums import OrderBy, UserSortField
 
 router = APIRouter(
     prefix="/users",

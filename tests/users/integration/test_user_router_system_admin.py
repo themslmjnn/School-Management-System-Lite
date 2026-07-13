@@ -1,7 +1,10 @@
+import asyncio
 from datetime import UTC, datetime
 
+import httpx
 import pytest
 from httpx import AsyncClient
+from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.emails.repository import PendingEmailRepository
@@ -13,7 +16,7 @@ from src.users.schemas.users import (
     CreateStudentAdmin,
 )
 from src.utils.enums import UserRole
-from tests.conftest import make_auth_header
+from tests.conftest import make_auth_header, test_engine
 from tests.factories import make_student, make_system_admin, make_teacher
 
 _URL = "/users"
@@ -281,6 +284,55 @@ class TestRegisterUser:
 
         assert response.status_code == 422
         assert "date_of_birth" in error_fields
+
+class TestStudentContactLimitRace:
+    async def test_concurrent_registrations_respect_contact_limit(
+        self, concurrent_client: AsyncClient, system_admin, test_db: AsyncSession
+    ):
+        shared_phone = "+992555123456"
+        headers = await make_auth_header(test_db, system_admin)
+
+        payloads = [
+            {
+                "type": "student",
+                "username": f"racetest{i}",
+                "firstname": "Race",
+                "lastname": "Test",
+                "phone_number": shared_phone,
+                "email": f"racetest{i}@example.com",
+                "date_of_birth": "2010-01-01",
+                "address": None,
+            }
+            for i in range(5)
+        ]
+
+        responses = await asyncio.gather(
+            *[
+                concurrent_client.post("/users", json=payload, headers=headers)
+                for payload in payloads
+            ],
+            return_exceptions=True,
+        )
+
+        successes = [
+            r for r in responses if isinstance(r, httpx.Response) and r.status_code == 201
+        ]
+        denials = [
+            r for r in responses if isinstance(r, httpx.Response) and r.status_code != 201
+        ]
+
+        try:
+            assert len(successes) == 3, (
+                f"Expected exactly 3 successful registrations, got {len(successes)}. "
+                f"Statuses: {[r.status_code for r in responses if isinstance(r, httpx.Response)]}"
+            )
+            assert len(denials) == 2
+        finally:
+            async with AsyncSession(bind=test_engine) as cleanup_session:
+                await cleanup_session.execute(
+                    delete(User).where(User.username.like("racetest%"))
+                )
+                await cleanup_session.commit()
 
 
 class TestUpdateUser:

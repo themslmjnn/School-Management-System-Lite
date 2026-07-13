@@ -14,6 +14,7 @@ from src.core.config import settings
 from src.core.limiter import ip_limiter
 from src.core.logging import get_logger, setup_logging
 from src.core.middleware import RequestIDMiddleware
+from src.users.routers import guardian as user_guardian_router
 from src.users.routers import system_admin as user_system_admin_router
 from src.utils import exceptions as exc
 from src.workers.deletion_worker import start_deletion_worker
@@ -79,8 +80,9 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(SlowAPIMiddleware)
 
 app.include_router(health_router)
-app.include_router(user_system_admin_router.router)
 app.include_router(auth_router)
+app.include_router(user_system_admin_router.router)
+app.include_router(user_guardian_router.router)
 
 EXCEPTION_STATUS_MAP = {
     exc.EmptyCredentialsError: 400,
