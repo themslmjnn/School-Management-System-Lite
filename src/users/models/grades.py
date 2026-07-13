@@ -15,7 +15,7 @@ class Grade(Base):
     )
     value: Mapped[float] = mapped_column(nullable=False)
 
-    student: Mapped["User"] = relationship("User", foreign_keys="[Grade.student_id]")
+    student: Mapped["User"] = relationship("User", foreign_keys="[Grade.student_id]")  # noqa: F821
 
 
 class GradeComment(Base):
@@ -48,6 +48,6 @@ class GradeComment(Base):
     grade: Mapped["Grade"] = relationship(
         "Grade", foreign_keys="[GradeComment.grade_id]"
     )
-    author: Mapped["User | None"] = relationship(
+    author: Mapped["User | None"] = relationship(  # noqa: F821
         "User", foreign_keys="[GradeComment.author_id]"
     )

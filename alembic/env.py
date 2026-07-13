@@ -6,7 +6,7 @@ from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
 import src.emails.models
-import src.users.models
+import src.users.models  # noqa: F401
 from alembic import context
 from src.core.config import settings
 from src.database import Base

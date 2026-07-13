@@ -81,8 +81,8 @@ app.include_router(user_system_admin_router.router)
 app.include_router(auth_router)
 
 EXCEPTION_STATUS_MAP = {
-    exc.InvalidCredentialsError: 401,
     exc.EmptyCredentialsError: 400,
+    exc.InvalidCredentialsError: 401,
     exc.InvalidAccessTokenError: 401,
     exc.InvalidRefreshTokenError: 401,
     exc.ExpiredRefreshTokenError: 401,
@@ -93,21 +93,21 @@ EXCEPTION_STATUS_MAP = {
     exc.ExpiredInviteTokenError: 400,
     exc.InvalidResetPasswordTokenError: 400,
     exc.ExpiredResetPasswordTokenError: 400,
-    exc.UsernameAlreadyTakenError: 409,
-    exc.DuplicateValueError: 409,
-    exc.MaxNumberOfIdenticalContactsError: 409,
-    exc.DateOfBirthNullError: 400,
-    exc.CannotCreateDirectorError: 403,
-    exc.CannotCreateSystemAdminError: 403,
-    exc.GuardianLinkNotFoundError: 404,
-    exc.GuardianLinkAlreadyExistsError: 409,
-    exc.GuardianSlotAlreadyFilledError: 400,
-    exc.InvalidGuardianLinkError: 400,
-    exc.PendingEmailNotFoundError: 404,
     exc.UserNotFoundError: 404,
+    exc.UsernameAlreadyTakenError: 409,
+    exc.DuplicateEmailError: 409,
+    exc.DuplicatePhoneNumberError: 409,
+    exc.PendingEmailNotFoundError: 404,
     exc.NoChangesDetectedError: 409,
     exc.UserAlreadyInactiveError: 409,
+    exc.UserAlreadyActiveError: 409,
     exc.UserAlreadyPendingDeletionError: 409,
+    exc.MaxStudentsPerEmailError: 409,
+    exc.MaxStudentsPerPhoneNumberError: 409,
+    exc.MaxStaffOrGuardianPerEmailError: 409,
+    exc.MaxStaffOrGuardianPerPhoneNumberError: 409,
+    exc.CannotCreateDirectorError: 403,
+    exc.CannotCreateSystemAdminError: 403,
 }
 
 

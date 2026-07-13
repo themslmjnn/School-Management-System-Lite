@@ -179,22 +179,12 @@ async def guardian(test_db):
     return await make_guardian(test_db)
 
 
-@pytest.fixture
-def mock_delete_cache(mocker):
-    return mocker.patch("src.users.service.delete_cache")
-
-
-@pytest.fixture
-def mock_set_cache(mocker):
-    return mocker.patch("src.users.service.set_cache")
-
-
 create_user_request = {
     "username": "new_test_username",
     "firstname": "New",
     "lastname": "User",
     "email": "new_test_email@gmail.com",
-    "phone_number": "+992 111 111 111",
+    "phone_number": "+992 111 111 101",
 }
 
 
@@ -222,6 +212,23 @@ def valid_create_student_request():
         type="student",
         date_of_birth="2008-05-01",
     )
+
+
+@pytest.fixture
+def mock_advisory_lock(mocker):
+    return mocker.patch(
+        "src.users.services.system_admin.acquire_student_contact_lock",
+        return_value=None,
+    )
+
+
+@pytest.fixture
+def mock_acquire_student_contact_lock(mocker):
+    return mocker.patch(
+        "src.users.services.system_admin.acquire_student_contact_lock",
+        return_value=None,
+    )
+
 
 @pytest.fixture
 def mock_send_account_info_updated_email(mocker):

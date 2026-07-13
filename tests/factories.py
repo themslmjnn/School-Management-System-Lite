@@ -42,7 +42,7 @@ async def make_user(
         lastname=lastname or "User",
         middlename=middlename,
         email=email or f"user_{n}@example.com",
-        phone_number=phone_number or f"+1555{n:07d}",
+        phone_number=phone_number or f"+992917{n:06d}",
         date_of_birth=date_of_birth
         if date_of_birth is not None
         else (date(2008, 1, 1) if role == UserRole.STUDENT else None),
@@ -57,7 +57,7 @@ async def make_user(
     UserRepositoryBase.add_entity(test_db, user=new_user)
     await test_db.flush()
 
-    raw_invite_token, hashed_invite_token = generate_invite_token()
+    _, hashed_invite_token = generate_invite_token()
 
     new_activation = UserActivation(
         user_id=new_user.id,
@@ -108,68 +108,9 @@ async def make_teacher(test_db: AsyncSession, **kwargs) -> User:
 
 async def make_student(test_db: AsyncSession, **kwargs) -> User:
     kwargs.setdefault("date_of_birth", date(2008, 1, 1))
+
     return await make_user(test_db, role=UserRole.STUDENT, **kwargs)
 
 
 async def make_guardian(test_db: AsyncSession, **kwargs) -> User:
     return await make_user(test_db, role=UserRole.GUARDIAN, **kwargs)
-
-
-async def make_user_pending_activation(
-    test_db: AsyncSession, **kwargs
-) -> tuple[User, str]:
-    kwargs.setdefault("status", UserStatus.PENDING_ACTIVATION)
-    kwargs.setdefault("is_active", False)
-    kwargs.setdefault("password", None)
-
-    user = await make_user(test_db, **kwargs)
-
-    user_with_activation = await UserRepositoryBase.get_user_by_id(
-        test_db, user.id, load_activation=True
-    )
-
-    raw_invite_token, hashed_invite_token = generate_invite_token()
-    user_with_activation.activation.invite_token_hash = hashed_invite_token
-    user_with_activation.activation.invite_token_expires_at = datetime.now(
-        UTC
-    ) + timedelta(hours=24)
-
-    await test_db.commit()
-
-    return user, raw_invite_token
-
-
-async def make_locked_out_user(
-    test_db: AsyncSession, *, attempts: int = 5, **kwargs
-) -> User:
-    kwargs.setdefault("locked_until", datetime.now(UTC) + timedelta(minutes=15))
-    return await make_user(test_db, failed_login_attempts=attempts, **kwargs)
-
-
-async def make_deactivated_user(test_db: AsyncSession, **kwargs) -> User:
-    kwargs.setdefault("status", UserStatus.DEACTIVATED)
-    kwargs.setdefault("is_active", False)
-    return await make_user(test_db, **kwargs)
-
-
-# async def make_parent_pending_deletion(test_db: AsyncSession, **kwargs) -> User:
-#     kwargs.setdefault("status", UserStatus.PENDING_DELETION)
-#     return await make_parent(test_db, **kwargs)
-
-
-# async def make_guardian_link(
-#     test_db: AsyncSession,
-#     *,
-#     guardian: User,
-#     student: User,
-#     priority: GuardianPriority = GuardianPriority.SECONDARY,
-# ) -> StudentGuardianLink:
-#     link = StudentGuardianLink(
-#         parent_id=guardian.id,
-#         student_id=student.id,
-#         priority=priority,
-#     )
-#     GuardianLinkRepository.add_link(test_db, link)
-#     await test_db.commit()
-
-#     return link

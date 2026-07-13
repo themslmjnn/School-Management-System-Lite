@@ -61,44 +61,19 @@ class ExpiredResetPasswordTokenError(AppException):
 
 
 # USER
+class UserNotFoundError(AppException):
+    pass
+
+
 class UsernameAlreadyTakenError(AppException):
     pass
 
 
-class DuplicateValueError(AppException):
+class DuplicateEmailError(AppException):
     pass
 
 
-class MaxNumberOfIdenticalContactsError(AppException):
-    pass
-
-
-class DateOfBirthNullError(AppException):
-    pass
-
-
-# ROLE RESTRICTIONS
-class CannotCreateSystemAdminError(AppException):
-    pass
-
-
-class CannotCreateDirectorError(AppException):
-    pass
-
-
-class InvalidGuardianLinkError(AppException):
-    pass
-
-
-class GuardianLinkAlreadyExistsError(AppException):
-    pass
-
-
-class GuardianSlotAlreadyFilledError(AppException):
-    pass
-
-
-class GuardianLinkNotFoundError(AppException):
+class DuplicatePhoneNumberError(AppException):
     pass
 
 
@@ -106,19 +81,15 @@ class PendingEmailNotFoundError(AppException):
     pass
 
 
-class UserNotFoundError(AppException):
-    pass
-
-
 class NoChangesDetectedError(AppException):
     pass
 
 
-class UserAlreadyInactiveError(AppException):
+class UserAlreadyActiveError(AppException):
     pass
 
 
-class UserAlreadyActiveError(AppException):
+class UserAlreadyInactiveError(AppException):
     pass
 
 
@@ -130,6 +101,10 @@ class MaxStudentsPerEmailError(AppException):
     pass
 
 
+class MaxStudentsPerPhoneNumberError(AppException):
+    pass
+
+
 class MaxStaffOrGuardianPerEmailError(AppException):
     pass
 
@@ -138,16 +113,16 @@ class MaxStaffOrGuardianPerPhoneNumberError(AppException):
     pass
 
 
-class MaxStudentsPerPhoneNumberError(AppException):
-    pass
-
-class DuplicatePhoneNumberError(AppException):
-    pass
-
-class DuplicateEmailError(AppException):
+# ROLE RESTRICTIONS
+class CannotCreateDirectorError(AppException):
     pass
 
 
+class CannotCreateSystemAdminError(AppException):
+    pass
+
+
+# INTEGRITY ERROR HANDLERS
 def handle_username_integrity_error(error: IntegrityError) -> None:
     if "users_username_key" in str(error.orig):
         raise UsernameAlreadyTakenError(HTTP409.USERNAME)

@@ -52,6 +52,7 @@ BLOCKED_ROLES_VIA_API = frozenset(
 )
 SYSTEM_ADMIN_INVISIBLE_ROLES = frozenset({UserRole.SYSTEM_ADMIN})
 
+
 async def _check_contact_limit(
     db: AsyncSession,
     current_user_id: int,

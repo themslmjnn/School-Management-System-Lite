@@ -1,24 +1,26 @@
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 
 import pytest
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.emails.models import EmailType
 from src.emails.repository import PendingEmailRepository
+from src.users.models.users import User
 from src.users.repositories.users import UserRepositoryBase
 from src.users.schemas.users import (
     CreateGuardianAdmin,
     CreateStaffAdmin,
     CreateStudentAdmin,
     UpdateStaffAndGuardianAdmin,
+    UpdateStudentAdmin,
 )
 from src.users.services.system_admin import UserServiceAdmin
 from src.utils.enums import UserRole, UserStatus
 from src.utils.exceptions import (
     CannotCreateDirectorError,
     CannotCreateSystemAdminError,
+    DuplicateEmailError,
     DuplicatePhoneNumberError,
-    DuplicateValueError,
-    MaxNumberOfIdenticalContactsError,
     MaxStaffOrGuardianPerEmailError,
     MaxStaffOrGuardianPerPhoneNumberError,
     MaxStudentsPerEmailError,
@@ -32,7 +34,10 @@ from tests.factories import make_guardian, make_student, make_system_admin, make
 
 class TestRegisterStaff:
     async def test_block_system_admin_creation(
-        self, test_db, system_admin, valid_create_staff_request: CreateStaffAdmin
+        self,
+        test_db: AsyncSession,
+        system_admin: User,
+        valid_create_staff_request: CreateStaffAdmin,
     ):
         valid_create_staff_request.role = UserRole.SYSTEM_ADMIN
 
@@ -42,7 +47,10 @@ class TestRegisterStaff:
             )
 
     async def test_block_director_creation(
-        self, test_db, system_admin, valid_create_staff_request: CreateStaffAdmin
+        self,
+        test_db: AsyncSession,
+        system_admin: User,
+        valid_create_staff_request: CreateStaffAdmin,
     ):
         valid_create_staff_request.role = UserRole.DIRECTOR
 
@@ -73,8 +81,8 @@ class TestRegisterStaff:
     )
     async def test_reject_duplicate_fields(
         self,
-        test_db,
-        system_admin,
+        test_db: AsyncSession,
+        system_admin: User,
         valid_create_staff_request: CreateStaffAdmin,
         existing_user_data: dict,
         request_override: dict,
@@ -91,7 +99,10 @@ class TestRegisterStaff:
             )
 
     async def test_create_user_session_table_successfully(
-        self, test_db, system_admin, valid_create_staff_request: CreateStaffAdmin
+        self,
+        test_db: AsyncSession,
+        system_admin: User,
+        valid_create_staff_request: CreateStaffAdmin,
     ):
         user = await UserServiceAdmin.register_user(
             test_db, system_admin.id, valid_create_staff_request
@@ -115,7 +126,10 @@ class TestRegisterStaff:
         assert session.email_change_code_expires_at is None
 
     async def test_create_user_login_lockout_table_successfully(
-        self, test_db, system_admin, valid_create_staff_request: CreateStaffAdmin
+        self,
+        test_db: AsyncSession,
+        system_admin: User,
+        valid_create_staff_request: CreateStaffAdmin,
     ):
         user = await UserServiceAdmin.register_user(
             test_db, system_admin.id, valid_create_staff_request
@@ -132,7 +146,10 @@ class TestRegisterStaff:
         assert lockout.locked_until is None
 
     async def test_create_user_activation_table_successfully(
-        self, test_db, system_admin, valid_create_staff_request: CreateStaffAdmin
+        self,
+        test_db: AsyncSession,
+        system_admin: User,
+        valid_create_staff_request: CreateStaffAdmin,
     ):
         user = await UserServiceAdmin.register_user(
             test_db, system_admin.id, valid_create_staff_request
@@ -150,7 +167,10 @@ class TestRegisterStaff:
         assert activation.invite_token_expires_at > datetime.now(UTC)
 
     async def test_create_pending_email_successfully(
-        self, test_db, system_admin, valid_create_staff_request: CreateStaffAdmin
+        self,
+        test_db: AsyncSession,
+        system_admin: User,
+        valid_create_staff_request: CreateStaffAdmin,
     ):
         user = await UserServiceAdmin.register_user(
             test_db, system_admin.id, valid_create_staff_request
@@ -171,7 +191,10 @@ class TestRegisterStaff:
         assert email.recipient_user_id == user.id
 
     async def test_create_user_successfully(
-        self, test_db, system_admin, valid_create_staff_request: CreateStaffAdmin
+        self,
+        test_db: AsyncSession,
+        system_admin: User,
+        valid_create_staff_request: CreateStaffAdmin,
     ):
         user = await UserServiceAdmin.register_user(
             test_db, system_admin.id, valid_create_staff_request
@@ -188,28 +211,54 @@ class TestRegisterStaff:
         assert user.created_by == system_admin.id
 
     @pytest.mark.db_constraint
+    @pytest.mark.parametrize(
+        "field, existing_kwargs, duplicate_value, expected_exception",
+        [
+            (
+                "email",
+                {
+                    "email": "constraint.check@example.com",
+                    "phone_number": "+992555111333",
+                },
+                "constraint.check@example.com",
+                DuplicateEmailError,
+            ),
+            (
+                "phone_number",
+                {
+                    "email": "constraint.check@example.com",
+                    "phone_number": "+992555111333",
+                },
+                "+992555111333",
+                DuplicatePhoneNumberError,
+            ),
+        ],
+    )
     async def test_contact_limit_db_constraint_catches_bypassed_precheck(
         self,
-        test_db,
-        system_admin,
+        field,
+        existing_kwargs,
+        duplicate_value,
+        expected_exception,
+        test_db: AsyncSession,
+        system_admin: User,
         valid_create_staff_request: CreateStaffAdmin,
         mocker,
     ):
-        await make_teacher(
-            test_db, email="constraint.check@example.com", phone_number="+992555111333"
-        )
+        await make_teacher(test_db, **existing_kwargs)
 
         mocker.patch(
             "src.users.services.system_admin.UserRepositoryBase.count_users_with_contact",
             return_value=0,
         )
 
-        valid_create_staff_request.email = "constraint.check@example.com"
-        valid_create_staff_request.phone_number = "+992555111333"
+        setattr(valid_create_staff_request, field, duplicate_value)
 
-        with pytest.raises(DuplicateValueError):
+        with pytest.raises(expected_exception):
             await UserServiceAdmin.register_user(
-                test_db, system_admin.id, valid_create_staff_request
+                test_db,
+                system_admin.id,
+                valid_create_staff_request,
             )
 
 
@@ -226,8 +275,8 @@ class TestRegisterStudent:
     )
     async def test_reject_duplicate_username(
         self,
-        test_db,
-        system_admin,
+        test_db: AsyncSession,
+        system_admin: User,
         valid_create_student_request: CreateStudentAdmin,
         existing_user_data: dict,
         request_override: dict,
@@ -247,17 +296,13 @@ class TestRegisterStudent:
         ("field", "value", "expected_exception"),
         [
             ("email", "shared@example.com", MaxStudentsPerEmailError),
-            (
-                "phone_number",
-                "+992555333444",
-                MaxStudentsPerPhoneNumberError,
-            ),
+            ("phone_number", "+992555333444", MaxStudentsPerPhoneNumberError),
         ],
     )
     async def test_reject_when_student_contact_limit_reached(
         self,
-        test_db,
-        system_admin,
+        test_db: AsyncSession,
+        system_admin: User,
         valid_create_student_request: CreateStudentAdmin,
         field,
         value,
@@ -280,7 +325,10 @@ class TestRegisterStudent:
             )
 
     async def test_create_user_session_table_successfully(
-        self, test_db, system_admin, valid_create_student_request: CreateStudentAdmin
+        self,
+        test_db: AsyncSession,
+        system_admin: User,
+        valid_create_student_request: CreateStudentAdmin,
     ):
         user = await UserServiceAdmin.register_user(
             test_db, system_admin.id, valid_create_student_request
@@ -297,7 +345,10 @@ class TestRegisterStudent:
         assert session.refresh_token_hash is None
 
     async def test_create_user_login_lockout_table_successfully(
-        self, test_db, system_admin, valid_create_student_request: CreateStudentAdmin
+        self,
+        test_db: AsyncSession,
+        system_admin: User,
+        valid_create_student_request: CreateStudentAdmin,
     ):
         user = await UserServiceAdmin.register_user(
             test_db, system_admin.id, valid_create_student_request
@@ -312,7 +363,10 @@ class TestRegisterStudent:
         assert lockout.locked_until is None
 
     async def test_create_user_activation_table_successfully(
-        self, test_db, system_admin, valid_create_student_request: CreateStudentAdmin
+        self,
+        test_db: AsyncSession,
+        system_admin: User,
+        valid_create_student_request: CreateStudentAdmin,
     ):
         user = await UserServiceAdmin.register_user(
             test_db, system_admin.id, valid_create_student_request
@@ -328,7 +382,10 @@ class TestRegisterStudent:
         assert activation.invite_token_expires_at > datetime.now(UTC)
 
     async def test_create_pending_email_successfully(
-        self, test_db, system_admin, valid_create_student_request: CreateStudentAdmin
+        self,
+        test_db: AsyncSession,
+        system_admin: User,
+        valid_create_student_request: CreateStudentAdmin,
     ):
         user = await UserServiceAdmin.register_user(
             test_db, system_admin.id, valid_create_student_request
@@ -345,7 +402,10 @@ class TestRegisterStudent:
         assert email.recipient_user_id == user.id
 
     async def test_create_user_successfully(
-        self, test_db, system_admin, valid_create_student_request: CreateStudentAdmin
+        self,
+        test_db: AsyncSession,
+        system_admin: User,
+        valid_create_student_request: CreateStudentAdmin,
     ):
         user = await UserServiceAdmin.register_user(
             test_db, system_admin.id, valid_create_student_request
@@ -361,36 +421,65 @@ class TestRegisterStudent:
 
 
 class TestRegisterGuardian:
+    @pytest.mark.parametrize(
+        "existing_factory, duplicate_field, unique_value, expected_exception",
+        [
+            (
+                make_teacher,
+                "email",
+                "+992555111111",
+                MaxStaffOrGuardianPerEmailError,
+            ),
+            (
+                make_teacher,
+                "phone_number",
+                "different@example.com",
+                MaxStaffOrGuardianPerPhoneNumberError,
+            ),
+            (
+                make_guardian,
+                "email",
+                "+992555222222",
+                MaxStaffOrGuardianPerEmailError,
+            ),
+            (
+                make_guardian,
+                "phone_number",
+                "another@example.com",
+                MaxStaffOrGuardianPerPhoneNumberError,
+            ),
+        ],
+    )
     async def test_reject_when_contact_limit_reached(
-        self, test_db, system_admin, valid_create_guardian_request: CreateGuardianAdmin
+        self,
+        existing_factory,
+        duplicate_field,
+        unique_value,
+        expected_exception,
+        test_db: AsyncSession,
+        system_admin: User,
+        valid_create_guardian_request: CreateGuardianAdmin,
     ):
-        await make_teacher(
-            test_db,
-            email=valid_create_guardian_request.email,
-            phone_number=valid_create_guardian_request.phone_number,
-        )
+        email = valid_create_guardian_request.email
+        phone = valid_create_guardian_request.phone_number
 
-        with pytest.raises(MaxNumberOfIdenticalContactsError):
-            await UserServiceAdmin.register_user(
-                test_db, system_admin.id, valid_create_guardian_request
-            )
+        if duplicate_field == "email":
+            phone = unique_value
+        else:
+            email = unique_value
 
-    async def test_staff_and_guardian_share_contact_pool(
-        self, test_db, system_admin, valid_create_guardian_request: CreateGuardianAdmin
-    ):
-        await make_guardian(
-            test_db,
-            email=valid_create_guardian_request.email,
-            phone_number=valid_create_guardian_request.phone_number,
-        )
+        await existing_factory(test_db, email=email, phone_number=phone)
 
-        with pytest.raises(MaxNumberOfIdenticalContactsError):
+        with pytest.raises(expected_exception):
             await UserServiceAdmin.register_user(
                 test_db, system_admin.id, valid_create_guardian_request
             )
 
     async def test_create_user_successfully(
-        self, test_db, system_admin, valid_create_guardian_request: CreateGuardianAdmin
+        self,
+        test_db: AsyncSession,
+        system_admin: User,
+        valid_create_guardian_request: CreateGuardianAdmin,
     ):
         user = await UserServiceAdmin.register_user(
             test_db, system_admin.id, valid_create_guardian_request
@@ -406,7 +495,10 @@ class TestRegisterGuardian:
         assert user.created_by == system_admin.id
 
     async def test_create_pending_email_successfully(
-        self, test_db, system_admin, valid_create_guardian_request: CreateGuardianAdmin
+        self,
+        test_db: AsyncSession,
+        system_admin: User,
+        valid_create_guardian_request: CreateGuardianAdmin,
     ):
         user = await UserServiceAdmin.register_user(
             test_db, system_admin.id, valid_create_guardian_request
@@ -426,21 +518,16 @@ class TestRegisterGuardian:
 class TestAdvisoryLock:
     async def test_advisory_lock_acquired_for_student(
         self,
-        test_db,
-        system_admin,
+        test_db: AsyncSession,
+        system_admin: User,
         valid_create_student_request: CreateStudentAdmin,
-        mocker,
+        mock_advisory_lock,
     ):
-        mock_lock = mocker.patch(
-            "src.users.services.system_admin.acquire_student_contact_lock",
-            return_value=None,
-        )
-
         await UserServiceAdmin.register_user(
             test_db, system_admin.id, valid_create_student_request
         )
 
-        mock_lock.assert_called_once_with(
+        mock_advisory_lock.assert_called_once_with(
             test_db,
             phone_number=valid_create_student_request.phone_number,
             email=valid_create_student_request.email,
@@ -448,104 +535,200 @@ class TestAdvisoryLock:
 
     async def test_advisory_lock_not_acquired_for_staff(
         self,
-        test_db,
-        system_admin,
+        test_db: AsyncSession,
+        system_admin: User,
         valid_create_staff_request: CreateStaffAdmin,
-        mocker,
+        mock_advisory_lock,
     ):
-        mock_lock = mocker.patch(
-            "src.users.services.system_admin.acquire_student_contact_lock",
-            return_value=None,
-        )
-
         await UserServiceAdmin.register_user(
             test_db, system_admin.id, valid_create_staff_request
         )
 
-        mock_lock.assert_not_called()
+        mock_advisory_lock.assert_not_called()
 
     async def test_advisory_lock_not_acquired_for_guardian(
         self,
-        test_db,
-        system_admin,
+        test_db: AsyncSession,
+        system_admin: User,
         valid_create_guardian_request: CreateGuardianAdmin,
-        mocker,
+        mock_advisory_lock,
     ):
-        mock_lock = mocker.patch(
-            "src.users.services.system_admin.acquire_student_contact_lock",
-            return_value=None,
-        )
-
         await UserServiceAdmin.register_user(
             test_db, system_admin.id, valid_create_guardian_request
         )
 
-        mock_lock.assert_not_called()
+        mock_advisory_lock.assert_not_called()
 
 
 class TestUpdateStaffAndGuardian:
     async def test_update_user_successfully(
         self,
-        test_db,
-        system_admin,
-        teacher,
+        test_db: AsyncSession,
+        system_admin: User,
+        teacher: User,
         mock_send_account_info_updated_email,
     ):
         update_request = UpdateStaffAndGuardianAdmin(firstname="UpdatedFirstName")
- 
+
         updated_user = await UserServiceAdmin.update_user(
             test_db, system_admin.id, teacher.id, update_request
         )
- 
+
         assert updated_user.firstname == "UpdatedFirstName"
- 
-    async def test_update_user_not_found(self, test_db, system_admin):
+
+    async def test_update_user_not_found(self, test_db: AsyncSession, system_admin):
         update_request = UpdateStaffAndGuardianAdmin(firstname="DoesntMatter")
- 
+
         with pytest.raises(UserNotFoundError):
             await UserServiceAdmin.update_user(
                 test_db, system_admin.id, 999_999, update_request
             )
- 
-    async def test_update_user_excludes_system_admins(self, test_db, system_admin):
+
+    async def test_update_user_excludes_system_admins(
+        self, test_db: AsyncSession, system_admin: User
+    ):
         other_admin = await make_system_admin(test_db)
         update_request = UpdateStaffAndGuardianAdmin(firstname="DoesntMatter")
- 
+
         with pytest.raises(UserNotFoundError):
             await UserServiceAdmin.update_user(
                 test_db, system_admin.id, other_admin.id, update_request
             )
- 
+
     async def test_update_user_no_fields_set_raises_no_changes(
-        self, test_db, system_admin, teacher
+        self, test_db: AsyncSession, system_admin: User, teacher: User
     ):
         update_request = UpdateStaffAndGuardianAdmin()
- 
+
         with pytest.raises(NoChangesDetectedError):
             await UserServiceAdmin.update_user(
                 test_db, system_admin.id, teacher.id, update_request
             )
- 
+
     async def test_update_user_same_value_raises_no_changes(
-        self, test_db, system_admin, teacher
+        self, test_db: AsyncSession, system_admin: User, teacher: User
     ):
         update_request = UpdateStaffAndGuardianAdmin(firstname=teacher.firstname)
- 
+
         with pytest.raises(NoChangesDetectedError):
             await UserServiceAdmin.update_user(
                 test_db, system_admin.id, teacher.id, update_request
             )
- 
+
     async def test_update_non_student_duplicate_phone_raises_error(
         self,
-        test_db,
-        system_admin,
-        teacher,
+        test_db: AsyncSession,
+        system_admin: User,
+        teacher: User,
     ):
         existing = await make_teacher(test_db, phone_number="+992555111333")
         update_request = UpdateStaffAndGuardianAdmin(phone_number=existing.phone_number)
- 
+
         with pytest.raises(DuplicatePhoneNumberError):
             await UserServiceAdmin.update_user(
                 test_db, system_admin.id, teacher.id, update_request
             )
+
+
+class TestUpdateStudent:
+    async def test_update_student_fields_successfully(
+        self,
+        test_db: AsyncSession,
+        system_admin: User,
+        student: User,
+        mock_send_account_info_updated_email,
+    ):
+        update_request = UpdateStudentAdmin(
+            firstname="NewName",
+            date_of_birth=date(2007, 6, 15),
+            address="123 New Address Street, City",
+        )
+
+        updated_user = await UserServiceAdmin.update_user(
+            test_db, system_admin.id, student.id, update_request
+        )
+
+        assert updated_user.firstname == "NewName"
+        assert updated_user.date_of_birth == date(2007, 6, 15)
+        assert updated_user.address == "123 New Address Street, City"
+
+    async def test_update_student_phone_acquires_advisory_lock(
+        self,
+        test_db: AsyncSession,
+        system_admin: User,
+        student: User,
+        mock_send_account_info_updated_email,
+        mock_acquire_student_contact_lock,
+    ):
+        update_request = UpdateStudentAdmin(phone_number="+992555999888")
+
+        await UserServiceAdmin.update_user(
+            test_db, system_admin.id, student.id, update_request
+        )
+
+        mock_acquire_student_contact_lock.assert_called_once_with(
+            test_db, phone_number="+992555999888", email=None
+        )
+
+    async def test_update_student_phone_unchanged_skips_lock_and_limit(
+        self,
+        test_db: AsyncSession,
+        system_admin: User,
+        student: User,
+        mock_send_account_info_updated_email,
+        mock_acquire_student_contact_lock,
+        mocker,
+    ):
+        mock_limit = mocker.patch(
+            "src.users.services.system_admin._check_contact_limit",
+            return_value=None,
+        )
+
+        update_request = UpdateStudentAdmin(phone_number=student.phone_number)
+
+        with pytest.raises(NoChangesDetectedError):
+            await UserServiceAdmin.update_user(
+                test_db, system_admin.id, student.id, update_request
+            )
+
+        mock_acquire_student_contact_lock.assert_not_called()
+        mock_limit.assert_not_called()
+
+    async def test_update_student_phone_contact_limit_reached(
+        self,
+        test_db: AsyncSession,
+        system_admin: User,
+        student: User,
+    ):
+        shared_phone = "+992555111777"
+
+        for i in range(3):
+            await make_student(
+                test_db,
+                phone_number=shared_phone,
+                email=f"other_student_{i}@example.com",
+                username=f"other_student_{i}",
+            )
+
+        update_request = UpdateStudentAdmin(phone_number=shared_phone)
+
+        with pytest.raises(MaxStudentsPerPhoneNumberError):
+            await UserServiceAdmin.update_user(
+                test_db, system_admin.id, student.id, update_request
+            )
+
+    async def test_update_non_student_phone_skips_advisory_lock(
+        self,
+        test_db: AsyncSession,
+        system_admin: User,
+        teacher: User,
+        mock_send_account_info_updated_email,
+        mock_acquire_student_contact_lock,
+    ):
+        update_request = UpdateStaffAndGuardianAdmin(phone_number="+992555888777")
+
+        await UserServiceAdmin.update_user(
+            test_db, system_admin.id, teacher.id, update_request
+        )
+
+        mock_acquire_student_contact_lock.assert_not_called()

@@ -152,10 +152,11 @@ class UpdateUserBase(BaseModel):
         if field is None:
             return None
         return validators.parse_and_validate_mobile_number(field)
-    
+
+
 class UpdateStaffAndGuardianAdmin(UpdateUserBase):
     type: Literal["staff_or_guardian"] = "staff_or_guardian"
-    
+
 
 class UpdateStudentAdmin(UpdateUserBase):
     type: Literal["student"] = "student"
@@ -168,7 +169,8 @@ class UpdateStudentAdmin(UpdateUserBase):
         if field is None:
             return None
         return validators.validate_date_of_birth(field)
-    
+
+
 UpdateUser = Annotated[
     UpdateStaffAndGuardianAdmin | UpdateStudentAdmin,
     Field(discriminator="type"),

@@ -166,7 +166,9 @@ async def send_account_deletion_email(email: str) -> None:
                 <h2>Your account is scheduled for deletion</h2>
                 <p>
                     A school administrator has scheduled your account for deletion.
-                    Your account will be <strong>permanently deleted in 30 days</strong>.
+                    Your account will be <strong>
+                        permanently deleted in 30 days
+                    </strong>.
                 </p>
                 <p>
                     You can still log in and use your account normally during this
@@ -388,11 +390,15 @@ async def send_admin_credentials_override_notification(
     if old_username is not None and new_username is not None:
         changes_html += f"""
                     <tr>
-                        <td style="padding:8px 0;color:#6b7280;font-size:13px;">Old username</td>
+                        <td style="padding:8px 0;color:#6b7280;font-size:13px;">
+                            Old username
+                        </td>
                         <td style="padding:8px 0;font-weight:bold;">{old_username}</td>
                     </tr>
                     <tr>
-                        <td style="padding:8px 0;color:#6b7280;font-size:13px;">New username</td>
+                        <td style="padding:8px 0;color:#6b7280;font-size:13px;">
+                            New username
+                        </td>
                         <td style="padding:8px 0;font-weight:bold;">{new_username}</td>
                     </tr>
         """
@@ -403,11 +409,15 @@ async def send_admin_credentials_override_notification(
     if old_email is not None and new_email is not None:
         changes_html += f"""
                     <tr>
-                        <td style="padding:8px 0;color:#6b7280;font-size:13px;">Old email</td>
+                        <td style="padding:8px 0;color:#6b7280;font-size:13px;">
+                            Old email
+                        </td>
                         <td style="padding:8px 0;font-weight:bold;">{old_email}</td>
                     </tr>
                     <tr>
-                        <td style="padding:8px 0;color:#6b7280;font-size:13px;">New email</td>
+                        <td style="padding:8px 0;color:#6b7280;font-size:13px;">
+                            New email
+                        </td>
                         <td style="padding:8px 0;font-weight:bold;">{new_email}</td>
                     </tr>
         """
