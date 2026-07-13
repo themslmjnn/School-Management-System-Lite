@@ -108,3 +108,14 @@ async def activate_user(
 ):
     return await UserServiceAdmin.activate_user(db, current_user.id, target_user_id)
 
+@router.post("/{target_user_id}/password", status_code=status.HTTP_204_NO_CONTENT)
+@user_limiter.limit("5/minute")
+async def create_reset_password_request(
+    request: Request,
+    db: async_db_dependency,
+    current_user: Annotated[CurrentUser, Depends(require_system_admin)],
+    target_user_id: Annotated[int, Path(ge=1)],
+):
+    await UserServiceAdmin.create_reset_password_request(
+        db, current_user, target_user_id
+    )

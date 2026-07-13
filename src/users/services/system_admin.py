@@ -8,8 +8,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.core.advisory_locks import acquire_student_contact_lock
 from src.core.caching import delete_cache
 from src.core.config import settings
+from src.core.dependencies import CurrentUser
 from src.core.logging import get_logger
-from src.core.security import generate_invite_token
+from src.core.security import generate_invite_token, generate_reset_password_token
 from src.emails.repository import PendingEmailRepository
 from src.users.models.users import User, UserActivation, UserLoginLockout, UserSession
 from src.users.repositories.users import (
@@ -654,4 +655,48 @@ class UserServiceAdmin:
             "user_activated",
             target_user_id=target_user_id,
             activated_by=current_user_id,
+        )
+
+    @staticmethod
+    async def create_reset_password_request(
+        db: AsyncSession,
+        current_user: CurrentUser,
+        target_user_id: int,
+    ) -> None:
+
+        target_user = await UserRepositoryBase.get_user_by_id(
+            db,
+            target_user_id,
+            excluded_roles=SYSTEM_ADMIN_INVISIBLE_ROLES,
+            load_session=True,
+        )
+        ensure_exists(target_user, UserNotFoundError(HTTP404.USER))
+
+        raw_reset_token, hashed_reset_token = generate_reset_password_token()
+
+        target_user.session.reset_password_token_hash = hashed_reset_token
+        target_user.session.reset_password_token_expires_at = datetime.now(
+            UTC
+        ) + timedelta(minutes=settings.RESET_PASSWORD_EXPIRES_MINUTES)
+
+        subject, html_body, text_body = email_sender.build_reset_password_email(
+            raw_reset_token
+        )
+
+        PendingEmailRepository.add_pending_email(
+            db,
+            recipient=target_user.email,
+            subject=subject,
+            html_body=html_body,
+            text_body=text_body,
+            email_type=EmailType.PASSWORD_RESET_ADMIN,
+            triggered_by=current_user.id,
+            recipient_user_id=target_user_id,
+        )
+
+        await db.commit()
+
+        logger.info(
+            "reset_password_request_created",
+            target_user_id=target_user_id,
         )
