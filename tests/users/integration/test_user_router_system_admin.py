@@ -864,3 +864,61 @@ class TestDeactivateUser:
         response = await client.patch("/users/0/deactivation", headers=headers)
  
         assert response.status_code == 422
+
+class TestActivateUser:
+    async def test_activate_user_returns_204(
+        self, test_db: AsyncSession, client: AsyncClient, system_admin: User
+    ) -> None:
+        deactivated = await make_deactivated_user(test_db)
+        headers = await make_auth_header(test_db, system_admin)
+ 
+        response = await client.patch(f"/users/{deactivated.id}/activation", headers=headers)
+ 
+        assert response.status_code == 204
+        activated = await UserRepositoryBase.get_user_by_id(test_db, deactivated.id)
+        assert activated.is_active is True
+ 
+    async def test_activate_user_returns_404_when_not_found(
+        self, test_db: AsyncSession, client: AsyncClient, system_admin: User
+    ) -> None:
+        headers = await make_auth_header(test_db, system_admin)
+ 
+        response = await client.patch("/users/999999/activation", headers=headers)
+ 
+        assert response.status_code == 404
+ 
+    async def test_activate_user_returns_409_when_already_active(
+        self, test_db: AsyncSession, client: AsyncClient, system_admin: User, teacher: User
+    ) -> None:
+        headers = await make_auth_header(test_db, system_admin)
+ 
+        response = await client.patch(f"/users/{teacher.id}/activation", headers=headers)
+ 
+        assert response.status_code == 409
+ 
+    async def test_activate_user_returns_403_for_non_admin(
+        self, test_db: AsyncSession, client: AsyncClient, teacher: User
+    ) -> None:
+        deactivated = await make_deactivated_user(test_db)
+        headers = await make_auth_header(test_db, teacher)
+ 
+        response = await client.patch(f"/users/{deactivated.id}/activation", headers=headers)
+ 
+        assert response.status_code == 403
+ 
+    async def test_activate_user_returns_401_when_unauthenticated(
+        self, client: AsyncClient
+    ) -> None:
+        deactivated_id = 1 
+        response = await client.patch(f"/users/{deactivated_id}/activation")
+ 
+        assert response.status_code == 401
+ 
+    async def test_activate_user_returns_422_for_invalid_path_id(
+        self, test_db: AsyncSession, client: AsyncClient, system_admin: User
+    ) -> None:
+        headers = await make_auth_header(test_db, system_admin)
+ 
+        response = await client.patch("/users/0/activation", headers=headers)
+ 
+        assert response.status_code == 422
