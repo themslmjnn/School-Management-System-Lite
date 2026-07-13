@@ -55,7 +55,3 @@ class UserSortField(StrEnum):
 class OrderBy(StrEnum):
     ASC = "asc"
     DESC = "desc"
-
-
-class StudentGroup(StrEnum):
-    pass

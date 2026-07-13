@@ -1,9 +1,13 @@
 from datetime import UTC, datetime
+from urllib.parse import parse_qs, urlparse
 
 import pytest
 from httpx import AsyncClient
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.core.security import verify_invite_token
+from src.emails.models import PendingEmail
 from src.emails.repository import PendingEmailRepository
 from src.users.models.users import User
 from src.users.repositories.users import UserRepositoryBase
@@ -11,6 +15,7 @@ from src.users.schemas.users import (
     CreateGuardianAdmin,
     CreateStaffAdmin,
     CreateStudentAdmin,
+    UpdateUserCredentials,
 )
 from src.utils.enums import UserRole, UserStatus
 from tests.conftest import make_auth_header
@@ -20,7 +25,9 @@ from tests.factories import (
     make_student,
     make_system_admin,
     make_teacher,
+    make_user,
 )
+from users.services.system_admin import UserServiceAdmin
 
 _URL = "/users"
 
@@ -639,6 +646,87 @@ class TestUpdateUserCredentials:
 
         assert response.status_code == 422
 
+class TestUpdateUserCredentialsActivationReissueEndpoint:
+    """HTTP-layer: only status code / response shape, per two-tier convention —
+    internal state already proven at the service layer above."""
+
+    async def test_returns_204_when_reissuing_invite_via_email_change(
+        self, test_db, client, system_admin
+    ):
+        pending_user = await make_teacher(test_db, status=UserStatus.PENDING_ACTIVATION)
+        headers = await make_auth_header(test_db, system_admin)
+
+        response = await client.patch(
+            f"/users/{pending_user.id}/credentials",
+            json={"email": "http.reissue@example.com"},
+            headers=headers,
+        )
+
+        assert response.status_code == 204
+
+def _extract_raw_token_from_text_body(text_body: str) -> str:
+    for line in text_body.splitlines():
+        if "token=" in line:
+            query = parse_qs(urlparse(line.strip()).query)
+            return query["token"][0]
+    raise AssertionError("No activation link with a token= param found in text_body")
+
+
+
+class TestUpdateUserCredentialsCombinedFieldsWithReissue:
+    """Covers updating username and email together when the target is
+    PENDING_ACTIVATION — proves the username write isn't somehow lost or
+    overwritten by the activation-reissue branch that runs afterward."""
+
+    async def test_combined_username_and_email_update_reissues_token_and_persists_both(
+        self,
+        test_db,
+        system_admin,
+        mock_send_admin_credentials_override_notification,
+    ):
+        pending_user = await make_teacher(test_db, status=UserStatus.PENDING_ACTIVATION)
+        original_hash = pending_user.activation.invite_token_hash
+        update_request = UpdateUserCredentials(
+            username="combined_update_username",
+            email="combined.update@example.com",
+        )
+
+        await UserServiceAdmin.update_user_credentials(
+            test_db, system_admin.id, pending_user.id, update_request
+        )
+
+        updated = await UserRepositoryBase.get_user_by_id(
+            test_db, pending_user.id, load_activation=True
+        )
+        assert updated.username == "combined_update_username"
+        assert updated.email == "combined.update@example.com"
+        assert updated.activation.invite_token_hash != original_hash
+
+        pending_email = await _get_pending_email_for(test_db, pending_user.id)
+        assert pending_email.recipient == "combined.update@example.com"
+
+        raw_token = _extract_raw_token_from_text_body(pending_email.text_body)
+        assert verify_invite_token(raw_token, updated.activation.invite_token_hash)
+
+        mock_send_admin_credentials_override_notification.assert_not_called()
+
+    async def test_combined_update_returns_204_via_endpoint(
+        self, test_db, client, system_admin
+    ):
+        pending_user = await make_teacher(test_db, status=UserStatus.PENDING_ACTIVATION)
+        headers = await make_auth_header(test_db, system_admin)
+
+        response = await client.patch(
+            f"/users/{pending_user.id}/credentials",
+            json={
+                "username": "combined_http_username",
+                "email": "combined.http@example.com",
+            },
+            headers=headers,
+        )
+
+        assert response.status_code == 204
+
 
 class TestCreateGuardianDeletionRequest:
     async def test_returns_204_on_success(
@@ -1027,9 +1115,14 @@ class TestCreateResetPasswordRequest:
         assert response.status_code == 422
 
 
-class TestResendActivationInviteEndpoint:
-    """HTTP-level integration tests for POST /users/{id}/resend-invite."""
+async def _get_pending_email_for(db, recipient_user_id: int) -> PendingEmail:
+    result = await db.execute(
+        select(PendingEmail).where(PendingEmail.recipient_user_id == recipient_user_id)
+    )
 
+    return result.scalar_one()
+
+class TestResendActivationInvite:
     async def test_system_admin_resends_invite_returns_204(
         self, test_db, client, system_admin
     ):
@@ -1101,3 +1194,39 @@ class TestResendActivationInviteEndpoint:
         response = await client.post(f"/users/{target.id}/resend-invite")
 
         assert response.status_code == 401
+
+class TestGetStaffEndpoint:
+    async def test_returns_200_with_staff_only(
+        self, test_db, client, system_admin, teacher, vice_director, student
+    ):
+        headers = await make_auth_header(test_db, system_admin)
+
+        response = await client.get("/users/staff", headers=headers)
+
+        assert response.status_code == 200
+        body = response.json()
+        returned_ids = {item["id"] for item in body["items"]}
+        assert teacher.id in returned_ids
+        assert vice_director.id in returned_ids
+        assert student.id not in returned_ids
+
+    async def test_forbidden_for_non_admin(self, test_db, client, teacher):
+        headers = await make_auth_header(test_db, teacher)
+
+        response = await client.get("/users/staff", headers=headers)
+
+        assert response.status_code == 403
+
+    async def test_unauthenticated_returns_401(self, client):
+        response = await client.get("/users/staff")
+
+        assert response.status_code == 401
+
+    async def test_limit_exceeding_max_returns_422(self, test_db, client, system_admin):
+        headers = await make_auth_header(test_db, system_admin)
+
+        response = await client.get(
+            "/users/staff", params={"limit": 101}, headers=headers
+        )
+
+        assert response.status_code == 422

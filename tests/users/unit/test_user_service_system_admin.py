@@ -17,12 +17,13 @@ from src.users.schemas.users import (
     CreateGuardianAdmin,
     CreateStaffAdmin,
     CreateStudentAdmin,
+    SearchUserAdmin,
     UpdateStaffAndGuardianAdmin,
     UpdateStudentAdmin,
     UpdateUserCredentials,
 )
 from src.users.services.system_admin import UserServiceAdmin
-from src.utils.enums import UserRole, UserStatus
+from src.utils.enums import OrderBy, UserRole, UserSortField, UserStatus
 from src.utils.exceptions import (
     CannotCreateDirectorError,
     CannotCreateSystemAdminError,
@@ -42,11 +43,13 @@ from src.utils.exceptions import (
 )
 from tests.factories import (
     make_deactivated_user,
+    make_director,
     make_guardian,
     make_student,
     make_system_admin,
     make_teacher,
     make_user,
+    make_vice_director,
 )
 from utils.cache_keys import SessionCacheKey, UserCacheKey
 
@@ -1012,6 +1015,119 @@ class TestUpdateUserCredentialsStudentEmailLock:
             )
 
 
+class TestUpdateUserCredentialsActivationReissue:
+    """Covers the should_reissue_activation_token branch: email change on a
+    user who is still PENDING_ACTIVATION."""
+
+    async def test_email_change_reissues_invite_token_with_matching_hash(
+        self,
+        test_db,
+        system_admin,
+        mock_send_admin_credentials_override_notification,
+    ):
+        """Proves the new token queued in the invite email actually matches
+        the new hash persisted on UserActivation — not just that both exist
+        independently."""
+        pending_user = await make_teacher(test_db, status=UserStatus.PENDING_ACTIVATION)
+        original_hash = pending_user.activation.invite_token_hash
+        update_request = UpdateUserCredentials(email="reissued@example.com")
+
+        await UserServiceAdmin.update_user_credentials(
+            test_db, system_admin.id, pending_user.id, update_request
+        )
+
+        updated = await UserRepositoryBase.get_user_by_id(
+            test_db, pending_user.id, load_activation=True
+        )
+        assert updated.email == "reissued@example.com"
+        assert updated.activation.invite_token_hash != original_hash
+
+        pending_email = await _get_pending_email_for(test_db, pending_user.id)
+        assert pending_email.email_type == EmailType.INVITE
+        assert pending_email.recipient == "reissued@example.com"
+        assert pending_email.triggered_by == system_admin.id
+
+        raw_token = _extract_raw_token_from_text_body(pending_email.text_body)
+        assert verify_invite_token(raw_token, updated.activation.invite_token_hash)
+
+    async def test_reissued_expiry_matches_settings_window(
+        self, test_db, system_admin, mock_send_admin_credentials_override_notification
+    ):
+        pending_user = await make_teacher(test_db, status=UserStatus.PENDING_ACTIVATION)
+        update_request = UpdateUserCredentials(email="expiry.check@example.com")
+
+        before_call = datetime.now(UTC)
+        await UserServiceAdmin.update_user_credentials(
+            test_db, system_admin.id, pending_user.id, update_request
+        )
+        after_call = datetime.now(UTC)
+
+        updated = await UserRepositoryBase.get_user_by_id(
+            test_db, pending_user.id, load_activation=True
+        )
+        expires_at = updated.activation.invite_token_expires_at
+        assert expires_at > before_call
+        hours_delta = (expires_at - after_call).total_seconds() / 3600
+        assert abs(hours_delta - settings.INVITE_TOKEN_EXPIRES_HOURS) < 0.01
+
+    async def test_override_notification_not_sent_when_reissuing_invite(
+        self,
+        test_db,
+        system_admin,
+        mock_send_admin_credentials_override_notification,
+    ):
+        """The two side effects are mutually exclusive: reissuing an
+        activation invite must NOT also notify the old email about a
+        credentials override."""
+        pending_user = await make_teacher(test_db, status=UserStatus.PENDING_ACTIVATION)
+        update_request = UpdateUserCredentials(email="no.override@example.com")
+
+        await UserServiceAdmin.update_user_credentials(
+            test_db, system_admin.id, pending_user.id, update_request
+        )
+        await asyncio.sleep(0)
+
+        mock_send_admin_credentials_override_notification.assert_not_called()
+
+    async def test_session_still_reset_when_reissuing_invite(
+        self, test_db, system_admin, mock_send_admin_credentials_override_notification
+    ):
+        """Guards against a future refactor accidentally moving the
+        unconditional session-reset block inside the `if not
+        should_reissue_activation_token` branch."""
+        pending_user = await make_teacher(test_db, status=UserStatus.PENDING_ACTIVATION)
+        update_request = UpdateUserCredentials(email="session.check@example.com")
+
+        await UserServiceAdmin.update_user_credentials(
+            test_db, system_admin.id, pending_user.id, update_request
+        )
+
+        user_with_session = await UserRepositoryBase.get_user_by_id(
+            test_db, pending_user.id, load_session=True
+        )
+        assert user_with_session.session.access_token_version == 2
+        assert user_with_session.session.refresh_token_hash is None
+
+    async def test_username_only_change_for_pending_user_does_not_reissue_token(
+        self, test_db, system_admin, mock_send_admin_credentials_override_notification
+    ):
+        """Control case: status is PENDING_ACTIVATION but email is NOT
+        changing, so should_reissue_activation_token must stay False —
+        proves the flag is gated on email_changing, not status alone."""
+        pending_user = await make_teacher(test_db, status=UserStatus.PENDING_ACTIVATION)
+        original_hash = pending_user.activation.invite_token_hash
+        update_request = UpdateUserCredentials(username="pending_user_new_name")
+
+        await UserServiceAdmin.update_user_credentials(
+            test_db, system_admin.id, pending_user.id, update_request
+        )
+
+        updated = await UserRepositoryBase.get_user_by_id(
+            test_db, pending_user.id, load_activation=True
+        )
+        assert updated.activation.invite_token_hash == original_hash
+        mock_send_admin_credentials_override_notification.assert_called_once()
+
 class TestCreateGuardianDeletionRequest:
     async def test_sets_pending_deletion_state_successfully(
         self,
@@ -1483,3 +1599,146 @@ class TestResendActivationInvite:
                 test_db, system_admin.id, deactivated_target.id
             )
 
+
+class TestGetStaff:
+    async def test_returns_only_staff_roles(self, test_db):
+        """Single test proving role scoping end-to-end: STAFF_ROLES inclusion
+        and the base query's SYSTEM_ADMIN/DIRECTOR exclusion agree — these two
+        mechanisms can't be independently distinguished through get_staff,
+        since STAFF_ROLES never contains SYSTEM_ADMIN or DIRECTOR to begin with."""
+        teacher = await make_teacher(test_db)
+        vice_director = await make_vice_director(test_db)
+        await make_student(test_db)
+        await make_guardian(test_db)
+        await make_system_admin(test_db)
+        await make_director(test_db)
+
+        result = await UserServiceAdmin.get_staff(
+            test_db,
+            skip=0,
+            limit=100,
+            filters=SearchUserAdmin(),
+            sort_by=UserSortField.CREATED_AT,
+            order=OrderBy.DESC,
+        )
+
+        returned_ids = {u.id for u in result.items}
+        assert returned_ids == {teacher.id, vice_director.id}
+        assert result.total == 2
+
+    async def test_has_more_true_when_results_exceed_limit(self, test_db):
+        for i in range(3):
+            await make_teacher(test_db, username=f"staff_page_{i}")
+
+        result = await UserServiceAdmin.get_staff(
+            test_db,
+            skip=0,
+            limit=2,
+            filters=SearchUserAdmin(),
+            sort_by=UserSortField.CREATED_AT,
+            order=OrderBy.DESC,
+        )
+
+        assert len(result.items) == 2
+        assert result.total == 3
+        assert result.has_more is True
+
+    async def test_has_more_false_on_final_page(self, test_db):
+        for i in range(3):
+            await make_teacher(test_db, username=f"staff_last_page_{i}")
+
+        result = await UserServiceAdmin.get_staff(
+            test_db,
+            skip=2,
+            limit=2,
+            filters=SearchUserAdmin(),
+            sort_by=UserSortField.CREATED_AT,
+            order=OrderBy.DESC,
+        )
+
+        assert len(result.items) == 1
+        assert result.has_more is False
+
+    async def test_sort_by_lastname_ascending(self, test_db):
+        z_teacher = await make_teacher(test_db, lastname="Zephyr")
+        a_teacher = await make_teacher(test_db, lastname="Anders")
+
+        result = await UserServiceAdmin.get_staff(
+            test_db,
+            skip=0,
+            limit=100,
+            filters=SearchUserAdmin(),
+            sort_by=UserSortField.LASTNAME,
+            order=OrderBy.ASC,
+        )
+
+        ids_in_order = [u.id for u in result.items]
+        assert ids_in_order.index(a_teacher.id) < ids_in_order.index(z_teacher.id)
+
+    async def test_filter_by_username_substring(self, test_db):
+        target = await make_teacher(test_db, username="findable_staff_member")
+        await make_teacher(test_db, username="unrelated_person")
+
+        result = await UserServiceAdmin.get_staff(
+            test_db,
+            skip=0,
+            limit=100,
+            filters=SearchUserAdmin(username="findable"),
+            sort_by=UserSortField.CREATED_AT,
+            order=OrderBy.DESC,
+        )
+
+        returned_ids = {u.id for u in result.items}
+        assert returned_ids == {target.id}
+
+    async def test_filter_by_is_active_false(self, test_db):
+        inactive = await make_teacher(test_db, is_active=False)
+        await make_teacher(test_db, is_active=True)
+
+        result = await UserServiceAdmin.get_staff(
+            test_db,
+            skip=0,
+            limit=100,
+            filters=SearchUserAdmin(is_active=False),
+            sort_by=UserSortField.CREATED_AT,
+            order=OrderBy.DESC,
+        )
+
+        returned_ids = {u.id for u in result.items}
+        assert returned_ids == {inactive.id}
+
+    @pytest.mark.parametrize(
+        "filter_kwargs",
+        [
+            {"firstname": "Jonathan"},
+            {"lastname": "Smithers"},
+            {"middlename": "Andrew"},
+        ],
+    )
+    async def test_name_filters_currently_broken(self, test_db, filter_kwargs):
+        """BUG: apply_base_filters reads filters.first_name / filters.last_name,
+        but SearchUserAdmin only has firstname / lastname / middlename. Setting
+        firstname or lastname currently raises AttributeError; middlename doesn't
+        crash but filters on the wrong value (last_name instead of middlename).
+        This test asserts the CORRECT expected behavior and will fail/error
+        until apply_base_filters is fixed to use the right attribute names
+        (and, for middlename, the right value)."""
+        matching = await make_teacher(
+            test_db, firstname="Jonathan", lastname="Smithers", middlename="Andrew"
+        )
+        other = await make_teacher(
+            test_db, firstname="Zack", lastname="Zephyr", middlename="Zane"
+        )
+
+        result = await UserServiceAdmin.get_staff(
+            test_db,
+            skip=0,
+            limit=100,
+            filters=SearchUserAdmin(**filter_kwargs),
+            sort_by=UserSortField.CREATED_AT,
+            order=OrderBy.DESC,
+        )
+
+        returned_ids = {u.id for u in result.items}
+        assert matching.id in returned_ids
+        assert other.id not in returned_ids
