@@ -119,3 +119,16 @@ async def create_reset_password_request(
     await UserServiceAdmin.create_reset_password_request(
         db, current_user, target_user_id
     )
+
+@router.post(
+    "/{target_user_id}/resend-invite",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+async def resend_activation_invite(
+    db: async_db_dependency,
+    current_user: Annotated[CurrentUser, Depends(require_system_admin)],
+    target_user_id: Annotated[int, Path(ge=1)],
+):
+    await UserServiceAdmin.resend_activation_invite(
+        db, current_user.id, target_user_id
+    )

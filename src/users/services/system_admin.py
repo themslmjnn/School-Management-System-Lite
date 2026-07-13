@@ -40,6 +40,7 @@ from src.utils.exceptions import (
     UserAlreadyInactiveError,
     UserAlreadyPendingDeletionError,
     UserNotFoundError,
+    UserNotPendingActivationError,
     UserTypeMismatchError,
     handle_non_student_unique_contact_error,
     handle_username_integrity_error,
@@ -381,6 +382,7 @@ class UserServiceAdmin:
             target_user_id,
             excluded_roles=SYSTEM_ADMIN_INVISIBLE_ROLES,
             load_session=True,
+            load_activation=True,
         )
         ensure_exists(target_user, UserNotFoundError(HTTP404.USER))
 
@@ -388,6 +390,9 @@ class UserServiceAdmin:
         email_changing = (
             update_request.email is not None
             and update_request.email != target_user.email
+        )
+        should_reissue_activation_token = (
+            email_changing and target_user.status == UserStatus.PENDING_ACTIVATION
         )
 
         if is_student and email_changing:
@@ -418,16 +423,41 @@ class UserServiceAdmin:
             target_user.session.email_change_code_hash = None
             target_user.session.email_change_code_expires_at = None
 
+            raw_invite_token = None
+            if should_reissue_activation_token:
+                raw_invite_token, hashed_invite_token = generate_invite_token()
+                invite_token_expires_at = datetime.now(UTC) + timedelta(
+                    hours=settings.INVITE_TOKEN_EXPIRES_HOURS
+                )
+                target_user.activation.invite_token_hash = hashed_invite_token
+                target_user.activation.invite_token_expires_at = invite_token_expires_at
+
+            if should_reissue_activation_token:
+                subject, html_body, text_body = email_sender.build_invite_email(
+                    raw_invite_token, target_user.email
+                )
+                PendingEmailRepository.add_pending_email(
+                    db,
+                    recipient=target_user.email,
+                    subject=subject,
+                    html_body=html_body,
+                    text_body=text_body,
+                    email_type=EmailType.INVITE,
+                    triggered_by=current_user_id,
+                    recipient_user_id=target_user.id,
+                )
+
             await db.commit()
 
-            asyncio.create_task(
-                email_sender.send_safe(
-                    email_sender.send_admin_credentials_override_notification(
-                        old_email
-                    ),
-                    email_type=EmailType.ADMIN_CREDENTIALS_OVERRIDE,
+            if not should_reissue_activation_token:
+                asyncio.create_task(
+                    email_sender.send_safe(
+                        email_sender.send_admin_credentials_override_notification(
+                            old_email
+                        ),
+                        email_type=EmailType.ADMIN_CREDENTIALS_OVERRIDE,
+                    )
                 )
-            )
 
             await delete_cache(
                 UserCacheKey.user_detail_key_admin(target_user_id),
@@ -699,4 +729,62 @@ class UserServiceAdmin:
         logger.info(
             "reset_password_request_created",
             target_user_id=target_user_id,
+        )
+
+
+    @staticmethod
+    async def resend_activation_invite(
+        db: AsyncSession,
+        current_user_id: int,
+        target_user_id: int,
+    ) -> None:
+        target_user = await UserRepositoryBase.get_user_by_id(
+            db,
+            target_user_id,
+            excluded_roles=SYSTEM_ADMIN_INVISIBLE_ROLES,
+            load_activation=True,
+        )
+        ensure_exists(target_user, UserNotFoundError(HTTP404.USER))
+
+        if target_user.status != UserStatus.PENDING_ACTIVATION:
+            logger.warning(
+                "activation_invite_resend_denied",
+                target_user_id=target_user_id,
+                actor_user_id=current_user_id,
+                denial_reason="user_not_pending_activation",
+            )
+            raise UserNotPendingActivationError(
+                "Cannot resend an activation invite to a user who is not "
+                "pending activation"
+            )
+
+        raw_invite_token, hashed_invite_token = generate_invite_token()
+        invite_token_expires_at = datetime.now(UTC) + timedelta(
+            hours=settings.INVITE_TOKEN_EXPIRES_HOURS
+        )
+
+        target_user.activation.invite_token_hash = hashed_invite_token
+        target_user.activation.invite_token_expires_at = invite_token_expires_at
+
+        subject, html_body, text_body = email_sender.build_invite_email(
+            raw_invite_token, target_user.email
+        )
+
+        PendingEmailRepository.add_pending_email(
+            db,
+            recipient=target_user.email,
+            subject=subject,
+            html_body=html_body,
+            text_body=text_body,
+            email_type=EmailType.INVITE,
+            triggered_by=current_user_id,
+            recipient_user_id=target_user.id,
+        )
+
+        await db.commit()
+
+        logger.info(
+            "activation_invite_resent",
+            target_user_id=target_user_id,
+            actor_user_id=current_user_id,
         )

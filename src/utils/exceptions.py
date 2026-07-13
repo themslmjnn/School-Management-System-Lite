@@ -115,6 +115,9 @@ class MaxStaffOrGuardianPerPhoneNumberError(AppException):
 class UserTypeMismatchError(AppException):
     pass
 
+class UserNotPendingActivationError(AppException):
+    pass
+
 
 # ROLE RESTRICTIONS
 class CannotCreateDirectorError(AppException):
