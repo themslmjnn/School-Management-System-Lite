@@ -213,6 +213,7 @@ def valid_create_student_request():
         date_of_birth="2008-05-01",
     )
 
+
 @pytest.fixture
 def mock_delete_cache(mocker):
     return mocker.patch("src.users.services.system_admin.delete_cache")
@@ -224,6 +225,7 @@ def mock_advisory_lock(mocker):
         "src.users.services.system_admin.acquire_student_contact_lock",
         return_value=None,
     )
+
 
 @pytest.fixture
 def mock_check_contact_limit(mocker):
@@ -247,6 +249,7 @@ def mock_send_account_info_updated_email(mocker):
         "src.users.services.system_admin.email_sender.send_account_info_updated_email",
         new_callable=AsyncMock,
     )
+
 
 @pytest.fixture
 def mock_send_admin_credentials_override_notification(mocker):

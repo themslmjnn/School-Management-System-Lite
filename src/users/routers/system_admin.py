@@ -67,3 +67,26 @@ async def update_user_credentials(
     await UserServiceAdmin.update_user_credentials(
         db, current_user.id, target_user_id, update_request
     )
+
+@router.post(
+    "/{target_user_id}/guardian-deletion",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+async def create_guardian_deletion_request(
+    db: async_db_dependency,
+    current_user: Annotated[CurrentUser, Depends(require_system_admin)],
+    target_user_id: int,
+):
+    await UserServiceAdmin.create_guardian_deletion_request(db, current_user.id, target_user_id)
+
+
+@router.post(
+    "/{target_user_id}/cancel-deletion",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+async def cancel_guardian_deletion(
+    db: async_db_dependency,
+    current_user: Annotated[CurrentUser, Depends(require_system_admin)],
+    target_user_id: int,
+):
+    await UserServiceAdmin.cancel_guardian_deletion_request(db, current_user.id, target_user_id)

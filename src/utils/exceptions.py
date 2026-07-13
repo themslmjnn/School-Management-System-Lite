@@ -112,6 +112,9 @@ class MaxStaffOrGuardianPerEmailError(AppException):
 class MaxStaffOrGuardianPerPhoneNumberError(AppException):
     pass
 
+class UserTypeMismatchError(AppException):
+    pass
+
 
 # ROLE RESTRICTIONS
 class CannotCreateDirectorError(AppException):

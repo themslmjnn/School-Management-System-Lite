@@ -1,9 +1,11 @@
-from sqlalchemy import func, select
+from datetime import datetime, UTC
+
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
 from src.users.models.users import User, UserActivation, UserLoginLockout, UserSession
-from src.utils.enums import UserRole
+from src.utils.enums import UserRole, UserStatus
 
 ENTITY_TYPE = User | UserSession | UserActivation | UserLoginLockout
 
@@ -71,3 +73,51 @@ class UserRepositoryBase:
         result = await db.execute(query)
 
         return result.scalar_one_or_none()
+    
+    @staticmethod
+    async def delete_user_if_due(db: AsyncSession, user_id: int) -> bool:
+        query = (
+                delete(User)
+                .where(
+                    User.id == user_id,
+                    User.status == UserStatus.PENDING_DELETION,
+                    User.deletion_scheduled_for <= datetime.now(UTC),
+                )
+            )
+        
+        result = await db.execute(query)
+
+        return result.rowcount > 0
+
+
+    @staticmethod
+    async def get_user_ids_due_for_hard_deletion(db: AsyncSession) -> list[int]:
+        query = select(User.id).where(
+            User.status == UserStatus.PENDING_DELETION,
+            User.deletion_scheduled_for <= datetime.now(UTC),
+        )
+
+        result = await db.execute(query)
+
+        return list(result.scalars().all())
+
+
+    @staticmethod
+    async def reactivate_pending_deletion_user(db: AsyncSession, user_id: int) -> bool:
+        query = (
+            update(User)
+            .where(
+                User.id == user_id,
+                User.role == UserRole.PARENT,
+                User.status == UserStatus.PENDING_DELETION,
+            )
+            .values(
+                status=UserStatus.ACTIVE,
+                is_active=True,
+                deletion_scheduled_for=None,
+            )
+        )
+
+        result = await db.execute(query)
+        
+        return result.rowcount > 0

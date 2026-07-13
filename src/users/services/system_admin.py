@@ -20,6 +20,7 @@ from src.users.schemas.users import (
     CreateRequest,
     CreateStaffAdmin,
     CreateStudentAdmin,
+    UpdateStudentAdmin,
     UpdateUser,
     UpdateUserCredentials,
 )
@@ -34,7 +35,9 @@ from src.utils.exceptions import (
     MaxStaffOrGuardianPerPhoneNumberError,
     MaxStudentsPerEmailError,
     MaxStudentsPerPhoneNumberError,
+    UserAlreadyPendingDeletionError,
     UserNotFoundError,
+    UserTypeMismatchError,
     handle_non_student_unique_contact_error,
     handle_username_integrity_error,
     raise_unhandled_integrity_error,
@@ -52,7 +55,7 @@ BLOCKED_ROLES_VIA_API = frozenset(
     }
 )
 SYSTEM_ADMIN_INVISIBLE_ROLES = frozenset({UserRole.SYSTEM_ADMIN})
-
+DELETION_GRACE_PERIOD_DAYS = 30
 
 async def _check_contact_limit(
     db: AsyncSession,
@@ -284,6 +287,23 @@ class UserServiceAdmin:
         ensure_exists(target_user, UserNotFoundError(HTTP404.USER))
 
         is_student = target_user.role == UserRole.STUDENT
+        request_is_student_shaped = isinstance(update_request, UpdateStudentAdmin)
+
+        if is_student != request_is_student_shaped:
+            logger.warning(
+                "update_user_type_mismatch",
+                actor_user_id=current_user_id,
+                target_user_id=target_user_id,
+                target_user_role=target_user.role.value,
+                submitted_type=update_request.type,
+            )
+
+            raise UserTypeMismatchError(
+                "Submitted update payload type does not match the target user's role"
+            )
+
+
+        is_student = target_user.role == UserRole.STUDENT
         phone_number_changing = (
             update_request.phone_number is not None
             and update_request.phone_number != target_user.phone_number
@@ -433,3 +453,112 @@ class UserServiceAdmin:
             if not is_student:
                 handle_non_student_unique_contact_error(e)
             raise_unhandled_integrity_error(e)
+
+    @staticmethod
+    async def create_guardian_deletion_request(
+        db: AsyncSession,
+        current_user_id: int,
+        target_user_id: int,
+    ) -> None:
+        target_user = await UserRepositoryBase.get_user_by_id(
+            db,
+            target_user_id,
+            load_session=True,
+            allowed_roles=frozenset({UserRole.guardian}),
+        )
+        ensure_exists(target_user, UserNotFoundError(HTTP404.USER))
+
+        if target_user.status == UserStatus.PENDING_DELETION:
+            logger.warning(
+                "guardian_deletion_denied",
+                actor_user_id=current_user_id,
+                target_user_id=target_user_id,
+                denial_reason="guardian_already_pending_deletion",
+            )
+
+            raise UserAlreadyPendingDeletionError(
+                "This guardian account is already pending deletion"
+            )
+
+        deletion_scheduled_for = datetime.now(UTC) + timedelta(
+            days=DELETION_GRACE_PERIOD_DAYS
+        )
+
+        target_user.status = UserStatus.PENDING_DELETION
+        target_user.is_active = False
+        target_user.deletion_scheduled_for = deletion_scheduled_for
+
+        target_user.session.access_token_version += 1
+        target_user.session.refresh_token_hash = None
+        target_user.session.refresh_token_family = None
+        target_user.session.refresh_token_expires_at = None
+        target_user_email = target_user.email
+
+        await db.commit()
+
+        asyncio.create_task(
+            email_sender.send_safe(
+                email_sender.send_account_deletion_email(target_user_email),
+                email_type=EmailType.ACCOUNT_DELETION,
+            )
+        )
+
+        await delete_cache(
+            SessionCacheKey.access_token_version_key(target_user_id),
+            UserCacheKey.user_detail_key_admin(target_user_id),
+        )
+
+        logger.info(
+            "guardian_deletion_scheduled",
+            actor_user_id=current_user_id,
+            target_user_id=target_user_id,
+            deletion_scheduled_for=deletion_scheduled_for.isoformat(),
+        )
+
+
+    @staticmethod
+    async def cancel_guardian_deletion_request(
+        db: AsyncSession,
+        current_user_id: int,
+        target_user_id: int,
+    ) -> None:
+        target_user = await UserRepositoryBase.get_user_by_id_pending_deletion(
+            db, target_user_id
+        )
+        ensure_exists(target_user, UserNotFoundError(HTTP404.USER))
+        target_user_email = target_user.email
+
+        reactivated = await UserRepositoryBase.reactivate_pending_deletion_user(
+            db, target_user_id
+        )
+
+        if not reactivated:
+            await db.rollback()
+
+            logger.warning(
+                "guardian_deletion_cancel_lost_race",
+                actor_user_id=current_user_id,
+                target_user_id=target_user_id,
+                denial_reason="user_hard_deleted_before_cancel_committed",
+            )
+
+            raise UserNotFoundError(HTTP404.USER)
+
+        await db.commit()
+
+        asyncio.create_task(
+            email_sender.send_safe(
+                email_sender.send_account_deletion_canceled_email(target_user_email),
+                email_type=EmailType.CANCEL_ACCOUNT_DELETION,
+            )
+        )
+
+        await delete_cache(
+            UserCacheKey.user_detail_key_admin(target_user_id),
+        )
+
+        logger.info(
+            "guardian_deletion_cancelled",
+            actor_user_id=current_user_id,
+            target_user_id=target_user_id,
+        )

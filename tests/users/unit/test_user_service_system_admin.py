@@ -1,3 +1,4 @@
+import asyncio
 from datetime import UTC, date, datetime
 
 import pytest
@@ -745,15 +746,15 @@ class TestUpdateUserCredentials:
         mock_send_admin_credentials_override_notification,
     ):
         update_request = UpdateUserCredentials(username="newusername1")
- 
+
         await UserServiceAdmin.update_user_credentials(
             test_db, system_admin.id, teacher.id, update_request
         )
- 
+
         updated_user = await UserRepositoryBase.get_user_by_id(test_db, teacher.id)
 
         assert updated_user.username == "newusername1"
- 
+
     async def test_update_email_successfully(
         self,
         test_db: AsyncSession,
@@ -762,15 +763,15 @@ class TestUpdateUserCredentials:
         mock_send_admin_credentials_override_notification,
     ):
         update_request = UpdateUserCredentials(email="new.email@example.com")
- 
+
         await UserServiceAdmin.update_user_credentials(
             test_db, system_admin.id, teacher.id, update_request
         )
- 
+
         updated_user = await UserRepositoryBase.get_user_by_id(test_db, teacher.id)
 
         assert updated_user.email == "new.email@example.com"
- 
+
     async def test_session_always_reset_after_credentials_update(
         self,
         test_db: AsyncSession,
@@ -779,16 +780,16 @@ class TestUpdateUserCredentials:
         mock_send_admin_credentials_override_notification,
     ):
         update_request = UpdateUserCredentials(username="newusername2")
- 
+
         await UserServiceAdmin.update_user_credentials(
             test_db, system_admin.id, teacher.id, update_request
         )
- 
+
         user_with_session = await UserRepositoryBase.get_user_by_id(
             test_db, teacher.id, load_session=True
         )
         session = user_with_session.session
- 
+
         assert session.access_token_version == 2
         assert session.refresh_token_hash is None
         assert session.refresh_token_family is None
@@ -796,7 +797,7 @@ class TestUpdateUserCredentials:
         assert session.pending_new_email is None
         assert session.email_change_code_hash is None
         assert session.email_change_code_expires_at is None
- 
+
     async def test_cache_invalidated_including_token_version(
         self,
         test_db: AsyncSession,
@@ -804,20 +805,20 @@ class TestUpdateUserCredentials:
         teacher: User,
         mock_send_admin_credentials_override_notification,
         mock_delete_cache,
-    ): 
+    ):
         update_request = UpdateUserCredentials(username="newusername3")
- 
+
         await UserServiceAdmin.update_user_credentials(
             test_db, system_admin.id, teacher.id, update_request
         )
- 
+
         mock_delete_cache.assert_called_once_with(
             UserCacheKey.user_detail_key_admin(teacher.id),
             UserCacheKey.user_detail_key_staff(teacher.id),
             UserCacheKey.user_detail_key_self(teacher.id),
             SessionCacheKey.access_token_version_key(teacher.id),
         )
- 
+
     async def test_notification_sent_to_old_email(
         self,
         test_db: AsyncSession,
@@ -827,27 +828,29 @@ class TestUpdateUserCredentials:
     ):
         old_email = teacher.email
         update_request = UpdateUserCredentials(email="brand.new@example.com")
- 
+
         await UserServiceAdmin.update_user_credentials(
             test_db, system_admin.id, teacher.id, update_request
         )
- 
+
+        await asyncio.sleep(0)
+
         mock_send_admin_credentials_override_notification.assert_called_once_with(
             old_email
         )
- 
+
     async def test_not_found_raises_user_not_found(
         self,
         test_db: AsyncSession,
         system_admin: User,
     ):
         update_request = UpdateUserCredentials(username="doesntmatter")
- 
+
         with pytest.raises(UserNotFoundError):
             await UserServiceAdmin.update_user_credentials(
                 test_db, system_admin.id, 999_999, update_request
             )
- 
+
     async def test_excludes_system_admins(
         self,
         test_db: AsyncSession,
@@ -855,12 +858,12 @@ class TestUpdateUserCredentials:
     ):
         other_admin = await make_system_admin(test_db)
         update_request = UpdateUserCredentials(username="doesntmatter")
- 
+
         with pytest.raises(UserNotFoundError):
             await UserServiceAdmin.update_user_credentials(
                 test_db, system_admin.id, other_admin.id, update_request
             )
- 
+
     async def test_no_fields_set_raises_no_changes(
         self,
         test_db: AsyncSession,
@@ -868,12 +871,12 @@ class TestUpdateUserCredentials:
         teacher: User,
     ):
         update_request = UpdateUserCredentials()
- 
+
         with pytest.raises(NoChangesDetectedError):
             await UserServiceAdmin.update_user_credentials(
                 test_db, system_admin.id, teacher.id, update_request
             )
- 
+
     async def test_same_value_raises_no_changes(
         self,
         test_db: AsyncSession,
@@ -881,12 +884,12 @@ class TestUpdateUserCredentials:
         teacher: User,
     ):
         update_request = UpdateUserCredentials(email=teacher.email)
- 
+
         with pytest.raises(NoChangesDetectedError):
             await UserServiceAdmin.update_user_credentials(
                 test_db, system_admin.id, teacher.id, update_request
             )
- 
+
     async def test_duplicate_username_raises_error(
         self,
         test_db: AsyncSession,
@@ -895,12 +898,12 @@ class TestUpdateUserCredentials:
     ):
         await make_teacher(test_db, username="taken_username")
         update_request = UpdateUserCredentials(username="taken_username")
- 
+
         with pytest.raises(UsernameAlreadyTakenError):
             await UserServiceAdmin.update_user_credentials(
                 test_db, system_admin.id, teacher.id, update_request
             )
- 
+
     async def test_duplicate_email_non_student_raises_error(
         self,
         test_db: AsyncSession,
@@ -909,11 +912,12 @@ class TestUpdateUserCredentials:
     ):
         await make_teacher(test_db, email="taken@example.com")
         update_request = UpdateUserCredentials(email="taken@example.com")
- 
+
         with pytest.raises(DuplicateEmailError):
             await UserServiceAdmin.update_user_credentials(
                 test_db, system_admin.id, teacher.id, update_request
             )
+
 
 class TestUpdateUserCredentialsStudentEmailLock:
     async def test_student_email_change_acquires_advisory_lock(
@@ -925,33 +929,33 @@ class TestUpdateUserCredentialsStudentEmailLock:
         mock_acquire_student_contact_lock,
     ):
         update_request = UpdateUserCredentials(email="new.student@example.com")
- 
+
         await UserServiceAdmin.update_user_credentials(
             test_db, system_admin.id, student.id, update_request
         )
- 
+
         mock_acquire_student_contact_lock.assert_called_once_with(
             test_db, phone_number=None, email="new.student@example.com"
         )
- 
+
     async def test_student_email_unchanged_skips_lock_and_limit(
         self,
         test_db: AsyncSession,
         system_admin: User,
         student: User,
         mock_acquire_student_contact_lock,
-        mock_check_contact_limit
+        mock_check_contact_limit,
     ):
         update_request = UpdateUserCredentials(email=student.email)
- 
+
         with pytest.raises(NoChangesDetectedError):
             await UserServiceAdmin.update_user_credentials(
                 test_db, system_admin.id, student.id, update_request
             )
- 
+
         mock_acquire_student_contact_lock.assert_not_called()
         mock_check_contact_limit.assert_not_called()
- 
+
     async def test_non_student_email_change_skips_advisory_lock(
         self,
         test_db: AsyncSession,
@@ -961,13 +965,13 @@ class TestUpdateUserCredentialsStudentEmailLock:
         mock_acquire_student_contact_lock,
     ):
         update_request = UpdateUserCredentials(email="new.teacher@example.com")
- 
+
         await UserServiceAdmin.update_user_credentials(
             test_db, system_admin.id, teacher.id, update_request
         )
- 
+
         mock_acquire_student_contact_lock.assert_not_called()
- 
+
     async def test_student_email_contact_limit_reached(
         self,
         test_db: AsyncSession,
@@ -975,7 +979,7 @@ class TestUpdateUserCredentialsStudentEmailLock:
         student: User,
     ):
         shared_email = "shared@example.com"
- 
+
         for i in range(3):
             await make_student(
                 test_db,
@@ -983,9 +987,9 @@ class TestUpdateUserCredentialsStudentEmailLock:
                 phone_number=f"+99255511{i:04d}",
                 username=f"other_student_{i}",
             )
- 
+
         update_request = UpdateUserCredentials(email=shared_email)
- 
+
         with pytest.raises(MaxStudentsPerEmailError):
             await UserServiceAdmin.update_user_credentials(
                 test_db, system_admin.id, student.id, update_request

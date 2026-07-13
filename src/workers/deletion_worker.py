@@ -12,9 +12,7 @@ DELETION_SWEEP_INTERVAL_SECONDS = 60 * 60 * 24
 async def _run_deletion_sweep() -> None:
     async with AsyncSessionLocal() as db:
         try:
-            user_ids_due = await UserRepositoryBase.get_user_ids_due_for_hard_deletion(
-                db
-            )
+            user_ids_due = await UserRepositoryBase.get_user_ids_due_for_hard_deletion(db)
         except Exception as e:
             logger.error(
                 "deletion_sweep_read_failed",
@@ -44,9 +42,6 @@ async def _run_deletion_sweep() -> None:
                 if was_deleted:
                     deleted_ids.append(user_id)
                 else:
-                    # Row no longer matched -- most likely cancelled by an
-                    # admin between the read above and this delete. Expected,
-                    # not an error.
                     skipped_ids.append(user_id)
 
             except Exception as e:
