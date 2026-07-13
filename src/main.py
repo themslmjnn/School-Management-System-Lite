@@ -112,6 +112,7 @@ EXCEPTION_STATUS_MAP = {
     exc.MaxStaffOrGuardianPerPhoneNumberError: 409,
     exc.UserTypeMismatchError: 400,
     exc.UserNotPendingActivationError: 404,
+    exc.ProfileFieldsNotEditableForRoleError: 403,
     exc.CannotCreateDirectorError: 403,
     exc.CannotCreateSystemAdminError: 403,
 }

@@ -213,3 +213,51 @@ class SearchUserAdmin(SearchUserBase):
     email: str | None = Field(default=None, max_length=20)
     phone_number: str | None = Field(default=None, max_length=15)
     is_active: bool | None = None
+
+
+class UserResponseSelf(BaseSchema):
+    id: int
+    username: str
+    firstname: str
+    lastname: str
+    middlename: str | None
+    date_of_birth: date
+    phone_number: str
+    email: str
+    address: str | None
+    created_at: datetime
+
+
+class UpdateMeProfile(BaseModel):
+    firstname: str | None = None
+    lastname: str | None = None
+    middlename: str | None = None
+    phone_number: str | None = None
+
+    @field_validator("firstname")
+    @classmethod
+    def validate_firstname(cls, v: str | None) -> str | None:
+        if v is None:
+            return None
+        return validators.validate_firstname(v)
+
+    @field_validator("lastname")
+    @classmethod
+    def validate_lastname(cls, v: str | None) -> str | None:
+        if v is None:
+            return None
+        return validators.validate_lastname(v)
+
+    @field_validator("middlename")
+    @classmethod
+    def validate_middlename(cls, v: str | None) -> str | None:
+        if v is None:
+            return None
+        return validators.validate_middlename(v)
+
+    @field_validator("phone_number", mode="after")
+    @classmethod
+    def validate_phone_number(cls, field: str | None) -> str | None:
+        if field is None:
+            return None
+        return validators.parse_and_validate_mobile_number(field)

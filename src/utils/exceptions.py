@@ -121,6 +121,10 @@ class UserNotPendingActivationError(AppException):
     pass
 
 
+class ProfileFieldsNotEditableForRoleError(AppException):
+    pass
+
+
 # ROLE RESTRICTIONS
 class CannotCreateDirectorError(AppException):
     pass

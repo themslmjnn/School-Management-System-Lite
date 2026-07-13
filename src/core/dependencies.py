@@ -107,6 +107,9 @@ def require_roles(*roles: UserRole):
 
 require_system_admin = require_roles(UserRole.SYSTEM_ADMIN)
 require_director = require_roles(UserRole.DIRECTOR, UserRole.VICE_DIRECTOR)
+require_system_admin_and_guardian = require_roles(
+    UserRole.SYSTEM_ADMIN, UserRole.GUARDIAN
+)
 
 
 class PaginationParams(BaseModel):
