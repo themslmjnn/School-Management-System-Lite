@@ -5,8 +5,8 @@ from fastapi import APIRouter, Depends, status
 from src.core.dependencies import (
     CurrentUser,
     async_db_dependency,
-    require_system_admin_and_guardian,
     current_user_dependency,
+    require_system_admin_and_guardian,
 )
 from src.users.schemas.users import (
     ConfirmEmailChange,

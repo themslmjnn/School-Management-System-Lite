@@ -291,3 +291,17 @@ class GuardianLinkRepositoryAdmin:
         result = await db.execute(query)
 
         return result.scalar_one_or_none()
+
+    @staticmethod
+    async def get_children_for_guardian(
+        db: AsyncSession, guardian_id: int
+    ) -> list[StudentGuardianLink]:
+        query = (
+            select(StudentGuardianLink)
+            .options(joinedload(StudentGuardianLink.student))
+            .where(StudentGuardianLink.parent_id == guardian_id)
+        )
+
+        result = await db.execute(query)
+
+        return list(result.scalars().all())

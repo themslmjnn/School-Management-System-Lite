@@ -9,7 +9,7 @@ from src.utils.enums import GuardianPriority
 class StudentGuardianLink(Base):
     __tablename__ = "student_guardian_links"
 
-    parent_id: Mapped[int] = mapped_column(
+    guardian_id: Mapped[int] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE"), nullable=False
     )
     student_id: Mapped[int] = mapped_column(
@@ -20,7 +20,7 @@ class StudentGuardianLink(Base):
     )
 
     __table_args__ = (
-        UniqueConstraint("parent_id", "student_id", name="uix_parent_student_pair"),
+        UniqueConstraint("guardian_id", "student_id", name="uix_guardian_student_pair"),
         Index(
             "uix_one_primary_guardian_per_student",
             "student_id",
@@ -36,7 +36,7 @@ class StudentGuardianLink(Base):
     )
 
     parent: Mapped["User"] = relationship(  # noqa: F821
-        "User", foreign_keys="[StudentGuardianLink.parent_id]"
+        "User", foreign_keys="[StudentGuardianLink.guardian_id]"
     )
     student: Mapped["User"] = relationship(  # noqa: F821
         "User", foreign_keys="[StudentGuardianLink.student_id]"

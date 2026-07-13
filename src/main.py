@@ -15,6 +15,7 @@ from src.core.limiter import ip_limiter
 from src.core.logging import get_logger, setup_logging
 from src.core.middleware import RequestIDMiddleware
 from src.users.routers import guardian as user_guardian_router
+from src.users.routers.system_admin import guardian_link as user_guardian_link_router
 from src.users.routers.system_admin import users as user_system_admin_router
 from src.utils import exceptions as exc
 from src.workers.deletion_worker import start_deletion_worker
@@ -48,6 +49,7 @@ async def lifespan(app: FastAPI):
     yield
 
     email_task.cancel()
+    deletion_task.cancel()
 
     results = await asyncio.gather(email_task, deletion_task, return_exceptions=True)
 
@@ -83,6 +85,7 @@ app.include_router(health_router)
 app.include_router(auth_router)
 app.include_router(user_system_admin_router.router)
 app.include_router(user_guardian_router.router)
+app.include_router(user_guardian_link_router.router)
 
 EXCEPTION_STATUS_MAP = {
     exc.EmptyCredentialsError: 400,

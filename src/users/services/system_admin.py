@@ -20,7 +20,11 @@ from src.users.repositories.users import (
     UserRepositoryAdmin,
     UserRepositoryBase,
 )
-from src.users.schemas.guardian_link import CreateGuardianLink, UpdateGuardianPriority
+from src.users.schemas.guardian_link import (
+    ChildResponse,
+    CreateGuardianLink,
+    UpdateGuardianPriority,
+)
 from src.users.schemas.users import (
     CreateGuardianAdmin,
     CreateRequest,
@@ -931,7 +935,7 @@ class GuardianLinkServiceAdmin:
             )
             raise InvalidGuardianLinkError("Target student_id is not a student account")
 
-        existing_link = await GuardianLinkRepositoryAdmin.get_link(
+        existing_link = await GuardianLinkRepositoryAdmin.get_guardian_link(
             db, link_request.guardian_id, link_request.student_id
         )
         if existing_link is not None:
@@ -939,8 +943,10 @@ class GuardianLinkServiceAdmin:
                 "This guardian is already linked to this student"
             )
 
-        existing_at_priority = await GuardianLinkRepositoryAdmin.get_link_by_priority(
-            db, link_request.student_id, link_request.priority
+        existing_at_priority = (
+            await GuardianLinkRepositoryAdmin.get_guardian_link_by_priority(
+                db, link_request.student_id, link_request.priority
+            )
         )
         if existing_at_priority is not None:
             logger.warning(
@@ -1059,3 +1065,22 @@ class GuardianLinkServiceAdmin:
         )
 
         return link
+
+    @staticmethod
+    async def get_children_for_guardian(
+        db: AsyncSession, guardian_id: int
+    ) -> list[ChildResponse]:
+        links = await GuardianLinkRepositoryAdmin.get_children_for_guardian(
+            db, guardian_id
+        )
+
+        return [
+            ChildResponse(
+                id=link.student.id,
+                firstname=link.student.firstname,
+                lastname=link.student.lastname,
+                middlename=link.student.middlename,
+                priority=link.priority,
+            )
+            for link in links
+        ]

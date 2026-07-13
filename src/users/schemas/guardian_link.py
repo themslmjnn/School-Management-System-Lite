@@ -18,3 +18,11 @@ class GuardianLinkResponse(BaseSchema):
 
 class UpdateGuardianPriority(BaseModel):
     priority: GuardianPriority
+
+
+class ChildResponse(BaseSchema):
+    id: int
+    firstname: str
+    lastname: str
+    middlename: str | None
+    priority: GuardianPriority
