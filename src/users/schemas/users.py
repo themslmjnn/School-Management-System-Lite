@@ -119,6 +119,7 @@ class UserResponseAdminDetailed(UserResponseAdmin, BaseSchema):
         return validators.format_phone_for_display(self.phone_number)
 
 
+# COMPLETED!!!
 class UpdateUserBase(BaseModel):
     firstname: str | None = None
     lastname: str | None = None
@@ -154,10 +155,12 @@ class UpdateUserBase(BaseModel):
         return validators.parse_and_validate_mobile_number(field)
 
 
+# COMPLETED!!!
 class UpdateStaffAndGuardianAdmin(UpdateUserBase):
     type: Literal["staff_or_guardian"] = "staff_or_guardian"
 
 
+# COMPLETED!!!
 class UpdateStudentAdmin(UpdateUserBase):
     type: Literal["student"] = "student"
     date_of_birth: date | None = None
@@ -171,7 +174,27 @@ class UpdateStudentAdmin(UpdateUserBase):
         return validators.validate_date_of_birth(field)
 
 
+# COMPLETED!!!
 UpdateUser = Annotated[
     UpdateStaffAndGuardianAdmin | UpdateStudentAdmin,
     Field(discriminator="type"),
 ]
+
+
+class UpdateUserCredentials(BaseModel):
+    username: str | None = Field(min_length=6, max_length=20, default=None)
+    email: EmailStr | None = None
+
+    @field_validator("username")
+    @classmethod
+    def validate_username(cls, v: str | None) -> str | None:
+        if v is None:
+            return None
+        return validators.validate_username(v)
+
+    @field_validator("email", mode="after")
+    @classmethod
+    def normalize_email(cls, v: EmailStr | None) -> str | None:
+        if v is None:
+            return None
+        return v.strip().lower()

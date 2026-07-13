@@ -21,9 +21,10 @@ from src.users.schemas.users import (
     CreateStaffAdmin,
     CreateStudentAdmin,
     UpdateUser,
+    UpdateUserCredentials,
 )
 from src.utils import email as email_sender
-from src.utils.cache_keys import UserCacheKey
+from src.utils.cache_keys import SessionCacheKey, UserCacheKey
 from src.utils.constants import HTTP404
 from src.utils.enums import EmailType, UserRole, UserStatus
 from src.utils.exceptions import (
@@ -341,6 +342,94 @@ class UserServiceAdmin:
                 reason=str(e.orig),
             )
 
+            if not is_student:
+                handle_non_student_unique_contact_error(e)
+            raise_unhandled_integrity_error(e)
+
+    @staticmethod
+    async def update_user_credentials(
+        db: AsyncSession,
+        current_user_id: int,
+        target_user_id: int,
+        update_request: UpdateUserCredentials,
+    ) -> None:
+        target_user = await UserRepositoryBase.get_user_by_id(
+            db,
+            target_user_id,
+            excluded_roles=SYSTEM_ADMIN_INVISIBLE_ROLES,
+            load_session=True,
+        )
+        ensure_exists(target_user, UserNotFoundError(HTTP404.USER))
+
+        is_student = target_user.role == UserRole.STUDENT
+        email_changing = (
+            update_request.email is not None
+            and update_request.email != target_user.email
+        )
+
+        if is_student and email_changing:
+            await acquire_student_contact_lock(
+                db, phone_number=None, email=update_request.email
+            )
+            await _check_contact_limit(
+                db,
+                current_user_id,
+                target_username=target_user.username,
+                phone_number=None,
+                email=update_request.email,
+                role=UserRole.STUDENT,
+                resolved_role=UserRole.STUDENT,
+                max_allowed=STUDENT_MAX_SHARED_CONTACT,
+                exclude_user_id=target_user_id,
+            )
+
+        try:
+            old_email = target_user.email
+            update_object(target_user, update_request)
+
+            target_user.session.access_token_version += 1
+            target_user.session.refresh_token_hash = None
+            target_user.session.refresh_token_family = None
+            target_user.session.refresh_token_expires_at = None
+            target_user.session.pending_new_email = None
+            target_user.session.email_change_code_hash = None
+            target_user.session.email_change_code_expires_at = None
+
+            await db.commit()
+
+            asyncio.create_task(
+                email_sender.send_safe(
+                    email_sender.send_admin_credentials_override_notification(
+                        old_email
+                    ),
+                    email_type=EmailType.ADMIN_CREDENTIALS_OVERRIDE,
+                )
+            )
+
+            await delete_cache(
+                UserCacheKey.user_detail_key_admin(target_user_id),
+                UserCacheKey.user_detail_key_staff(target_user_id),
+                UserCacheKey.user_detail_key_self(target_user_id),
+                SessionCacheKey.access_token_version_key(target_user_id),
+            )
+
+            logger.info(
+                "admin_email_override",
+                target_user_id=target_user_id,
+                updated_by=current_user_id,
+            )
+
+        except IntegrityError as e:
+            await db.rollback()
+
+            logger.error(
+                "admin_email_override_failed",
+                target_user_id=target_user_id,
+                requested_by=current_user_id,
+                reason=str(e.orig),
+            )
+
+            handle_username_integrity_error(e)
             if not is_student:
                 handle_non_student_unique_contact_error(e)
             raise_unhandled_integrity_error(e)

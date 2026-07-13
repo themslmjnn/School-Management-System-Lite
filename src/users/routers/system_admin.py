@@ -11,6 +11,7 @@ from src.core.limiter import user_limiter
 from src.users.schemas.users import (
     CreateRequest,
     UpdateUser,
+    UpdateUserCredentials,
     UserResponseAdminDetailed,
 )
 from src.users.services.system_admin import UserServiceAdmin
@@ -49,5 +50,20 @@ async def update_user(
     update_request: UpdateUser,
 ):
     return await UserServiceAdmin.update_user(
+        db, current_user.id, target_user_id, update_request
+    )
+
+
+@router.patch(
+    "/{target_user_id}/credentials",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+async def update_user_credentials(
+    db: async_db_dependency,
+    current_user: Annotated[CurrentUser, Depends(require_system_admin)],
+    target_user_id: Annotated[int, Path(ge=1)],
+    update_request: UpdateUserCredentials,
+):
+    await UserServiceAdmin.update_user_credentials(
         db, current_user.id, target_user_id, update_request
     )
