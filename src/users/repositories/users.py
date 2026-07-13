@@ -7,7 +7,13 @@ from sqlalchemy.orm import joinedload
 from src.users.models.guardian_link import StudentGuardianLink
 from src.users.models.users import User, UserActivation, UserLoginLockout, UserSession
 from src.users.schemas.users import SearchUserAdmin, SearchUserBase
-from src.utils.enums import OrderBy, UserRole, UserSortField, UserStatus
+from src.utils.enums import (
+    GuardianPriority,
+    OrderBy,
+    UserRole,
+    UserSortField,
+    UserStatus,
+)
 
 ENTITY_TYPE = User | UserSession | UserActivation | UserLoginLockout
 
@@ -268,7 +274,20 @@ class GuardianLinkRepositoryAdmin:
             StudentGuardianLink.parent_id == parent_id,
             StudentGuardianLink.student_id == student_id,
         )
-        
+
+        result = await db.execute(query)
+
+        return result.scalar_one_or_none()
+
+    @staticmethod
+    async def get_guardian_link_by_priority(
+        db: AsyncSession, student_id: int, priority: GuardianPriority
+    ) -> StudentGuardianLink | None:
+        query = select(StudentGuardianLink).where(
+            StudentGuardianLink.student_id == student_id,
+            StudentGuardianLink.priority == priority,
+        )
+
         result = await db.execute(query)
 
         return result.scalar_one_or_none()

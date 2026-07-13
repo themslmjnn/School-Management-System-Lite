@@ -20,7 +20,7 @@ from src.users.repositories.users import (
     UserRepositoryAdmin,
     UserRepositoryBase,
 )
-from src.users.schemas.guardian_link import CreateGuardianLink
+from src.users.schemas.guardian_link import CreateGuardianLink, UpdateGuardianPriority
 from src.users.schemas.users import (
     CreateGuardianAdmin,
     CreateRequest,
@@ -983,12 +983,14 @@ class GuardianLinkServiceAdmin:
         )
 
         return new_link
-    
+
     @staticmethod
     async def unlink_guardian(
         db: AsyncSession, current_user_id: int, guardian_id: int, student_id: int
     ) -> None:
-        link = await GuardianLinkRepositoryAdmin.get_guardian_link(db, guardian_id, student_id)
+        link = await GuardianLinkRepositoryAdmin.get_guardian_link(
+            db, guardian_id, student_id
+        )
 
         if link is None:
             raise GuardianLinkNotFoundError("This guardian link does not exist")
@@ -1002,3 +1004,58 @@ class GuardianLinkServiceAdmin:
             guardian_id=guardian_id,
             student_id=student_id,
         )
+
+    @staticmethod
+    async def change_priority(
+        db: AsyncSession,
+        current_user_id: int,
+        guardian_id: int,
+        student_id: int,
+        update_request: UpdateGuardianPriority,
+    ) -> StudentGuardianLink:
+        link = await GuardianLinkRepositoryAdmin.get_guardian_link(
+            db, guardian_id, student_id
+        )
+
+        if link is None:
+            raise GuardianLinkNotFoundError("This guardian link does not exist")
+
+        if link.priority == update_request.priority:
+            return link
+
+        existing_at_target = (
+            await GuardianLinkRepositoryAdmin.get_guardian_link_by_priority(
+                db, student_id, update_request.priority
+            )
+        )
+        if existing_at_target is not None:
+            logger.warning(
+                "guardian_priority_change_denied",
+                actor_user_id=current_user_id,
+                target_student_id=student_id,
+                denial_reason=f"{update_request.priority.value}_guardian_slot_already_filled",
+            )
+            raise GuardianSlotAlreadyFilledError(
+                f"Student already has a different {update_request.priority.value} guardian; "
+                "change or remove the existing one first"
+            )
+
+        try:
+            link.priority = update_request.priority
+            await db.commit()
+            await db.refresh(link)
+        except IntegrityError as e:
+            await db.rollback()
+            raise GuardianSlotAlreadyFilledError(
+                "Could not update priority due to a conflicting guardian slot"
+            ) from e
+
+        logger.info(
+            "guardian_priority_changed",
+            actor_user_id=current_user_id,
+            guardian_id=guardian_id,
+            student_id=student_id,
+            new_priority=update_request.priority.value,
+        )
+
+        return link
