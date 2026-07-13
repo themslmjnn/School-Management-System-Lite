@@ -36,6 +36,7 @@ class EmailType(StrEnum):
     CANCEL_ACCOUNT_DELETION = "cancel_account_deletion"
     UPDATING_ACCOUNT = "updating_account"
     ADMIN_CREDENTIALS_OVERRIDE = "admin_credentials_override"
+    EMAIL_CHANGE_CODE = "email_change_code"
 
 
 class EmailSendingStatus(StrEnum):
