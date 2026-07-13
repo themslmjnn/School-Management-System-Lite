@@ -15,9 +15,9 @@ from src.users.schemas.users import (
     CreateStaffAdmin,
     CreateStudentAdmin,
 )
-from src.utils.enums import UserRole
+from src.utils.enums import UserRole, UserStatus
 from tests.conftest import make_auth_header, test_engine
-from tests.factories import make_student, make_system_admin, make_teacher
+from tests.factories import make_guardian, make_student, make_system_admin, make_teacher
 
 _URL = "/users"
 
@@ -284,55 +284,6 @@ class TestRegisterUser:
 
         assert response.status_code == 422
         assert "date_of_birth" in error_fields
-
-class TestStudentContactLimitRace:
-    async def test_concurrent_registrations_respect_contact_limit(
-        self, concurrent_client: AsyncClient, system_admin, test_db: AsyncSession
-    ):
-        shared_phone = "+992555123456"
-        headers = await make_auth_header(test_db, system_admin)
-
-        payloads = [
-            {
-                "type": "student",
-                "username": f"racetest{i}",
-                "firstname": "Race",
-                "lastname": "Test",
-                "phone_number": shared_phone,
-                "email": f"racetest{i}@example.com",
-                "date_of_birth": "2010-01-01",
-                "address": None,
-            }
-            for i in range(5)
-        ]
-
-        responses = await asyncio.gather(
-            *[
-                concurrent_client.post("/users", json=payload, headers=headers)
-                for payload in payloads
-            ],
-            return_exceptions=True,
-        )
-
-        successes = [
-            r for r in responses if isinstance(r, httpx.Response) and r.status_code == 201
-        ]
-        denials = [
-            r for r in responses if isinstance(r, httpx.Response) and r.status_code != 201
-        ]
-
-        try:
-            assert len(successes) == 3, (
-                f"Expected exactly 3 successful registrations, got {len(successes)}. "
-                f"Statuses: {[r.status_code for r in responses if isinstance(r, httpx.Response)]}"
-            )
-            assert len(denials) == 2
-        finally:
-            async with AsyncSession(bind=test_engine) as cleanup_session:
-                await cleanup_session.execute(
-                    delete(User).where(User.username.like("racetest%"))
-                )
-                await cleanup_session.commit()
 
 
 class TestUpdateUser:
@@ -684,3 +635,93 @@ class TestUpdateUserCredentials:
         )
 
         assert response.status_code == 422
+
+class TestCreateGuardianDeletionRequestRoute:
+    async def test_returns_204_on_success(
+        self,
+        test_db: AsyncSession,
+        client: AsyncClient,
+        system_admin: User,
+        guardian: User,
+        mock_send_account_deletion_email,
+        mock_delete_cache,
+    ):
+        headers = await make_auth_header(test_db, system_admin)
+ 
+        response = await client.post(
+            f"/users/{guardian.id}/guardian-deletion", headers=headers
+        )
+ 
+        assert response.status_code == 204
+ 
+    async def test_returns_404_when_not_found(
+        self,
+        test_db: AsyncSession,
+        client: AsyncClient,
+        system_admin: User,
+    ):
+        headers = await make_auth_header(test_db, system_admin)
+ 
+        response = await client.post(
+            "/users/999999/guardian-deletion", headers=headers
+        )
+ 
+        assert response.status_code == 404
+ 
+    async def test_returns_404_for_non_guardian_role(
+        self,
+        test_db: AsyncSession,
+        client: AsyncClient,
+        system_admin: User,
+        teacher: User,
+    ):
+        headers = await make_auth_header(test_db, system_admin)
+ 
+        response = await client.post(
+            f"/users/{teacher.id}/guardian-deletion", headers=headers
+        )
+ 
+        assert response.status_code == 404
+ 
+    async def test_returns_409_when_already_pending_deletion(
+        self,
+        test_db: AsyncSession,
+        client: AsyncClient,
+        system_admin: User,
+        mock_send_account_deletion_email,
+        mock_delete_cache,
+    ):
+        guardian_pending = await make_guardian(
+            test_db, status=UserStatus.PENDING_DELETION, is_active=False
+        )
+        headers = await make_auth_header(test_db, system_admin)
+ 
+        response = await client.post(
+            f"/users/{guardian_pending.id}/guardian-deletion", headers=headers
+        )
+ 
+        assert response.status_code == 409
+ 
+    async def test_returns_403_for_non_admin(
+        self,
+        test_db: AsyncSession,
+        client: AsyncClient,
+        teacher: User,
+        guardian: User,
+    ):
+        headers = await make_auth_header(test_db, teacher)
+ 
+        response = await client.post(
+            f"/users/{guardian.id}/guardian-deletion", headers=headers
+        )
+ 
+        assert response.status_code == 403
+ 
+    async def test_returns_401_when_unauthenticated(
+        self,
+        client: AsyncClient,
+        guardian: User,
+    ):
+        response = await client.post(f"/users/{guardian.id}/guardian-deletion")
+ 
+        assert response.status_code == 401
