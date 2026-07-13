@@ -35,6 +35,7 @@ from src.utils.exceptions import (
     MaxStaffOrGuardianPerPhoneNumberError,
     MaxStudentsPerEmailError,
     MaxStudentsPerPhoneNumberError,
+    UserAlreadyActiveError,
     UserAlreadyInactiveError,
     UserAlreadyPendingDeletionError,
     UserNotFoundError,
@@ -613,4 +614,44 @@ class UserServiceAdmin:
             "user_deactivated",
             target_user_id=target_user_id,
             deactivated_by=current_user_id,
+        )
+
+    @staticmethod
+    async def activate_user(
+        db: AsyncSession, current_user_id: int, target_user_id: int
+    ) -> None:
+        target_user = await UserRepositoryBase.get_user_by_id(
+            db, target_user_id, excluded_roles=SYSTEM_ADMIN_INVISIBLE_ROLES, load_login_lockout=True
+        )
+        ensure_exists(target_user, UserNotFoundError(HTTP404.USER))
+
+        if target_user.is_active:
+            logger.error(
+                "activate_user_failed",
+                target_user_id=target_user_id,
+                requested_by=current_user_id,
+                reason="user_is_already_activated",
+            )
+
+            raise UserAlreadyActiveError("User is already activated")
+
+        target_user.is_active = True
+        target_user.login_lockout.failed_login_attempts = 0
+        target_user.login_lockout.locked_until = None
+
+        await db.commit()
+
+        asyncio.create_task(
+            email_sender.send_safe(
+                email_sender.send_account_activation_email(target_user.email),
+                email_type=EmailType.ACCOUNT_ACTIVATION,
+            )
+        )
+
+        await delete_cache(UserCacheKey.user_detail_key_admin(target_user_id))
+
+        logger.info(
+            "user_activated",
+            target_user_id=target_user_id,
+            activated_by=current_user_id,
         )
