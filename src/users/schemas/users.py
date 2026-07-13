@@ -198,3 +198,17 @@ class UpdateUserCredentials(BaseModel):
         if v is None:
             return None
         return v.strip().lower()
+
+class SearchUserBase(BaseModel):
+    firstname: str | None = Field(default=None, max_length=50)
+    lastname: str | None = Field(default=None, max_length=50)
+    middlename: str | None = Field(default=None, max_length=50)
+    role: UserRole | None = None
+    status: UserStatus | None = None
+
+
+class SearchUserAdmin(SearchUserBase):
+    username: str | None = Field(default=None, max_length=15)
+    email: str | None = Field(default=None, max_length=20)
+    phone_number: str | None = Field(default=None, max_length=15)
+    is_active: bool | None = None

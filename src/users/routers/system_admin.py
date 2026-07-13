@@ -2,19 +2,24 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Path, Request, status
 
+from pagination import PaginatedResponse
 from src.core.dependencies import (
     CurrentUser,
     async_db_dependency,
+    pagination_dependency,
     require_system_admin,
 )
 from src.core.limiter import user_limiter
 from src.users.schemas.users import (
     CreateRequest,
+    SearchUserAdmin,
     UpdateUser,
     UpdateUserCredentials,
+    UserResponseAdmin,
     UserResponseAdminDetailed,
 )
 from src.users.services.system_admin import UserServiceAdmin
+from utils.enums import OrderBy, UserSortField
 
 router = APIRouter(
     prefix="/users",
@@ -131,4 +136,28 @@ async def resend_activation_invite(
 ):
     await UserServiceAdmin.resend_activation_invite(
         db, current_user.id, target_user_id
+    )
+
+@router.get(
+    "/staff",
+    response_model=PaginatedResponse[UserResponseAdmin],
+    status_code=status.HTTP_200_OK,
+)
+@user_limiter.limit("15/minute")
+async def get_staff(
+    request: Request,
+    db: async_db_dependency,
+    _: Annotated[CurrentUser, Depends(require_system_admin)],
+    pagination: pagination_dependency,
+    filters: Annotated[SearchUserAdmin, Depends()],
+    sort_by: str = UserSortField.CREATED_AT,
+    order: str = OrderBy.DESC,
+):
+    return await UserServiceAdmin.get_staff(
+        db,
+        pagination.skip,
+        pagination.limit,
+        filters,
+        sort_by,
+        order,
     )

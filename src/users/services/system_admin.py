@@ -5,6 +5,7 @@ from typing import assert_never
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from pagination import PaginatedResponse
 from src.core.advisory_locks import acquire_student_contact_lock
 from src.core.caching import delete_cache
 from src.core.config import settings
@@ -14,6 +15,7 @@ from src.core.security import generate_invite_token, generate_reset_password_tok
 from src.emails.repository import PendingEmailRepository
 from src.users.models.users import User, UserActivation, UserLoginLockout, UserSession
 from src.users.repositories.users import (
+    UserRepositoryAdmin,
     UserRepositoryBase,
 )
 from src.users.schemas.users import (
@@ -21,6 +23,7 @@ from src.users.schemas.users import (
     CreateRequest,
     CreateStaffAdmin,
     CreateStudentAdmin,
+    SearchUserAdmin,
     UpdateStudentAdmin,
     UpdateUser,
     UpdateUserCredentials,
@@ -787,4 +790,26 @@ class UserServiceAdmin:
             "activation_invite_resent",
             target_user_id=target_user_id,
             actor_user_id=current_user_id,
+        )
+
+    @staticmethod
+    async def get_staff(
+        db: AsyncSession,
+        skip: int,
+        limit: int,
+        filters: SearchUserAdmin,
+        sort_by: str,
+        order: str,
+    ) -> PaginatedResponse:
+
+        users, total = await UserRepositoryAdmin.get_users_admin(
+            db, skip, limit, filters, sort_by, order
+        )
+
+        return PaginatedResponse(
+            items=users,
+            total=total,
+            skip=skip,
+            limit=limit,
+            has_more=skip + limit < total,
         )
