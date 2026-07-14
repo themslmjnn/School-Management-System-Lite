@@ -625,7 +625,7 @@ async def send_email_change_verification(new_email: str, code: str) -> None:
     """
 
     text = (
-        f"Library Management System.\n\n"
+        f"SGM | LFGS\n\n"
         f"You requested to change your email address.\n\n"
         f"Your confirmation code is: {code}\n\n"
         f"It expires in {settings.EMAIL_CHANGE_CODE_EXPIRES_MINUTES} minutes.\n\n"
@@ -634,8 +634,47 @@ async def send_email_change_verification(new_email: str, code: str) -> None:
     )
 
     await send(
-        subject="Confirm your new Library email address",
+        subject="Confirm your new LFGS email address",
         to_email=new_email,
+        html_body=html,
+        text_body=text,
+    )
+
+
+# COMPLETED!!!
+async def send_password_changed_notification(email: str) -> None:
+    html = """
+        <!DOCTYPE html>
+        <html lang="en">
+        <body style="font-family: Arial, sans-serif; background:#f4f4f5; padding:40px;">
+            <div style="max-width:560px;margin:auto;background:white;
+                        padding:40px;border-radius:8px;">
+                <h1 style="color:#1d4ed8;">SGM | LFGS</h1>
+                <h2>Your password was changed</h2>
+                <p>
+                    Your account password was successfully changed.
+                    If you made this change, no action is needed.
+                </p>
+                <p>
+                    If you did not change your password, contact your administrator
+                    immediately as your account may be compromised.
+                </p>
+            </div>
+        </body>
+        </html>
+    """
+
+    text = (
+        "SGM | LFGS.\n\n"
+        "Your account password was successfully changed.\n\n"
+        "If you made this change, no action is needed.\n\n"
+        "If you did not change your password, contact your administrator "
+        "immediately as your account may be compromised."
+    )
+
+    await send(
+        subject="Your LFGS password was changed",
+        to_email=email,
         html_body=html,
         text_body=text,
     )

@@ -25,6 +25,7 @@ router = APIRouter(
 )
 
 
+# COMPLETED!!!
 @router.patch(
     "/me/profile",
     response_model=UserResponseSelf,
@@ -62,6 +63,7 @@ async def confirm_email_change(
     await UserServiceSelf.confirm_email_change(db, current_user.id, confirm_request)
 
 
+# COMPLETED!!!
 @router.patch(
     "/me/password",
     status_code=status.HTTP_204_NO_CONTENT,

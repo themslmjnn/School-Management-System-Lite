@@ -29,12 +29,13 @@ from src.users.schemas.users import (
 from src.users.services.system_admin.users import check_contact_limit
 from src.utils import email as email_sender
 from src.utils.cache_keys import SessionCacheKey, UserCacheKey
-from src.utils.constants import HTTP404
+from src.utils.constants import HTTP400, HTTP404
 from src.utils.enums import EmailType, UserRole
 from src.utils.exceptions import (
     EmailChangeCodeExpiredError,
     IncorrectPasswordError,
     InvalidEmailChangeCodeError,
+    NoChangesDetectedError,
     NoPendingEmailChangeError,
     ProfileFieldsNotEditableForRoleError,
     UserNotFoundError,
@@ -51,6 +52,7 @@ STUDENT_MAX_SHARED_CONTACT = 3
 
 
 class UserServiceSelf:
+    # COMPLETED!!!
     @staticmethod
     async def update_me_profile(
         db: AsyncSession,
@@ -103,6 +105,7 @@ class UserServiceSelf:
                 target_user_id=current_user_id,
                 reason=str(e.orig),
             )
+
             handle_non_student_unique_contact_error(e)
             raise_unhandled_integrity_error(e)
 
@@ -121,6 +124,8 @@ class UserServiceSelf:
             update_request.email is not None
             and update_request.email != current_user.email
         )
+        if update_request.username == current_user.username and not email_requested:
+            raise NoChangesDetectedError(HTTP400.NO_CHANGES_DETECTED)
 
         try:
             if update_request.username is not None:
@@ -131,25 +136,24 @@ class UserServiceSelf:
                 code_expires_at = datetime.now(UTC) + timedelta(
                     minutes=settings.EMAIL_CHANGE_CODE_EXPIRES_MINUTES
                 )
-
                 current_user.session.pending_new_email = update_request.email
                 current_user.session.email_change_code_hash = hashed_code
                 current_user.session.email_change_code_expires_at = code_expires_at
 
             await db.commit()
 
-            print(raw_code)
-            # if email_requested:
-            #     asyncio.create_task(
-            #         email_sender.send_safe(
-            #             email_sender.send_email_change_verification(
-            #                 update_request.email, raw_code
-            #             ),
-            #             email_type=EmailType.EMAIL_CHANGE_CODE,
-            #         )
-            #     )
+            if email_requested:
+                asyncio.create_task(
+                    email_sender.send_safe(
+                        email_sender.send_email_change_verification(
+                            update_request.email, raw_code
+                        ),
+                        email_type=EmailType.EMAIL_CHANGE_CODE,
+                    )
+                )
 
             await delete_cache(
+                SessionCacheKey.access_token_version_key(current_user_id),
                 UserCacheKey.user_detail_key_self(current_user_id),
                 UserCacheKey.user_detail_key_admin(current_user_id),
                 UserCacheKey.user_detail_key_staff(current_user_id),
@@ -252,19 +256,20 @@ class UserServiceSelf:
                 handle_non_student_unique_contact_error(e)
             raise_unhandled_integrity_error(e)
 
+    # COMPLETED!!!
     @staticmethod
     async def update_me_password(
         db: AsyncSession,
         current_user_id: int,
         update_request: UpdateMePassword,
     ) -> None:
-        current_user = await UserRepositoryBase.get_user_by_id(
+        target_user = await UserRepositoryBase.get_user_by_id(
             db, current_user_id, load_session=True
         )
-        ensure_exists(current_user, UserNotFoundError(HTTP404.USER))
+        ensure_exists(target_user, UserNotFoundError(HTTP404.USER))
 
         is_current_password_valid = await verify_password(
-            update_request.current_password, current_user.password_hash
+            update_request.current_password, target_user.password_hash
         )
         if not is_current_password_valid:
             logger.warning(
@@ -272,29 +277,28 @@ class UserServiceSelf:
                 target_user_id=current_user_id,
                 denial_reason="incorrect_current_password",
             )
+
             raise IncorrectPasswordError("Current password is incorrect")
 
         new_password_hash = await hash_password(update_request.new_password)
 
-        current_user.password_hash = new_password_hash
-        current_user.session.access_token_version += 1
-        current_user.session.refresh_token_hash = None
-        current_user.session.refresh_token_family = None
-        current_user.session.refresh_token_expires_at = None
+        target_user.password_hash = new_password_hash
+
+        target_user.session.access_token_version += 1
+        target_user.session.refresh_token_hash = None
+        target_user.session.refresh_token_family = None
+        target_user.session.refresh_token_expires_at = None
 
         await db.commit()
 
-        # asyncio.create_task(
-        #     email_sender.send_safe(
-        #         email_sender.send_password_changed_notification(current_user.email),
-        #         email_type=EmailType.PASSWORD_CHANGED,
-        #     )
-        # )
-
-        await delete_cache(
-            UserCacheKey.user_detail_key_self(current_user_id),
-            SessionCacheKey.access_token_version_key(current_user_id),
+        asyncio.create_task(
+            email_sender.send_safe(
+                email_sender.send_password_changed_notification(target_user.email),
+                email_type=EmailType.PASSWORD_CHANGED,
+            )
         )
+
+        await delete_cache(SessionCacheKey.access_token_version_key(current_user_id))
 
         logger.info(
             "user_password_changed",
