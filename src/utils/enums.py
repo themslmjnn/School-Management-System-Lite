@@ -12,13 +12,13 @@ class UserRole(StrEnum):
 
 class UserStatus(StrEnum):
     ACTIVE = "active"
+    DEACTIVATED = "deactivated"
+    DELETED = "deleted"
+    PENDING_ACTIVATION = "pending_activation"
+    PENDING_DELETION = "pending_deletion"
     GRADUATED = "graduated"
     EXPELLED = "expelled"
     WITHDRAWN = "withdrawn"
-    DEACTIVATED = "deactivated"
-    PENDING_ACTIVATION = "pending_activation"
-    PENDING_DELETION = "pending_deletion"
-    DELETED = "deleted"
 
 
 class GuardianPriority(StrEnum):
@@ -28,14 +28,14 @@ class GuardianPriority(StrEnum):
 
 class EmailType(StrEnum):
     INVITE = "invite"
+    UPDATING_ACCOUNT = "updating_account"
+    ADMIN_CREDENTIALS_OVERRIDE = "admin_credentials_override"
     PASSWORD_RESET_ADMIN = "password_reset_admin"
     ACTIVATION_WITH_TOKEN = "activation_with_token"
     ACCOUNT_DEACTIVATION = "account_deactivation"
     ACCOUNT_ACTIVATION = "account_activation"
     ACCOUNT_DELETION = "account_deletion"
     CANCEL_ACCOUNT_DELETION = "cancel_account_deletion"
-    UPDATING_ACCOUNT = "updating_account"
-    ADMIN_CREDENTIALS_OVERRIDE = "admin_credentials_override"
     EMAIL_CHANGE_CODE = "email_change_code"
     PASSWORD_CHANGED = "password_changed"
 

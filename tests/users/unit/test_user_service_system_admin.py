@@ -835,7 +835,6 @@ class TestUpdateUserCredentials:
             SessionCacheKey.access_token_version_key(teacher.id),
         )
 
-
     async def test_not_found_raises_user_not_found(
         self,
         test_db: AsyncSession,
@@ -1104,6 +1103,7 @@ class TestUpdateUserCredentialsActivationReissue:
         )
         assert updated.activation.invite_token_hash == original_hash
         mock_send_admin_credentials_override_notification.assert_called_once()
+
 
 class TestCreateGuardianDeletionRequest:
     async def test_sets_pending_deletion_state_successfully(
@@ -1489,9 +1489,13 @@ class TestResendActivationInvite:
         self, test_db, system_admin
     ):
         target = await make_user(
-            test_db, role=UserRole.TEACHER, status=UserStatus.PENDING_ACTIVATION,
+            test_db,
+            role=UserRole.TEACHER,
+            status=UserStatus.PENDING_ACTIVATION,
         )
-        target = await UserRepositoryBase.get_user_by_id(test_db, target.id, load_activation=True)
+        target = await UserRepositoryBase.get_user_by_id(
+            test_db, target.id, load_activation=True
+        )
         original_hash = target.activation.invite_token_hash
 
         await UserServiceAdmin.resend_activation_invite(
@@ -1529,7 +1533,7 @@ class TestResendActivationInvite:
             test_db, target.id, load_activation=True
         )
         before_call + settings.INVITE_TOKEN_EXPIRES_HOURS_delta if False else None
- 
+
         expires_at = updated_target.activation.invite_token_expires_at
         assert expires_at > before_call
         hours_delta = (expires_at - after_call).total_seconds() / 3600

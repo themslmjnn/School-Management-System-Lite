@@ -16,11 +16,43 @@ from src.utils.enums import UserRole, UserStatus
 
 
 # COMPLETED!!!
+class UserResponseAdmin(BaseModel):
+    firstname: str
+    lastname: str
+    middlename: str | None
+    role: UserRole
+
+
+# COMPLETED!!!
+class UserResponseAdminDetailed(UserResponseAdmin, BaseSchema):
+    id: int
+    username: str
+    date_of_birth: date | None
+    phone_number: str = Field(exclude=True)
+    email: EmailStr
+    address: str | None
+    status: UserStatus
+    is_active: bool
+    created_by: int | None
+    created_at: datetime
+    updated_at: datetime
+
+    @field_serializer("created_at", "updated_at")
+    def serialize_updated_at(self, value: datetime) -> str:
+        return value.strftime("%d %b %Y, %H:%M")
+
+    @computed_field
+    @property
+    def format_phone_number(self) -> str:
+        return validators.format_phone_for_display(self.phone_number)
+
+
+# COMPLETED!!!
 class CreateUserBase(BaseModel):
     username: str = Field(min_length=6, max_length=20)
     firstname: str = Field(min_length=3, max_length=50)
     lastname: str = Field(min_length=3, max_length=50)
-    middlename: str | None = Field(min_length=2, max_length=50, default=None)
+    middlename: str | None = Field(min_length=3, max_length=50, default=None)
     phone_number: str
     email: EmailStr
 
@@ -85,38 +117,6 @@ CreateRequest = Annotated[
     CreateStudentAdmin | CreateStaffAdmin | CreateGuardianAdmin,
     Field(discriminator="type"),
 ]
-
-
-# COMPLETED!!!
-class UserResponseAdmin(BaseModel):
-    firstname: str
-    lastname: str
-    middlename: str | None
-    role: UserRole
-
-
-# COMPLETED!!!
-class UserResponseAdminDetailed(UserResponseAdmin, BaseSchema):
-    id: int
-    username: str
-    date_of_birth: date | None
-    phone_number: str = Field(exclude=True)
-    email: EmailStr
-    address: str | None
-    status: UserStatus
-    is_active: bool
-    created_by: int | None
-    created_at: datetime
-    updated_at: datetime
-
-    @field_serializer("created_at", "updated_at")
-    def serialize_updated_at(self, value: datetime) -> str:
-        return value.strftime("%d %b %Y, %H:%M")
-
-    @computed_field
-    @property
-    def format_phone_number(self) -> str:
-        return validators.format_phone_for_display(self.phone_number)
 
 
 # COMPLETED!!!

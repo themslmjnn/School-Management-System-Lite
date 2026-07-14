@@ -149,10 +149,60 @@ def build_invite_email(invite_token: str, username: str) -> tuple[str, str, str]
     return subject, html, text
 
 
-async def send_invite_email(to_email: str, username: str, raw_invite_token: str) -> None:
+async def send_invite_email(
+    to_email: str, username: str, raw_invite_token: str
+) -> None:
     subject, html, text = build_invite_email(raw_invite_token, username)
 
     await send(subject=subject, to_email=to_email, html_body=html, text_body=text)
+
+
+async def send_account_info_updated_email(email: str) -> None:
+    login_link = f"{settings.APP_URL}/auth/login"
+
+    html = f"""
+        <!DOCTYPE html>
+        <html lang="en">
+        <body style="font-family: Arial, sans-serif; background:#f4f4f5; padding:40px;">
+            <div style="max-width:560px;margin:auto;background:white;
+                        padding:40px;border-radius:8px;">
+                <h1 style="color:#1d4ed8;">SGM | LFGS</h1>
+                <h2>Your account information has been updated</h2>
+                <p>
+                    A school administrator has updated some information
+                    associated with your account.
+                </p>
+                <div style="margin:40px 0;text-align:center;">
+                    <a href="{login_link}"
+                        style="background:#1d4ed8;color:white;padding:14px 28px;
+                            border-radius:6px;text-decoration:none;font-weight:bold;">
+                        Log In
+                    </a>
+                </div>
+                <p>
+                    If you did not request this change, please contact
+                    your school administration as soon as possible.
+                </p>
+            </div>
+        </body>
+        </html>
+    """
+
+    text = (
+        "SGM | LFGS.\n\n"
+        "A school administrator has updated some information associated "
+        "with your account.\n\n"
+        f"Log in at: {login_link}\n\n"
+        "If you did not request this change, please contact "
+        "your school administration as soon as possible."
+    )
+
+    await send(
+        subject="Your account information has been updated",
+        to_email=email,
+        html_body=html,
+        text_body=text,
+    )
 
 
 def build_admin_credentials_override_notification_email(
@@ -250,14 +300,17 @@ def build_admin_credentials_override_notification_email(
 
     return subject, html, text
 
+
 async def send_admin_credentials_override_notification(
     email: str,
     old_username: str | None = None,
     new_username: str | None = None,
     old_email: str | None = None,
-    new_email: str | None = None
+    new_email: str | None = None,
 ) -> None:
-    subject, html, text = build_admin_credentials_override_notification_email(old_username, new_username, old_email, new_email)
+    subject, html, text = build_admin_credentials_override_notification_email(
+        old_username, new_username, old_email, new_email
+    )
 
     await send(
         subject=subject,
@@ -265,6 +318,7 @@ async def send_admin_credentials_override_notification(
         html_body=html,
         text_body=text,
     )
+
 
 async def send_account_deletion_email(email: str) -> None:
     login_link = f"{settings.APP_URL}/auth/login"
@@ -460,54 +514,6 @@ async def send_account_activation_email(email: str) -> None:
     )
 
 
-async def send_account_info_updated_email(email: str) -> None:
-    login_link = f"{settings.APP_URL}/auth/login"
-
-    html = f"""
-        <!DOCTYPE html>
-        <html lang="en">
-        <body style="font-family: Arial, sans-serif; background:#f4f4f5; padding:40px;">
-            <div style="max-width:560px;margin:auto;background:white;
-                        padding:40px;border-radius:8px;">
-                <h1 style="color:#1d4ed8;">SGM | LFGS</h1>
-                <h2>Your account information has been updated</h2>
-                <p>
-                    A school administrator has updated some information
-                    associated with your account.
-                </p>
-                <div style="margin:40px 0;text-align:center;">
-                    <a href="{login_link}"
-                        style="background:#1d4ed8;color:white;padding:14px 28px;
-                            border-radius:6px;text-decoration:none;font-weight:bold;">
-                        Log In
-                    </a>
-                </div>
-                <p>
-                    If you did not request this change, please contact
-                    your school administration as soon as possible.
-                </p>
-            </div>
-        </body>
-        </html>
-    """
-
-    text = (
-        "SGM | LFGS.\n\n"
-        "A school administrator has updated some information associated "
-        "with your account.\n\n"
-        f"Log in at: {login_link}\n\n"
-        "If you did not request this change, please contact "
-        "your school administration as soon as possible."
-    )
-
-    await send(
-        subject="Your account information has been updated",
-        to_email=email,
-        html_body=html,
-        text_body=text,
-    )
-
-
 def build_reset_password_email(reset_password_token: str) -> tuple[str, str, str]:
     reset_link = f"{settings.APP_URL}/auth/reset_password?token={reset_password_token}"
 
@@ -557,6 +563,7 @@ async def send_reset_password_token(email: str, raw_reset_token: str) -> None:
     subject, html, text = build_reset_password_email(raw_reset_token)
 
     await send(subject=subject, to_email=email, html_body=html, text_body=text)
+
 
 async def send_email_change_verification(new_email: str, code: str) -> None:
     html = f"""

@@ -120,7 +120,7 @@ async def check_contact_limit(
                 raise MaxStudentsPerPhoneNumberError(
                     "Maximum number of students with this phone number reached"
                 )
-            
+
             raise MaxStaffOrGuardianPerPhoneNumberError(
                 "Maximum number of staff or guardians with this phone number reached"
             )
@@ -147,7 +147,7 @@ async def check_contact_limit(
                 raise MaxStudentsPerEmailError(
                     "Maximum number of students with this email reached"
                 )
-            
+
             raise MaxStaffOrGuardianPerEmailError(
                 "Maximum number of staff or guardians with this email reached"
             )
@@ -472,14 +472,22 @@ class UserServiceAdmin:
                     recipient_user_id=target_user.id,
                 )
 
-            if not should_reissue_activation_token:
-                old_username = old_username if old_username != target_user.username else None
-                new_username = target_user.username if old_username != target_user.username else None
-                old_email = old_email if old_email != target_user.email else None
-                new_email = target_user.email if old_email != target_user.email else None
+            username_changed = old_username != target_user.username
+            email_changed = old_email != target_user.email
 
-                subject, html_body, text_body = email_sender.build_admin_credentials_override_notification_email(
-                    old_username, new_username, old_email, new_email
+            if not should_reissue_activation_token:
+                notify_old_username = old_username if username_changed else None
+                notify_new_username = target_user.username if username_changed else None
+                notify_old_email = old_email if email_changed else None
+                notify_new_email = target_user.email if email_changed else None
+
+                subject, html_body, text_body = (
+                    email_sender.build_admin_credentials_override_notification_email(
+                        notify_old_username,
+                        notify_new_username,
+                        notify_old_email,
+                        notify_new_email,
+                    )
                 )
 
                 PendingEmailRepository.add_pending_email(
@@ -836,10 +844,8 @@ class UserServiceAdmin:
         sort_by: str,
         order: str,
     ) -> PaginatedResponse:
-        
-        filters = filters.model_copy(
-            update={"allowed_roles": STAFF_ROLES}
-        )
+
+        filters = filters.model_copy(update={"allowed_roles": STAFF_ROLES})
 
         users, total = await UserRepositoryAdmin.get_users_admin(
             db, skip, limit, filters, sort_by, order

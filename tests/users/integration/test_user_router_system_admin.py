@@ -658,6 +658,7 @@ class TestUpdateUserCredentials:
 
         assert response.status_code == 422
 
+
 class TestUpdateUserCredentialsActivationReissueEndpoint:
     """HTTP-layer: only status code / response shape, per two-tier convention —
     internal state already proven at the service layer above."""
@@ -676,13 +677,13 @@ class TestUpdateUserCredentialsActivationReissueEndpoint:
 
         assert response.status_code == 204
 
+
 def _extract_raw_token_from_text_body(text_body: str) -> str:
     for line in text_body.splitlines():
         if "token=" in line:
             query = parse_qs(urlparse(line.strip()).query)
             return query["token"][0]
     raise AssertionError("No activation link with a token= param found in text_body")
-
 
 
 class TestUpdateUserCredentialsCombinedFieldsWithReissue:
@@ -1134,6 +1135,7 @@ async def _get_pending_email_for(db, recipient_user_id: int) -> PendingEmail:
 
     return result.scalar_one()
 
+
 class TestResendActivationInvite:
     async def test_system_admin_resends_invite_returns_204(
         self, test_db, client, system_admin
@@ -1156,9 +1158,7 @@ class TestResendActivationInvite:
     async def test_nonexistent_target_returns_404(self, test_db, client, system_admin):
         headers = await make_auth_header(test_db, system_admin)
 
-        response = await client.post(
-            "/users/999999999/resend-invite", headers=headers
-        )
+        response = await client.post("/users/999999999/resend-invite", headers=headers)
 
         assert response.status_code == 404
 
@@ -1206,6 +1206,7 @@ class TestResendActivationInvite:
         response = await client.post(f"/users/{target.id}/resend-invite")
 
         assert response.status_code == 401
+
 
 class TestGetStaffEndpoint:
     async def test_returns_200_with_staff_only(

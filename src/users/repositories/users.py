@@ -94,9 +94,7 @@ class UserRepositoryBase:
                 User.firstname.ilike(f"%{filters.firstname}%")
             )
         if filters.lastname:
-            base_query = base_query.filter(
-                User.lastname.ilike(f"%{filters.lastname}%")
-            )
+            base_query = base_query.filter(User.lastname.ilike(f"%{filters.lastname}%"))
         if filters.middlename:
             base_query = base_query.filter(
                 User.middlename.ilike(f"%{filters.lastname}%")
