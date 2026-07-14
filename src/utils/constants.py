@@ -23,6 +23,7 @@ class HTTP403:
 
 class HTTP404:
     USER = "User not found"
+    GUARDIAN_LINK = "This guardian link does not exist"
 
 
 class HTTP409:

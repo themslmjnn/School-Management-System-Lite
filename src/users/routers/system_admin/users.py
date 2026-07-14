@@ -18,7 +18,7 @@ from src.users.schemas.users import (
     UserResponseAdmin,
     UserResponseAdminDetailed,
 )
-from src.users.services.system_admin import UserServiceAdmin
+from src.users.services.system_admin.users import UserServiceAdmin
 from src.utils.enums import OrderBy, UserSortField
 
 router = APIRouter(
@@ -181,6 +181,7 @@ async def get_staff(
     )
 
 
+# COMPLETED!!!
 @router.get(
     "/staff/{target_user_id}",
     response_model=UserResponseAdminDetailed | dict,
@@ -194,6 +195,7 @@ async def get_staff_by_id(
     return await UserServiceAdmin.get_staff_by_id(db, target_user_id)
 
 
+# COMPLETED!!!
 @router.get(
     "/guardians",
     response_model=PaginatedResponse[UserResponseAdmin],
@@ -219,6 +221,7 @@ async def get_guardians(
     )
 
 
+# COMPLETED!!!
 @router.get(
     "/guardians/{target_user_id}",
     response_model=UserResponseAdminDetailed | dict,

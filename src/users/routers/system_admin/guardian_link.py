@@ -10,11 +10,11 @@ from src.core.dependencies import (
 )
 from src.users.schemas.guardian_link import (
     ChildResponse,
-    CreateGuardianLink,
-    GuardianLinkResponse,
-    UpdateGuardianPriority,
+    CreateGuardianLinkAdmin,
+    GuardianLinkResponseAdmin,
+    UpdateGuardianPriorityAdmin,
 )
-from src.users.services.system_admin import GuardianLinkServiceAdmin
+from src.users.services.system_admin.guardian_link import GuardianLinkServiceAdmin
 from src.utils.enums import UserRole
 
 router = APIRouter(
@@ -23,19 +23,21 @@ router = APIRouter(
 )
 
 
+# COMPLETED!!!
 @router.post(
-    "", response_model=GuardianLinkResponse, status_code=status.HTTP_201_CREATED
+    "", response_model=GuardianLinkResponseAdmin, status_code=status.HTTP_201_CREATED
 )
 async def link_guardian(
     db: async_db_dependency,
     current_user: Annotated[CurrentUser, Depends(require_system_admin)],
-    link_request: CreateGuardianLink,
+    create_request: CreateGuardianLinkAdmin,
 ):
     return await GuardianLinkServiceAdmin.link_guardian(
-        db, current_user.id, link_request
+        db, current_user.id, create_request
     )
 
 
+# COMPLETED!!!
 @router.delete("/{guardian_id}/{student_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def unlink_guardian(
     db: async_db_dependency,
@@ -48,9 +50,10 @@ async def unlink_guardian(
     )
 
 
+# COMPLETED!!!
 @router.patch(
     "/{guardian_id}/{student_id}",
-    response_model=GuardianLinkResponse,
+    response_model=GuardianLinkResponseAdmin,
     status_code=status.HTTP_200_OK,
 )
 async def change_guardian_priority(
@@ -58,7 +61,7 @@ async def change_guardian_priority(
     current_user: Annotated[CurrentUser, Depends(require_system_admin)],
     guardian_id: int,
     student_id: int,
-    update_request: UpdateGuardianPriority,
+    update_request: UpdateGuardianPriorityAdmin,
 ):
     return await GuardianLinkServiceAdmin.change_priority(
         db, current_user.id, guardian_id, student_id, update_request
