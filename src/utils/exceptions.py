@@ -158,6 +158,10 @@ class GuardianLinkNotFoundError(AppException):
     pass
 
 
+class DuplicateEmailChangeRequestError(AppException):
+    pass
+
+
 # ROLE RESTRICTIONS
 class CannotCreateDirectorError(AppException):
     pass

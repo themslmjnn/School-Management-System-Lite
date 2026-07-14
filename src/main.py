@@ -126,6 +126,7 @@ EXCEPTION_STATUS_MAP = {
     exc.CannotCreateSystemAdminError: 403,
     exc.GuardianSlotAlreadyFilledError: 409,
     exc.GuardianLinkAlreadyExistsError: 409,
+    exc.DuplicateEmailChangeRequestError: 409,
     exc.InvalidGuardianLinkError: 400,
     exc.GuardianLinkNotFoundError: 404,
 }

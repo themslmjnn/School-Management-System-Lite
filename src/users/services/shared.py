@@ -32,6 +32,7 @@ from src.utils.cache_keys import SessionCacheKey, UserCacheKey
 from src.utils.constants import HTTP400, HTTP404
 from src.utils.enums import EmailType, UserRole
 from src.utils.exceptions import (
+    DuplicateEmailChangeRequestError,
     EmailChangeCodeExpiredError,
     IncorrectPasswordError,
     InvalidEmailChangeCodeError,
@@ -52,7 +53,6 @@ STUDENT_MAX_SHARED_CONTACT = 3
 
 
 class UserServiceSelf:
-    # COMPLETED!!!
     @staticmethod
     async def update_me_profile(
         db: AsyncSession,
@@ -115,33 +115,60 @@ class UserServiceSelf:
         current_user_id: int,
         update_request: UpdateMeCredentials,
     ) -> None:
-        current_user = await UserRepositoryBase.get_user_by_id(
+        target_user = await UserRepositoryBase.get_user_by_id(
             db, current_user_id, load_session=True
         )
-        ensure_exists(current_user, UserNotFoundError(HTTP404.USER))
+        ensure_exists(target_user, UserNotFoundError(HTTP404.USER))
 
+        session = target_user.session
+
+        username_changing = (
+            update_request.username is not None
+            and update_request.username != target_user.username
+        )
         email_requested = (
             update_request.email is not None
-            and update_request.email != current_user.email
+            and update_request.email != target_user.email
         )
-        if update_request.username == current_user.username and not email_requested:
+
+        if not username_changing and not email_requested:
             raise NoChangesDetectedError(HTTP400.NO_CHANGES_DETECTED)
 
+        if email_requested:
+            pending_still_active = (
+                session.email_change_code_expires_at is not None
+                and session.email_change_code_expires_at > datetime.now(UTC)
+            )
+            if (
+                session.pending_new_email == update_request.email
+                and pending_still_active
+            ):
+                logger.warning(
+                    "email_change_request_denied",
+                    target_user_id=current_user_id,
+                    denial_reason="duplicate_pending_request",
+                )
+
+                raise DuplicateEmailChangeRequestError(
+                    "An identical email change request is already pending"
+                )
+
         try:
-            if update_request.username is not None:
-                current_user.username = update_request.username
+            if username_changing:
+                target_user.username = update_request.username
+                target_user.session.access_token_version += 1
 
             if email_requested:
                 raw_code, hashed_code = generate_email_change_code()
                 code_expires_at = datetime.now(UTC) + timedelta(
                     minutes=settings.EMAIL_CHANGE_CODE_EXPIRES_MINUTES
                 )
-                current_user.session.pending_new_email = update_request.email
-                current_user.session.email_change_code_hash = hashed_code
-                current_user.session.email_change_code_expires_at = code_expires_at
+                session.pending_new_email = update_request.email
+                session.email_change_code_hash = hashed_code
+                session.email_change_code_expires_at = code_expires_at
 
             await db.commit()
-
+            print(raw_code)
             if email_requested:
                 asyncio.create_task(
                     email_sender.send_safe(
@@ -153,16 +180,20 @@ class UserServiceSelf:
                 )
 
             await delete_cache(
-                SessionCacheKey.access_token_version_key(current_user_id),
-                UserCacheKey.user_detail_key_self(current_user_id),
-                UserCacheKey.user_detail_key_admin(current_user_id),
-                UserCacheKey.user_detail_key_staff(current_user_id),
+                UserCacheKey.user_detail_key_self(target_user.id),
+                UserCacheKey.user_detail_key_admin(target_user.id),
+                UserCacheKey.user_detail_key_staff(target_user.id),
             )
+
+            if username_changing:
+                await delete_cache(
+                    SessionCacheKey.access_token_version_key(target_user.id)
+                )
 
             logger.info(
                 "user_credentials_update_requested",
                 target_user_id=current_user_id,
-                username_changed=update_request.username is not None,
+                username_changed=username_changing,
                 email_change_requested=email_requested,
             )
 
@@ -184,12 +215,12 @@ class UserServiceSelf:
         current_user_id: int,
         confirm_request: ConfirmEmailChange,
     ) -> None:
-        current_user = await UserRepositoryBase.get_user_by_id(
+        target_user = await UserRepositoryBase.get_user_by_id(
             db, current_user_id, load_session=True
         )
-        ensure_exists(current_user, UserNotFoundError(HTTP404.USER))
+        ensure_exists(target_user, UserNotFoundError(HTTP404.USER))
 
-        session = current_user.session
+        session = target_user.session
         if session.pending_new_email is None or session.email_change_code_hash is None:
             raise NoPendingEmailChangeError("No email change is currently pending")
 
@@ -204,17 +235,18 @@ class UserServiceSelf:
                 target_user_id=current_user_id,
                 denial_reason="invalid_code",
             )
+
             raise InvalidEmailChangeCodeError("Invalid email change code")
 
         new_email = session.pending_new_email
-        is_student = current_user.role == UserRole.STUDENT
+        is_student = target_user.role == UserRole.STUDENT
 
         if is_student:
             await acquire_student_contact_lock(db, phone_number=None, email=new_email)
             await check_contact_limit(
                 db,
                 current_user_id,
-                target_username=current_user.username,
+                target_username=target_user.username,
                 phone_number=None,
                 email=new_email,
                 role=UserRole.STUDENT,
@@ -224,25 +256,41 @@ class UserServiceSelf:
             )
 
         try:
-            old_email = current_user.email
-            current_user.email = new_email
+            old_email = target_user.email
+            target_user.email = new_email
 
             session.pending_new_email = None
             session.email_change_code_hash = None
             session.email_change_code_expires_at = None
 
+            session.access_token_version += 1
+            session.refresh_token_hash = None
+            session.refresh_token_family = None
+            session.refresh_token_expires_at = None
+
             await db.commit()
+            await db.refresh(target_user)
 
-            # asyncio.create_task(
-            #     email_sender.send_safe(
-            #         email_sender.send_email_changed_notification(old_email),
-            #         email_type=EmailType.EMAIL_CHANGED,
-            #     )
-            # )
+            asyncio.create_task(
+                email_sender.send_safe(
+                    email_sender.send_email_changed_notification(
+                        target_user.email, old_email, target_user.email
+                    ),
+                    email_type=EmailType.EMAIL_CHANGED,
+                )
+            )
 
-            await delete_cache(UserCacheKey.user_detail_key_self(current_user_id))
+            await delete_cache(
+                SessionCacheKey.access_token_version_key(current_user_id),
+                UserCacheKey.user_detail_key_admin(current_user_id),
+                UserCacheKey.user_detail_key_staff(current_user_id),
+                UserCacheKey.user_detail_key_self(current_user_id),
+            )
 
-            logger.info("user_email_changed", target_user_id=current_user_id)
+            logger.info(
+                "user_email_changed",
+                target_user_id=current_user_id,
+            )
 
         except IntegrityError as e:
             await db.rollback()
@@ -252,11 +300,11 @@ class UserServiceSelf:
                 target_user_id=current_user_id,
                 reason=str(e.orig),
             )
+
             if not is_student:
                 handle_non_student_unique_contact_error(e)
             raise_unhandled_integrity_error(e)
 
-    # COMPLETED!!!
     @staticmethod
     async def update_me_password(
         db: AsyncSession,
@@ -307,7 +355,6 @@ class UserServiceSelf:
 
 
 class GuardianLinkServiceShared:
-    # COMPLETED!!!
     @staticmethod
     async def get_children_for_guardian(
         db: AsyncSession, guardian_id: int

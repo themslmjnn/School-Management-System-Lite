@@ -19,7 +19,6 @@ DELETION_GRACE_PERIOD_DAYS = 30
 
 
 class UserServiceGuardian:
-    # COMPLETED!!!
     @staticmethod
     async def create_guardian_self_deletion_request(
         db: AsyncSession,

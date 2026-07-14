@@ -20,7 +20,6 @@ router = APIRouter(
 )
 
 
-# COMPLETED!!!
 @router.post(
     "", response_model=GuardianLinkResponseAdmin, status_code=status.HTTP_201_CREATED
 )
@@ -34,7 +33,6 @@ async def link_guardian(
     )
 
 
-# COMPLETED!!!
 @router.delete("/{guardian_id}/{student_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def unlink_guardian(
     db: async_db_dependency,
@@ -47,7 +45,6 @@ async def unlink_guardian(
     )
 
 
-# COMPLETED!!!
 @router.patch(
     "/{guardian_id}/{student_id}",
     response_model=GuardianLinkResponseAdmin,

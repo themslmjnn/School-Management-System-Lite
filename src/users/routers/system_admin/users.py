@@ -27,7 +27,6 @@ router = APIRouter(
 )
 
 
-# COMPLETED!!!
 @router.post(
     "",
     response_model=UserResponseAdminDetailed,
@@ -43,7 +42,6 @@ async def register_user(
     return await UserServiceAdmin.register_user(db, current_user.id, create_request)
 
 
-# COMPLETED!!!
 @router.patch(
     "/{target_user_id}",
     response_model=UserResponseAdminDetailed,
@@ -60,7 +58,6 @@ async def update_user(
     )
 
 
-# COMPLETED!!!
 @router.patch(
     "/{target_user_id}/credentials",
     status_code=status.HTTP_204_NO_CONTENT,
@@ -76,7 +73,6 @@ async def update_user_credentials(
     )
 
 
-# COMPLETED!!!
 @router.post(
     "/{target_user_id}/guardian-deletion",
     status_code=status.HTTP_204_NO_CONTENT,
@@ -91,7 +87,6 @@ async def create_guardian_deletion_request(
     )
 
 
-# COMPLETED!!!
 @router.post(
     "/{target_user_id}/cancel-deletion",
     status_code=status.HTTP_204_NO_CONTENT,
@@ -106,7 +101,6 @@ async def cancel_guardian_deletion(
     )
 
 
-# COMPLETED!!!
 @router.patch("/{target_user_id}/deactivation", status_code=status.HTTP_204_NO_CONTENT)
 async def deactivate_user(
     db: async_db_dependency,
@@ -116,7 +110,6 @@ async def deactivate_user(
     return await UserServiceAdmin.deactivate_user(db, current_user.id, target_user_id)
 
 
-# COMPLETED!!!
 @router.patch("/{target_user_id}/activation", status_code=status.HTTP_204_NO_CONTENT)
 async def activate_user(
     db: async_db_dependency,
@@ -126,7 +119,6 @@ async def activate_user(
     return await UserServiceAdmin.activate_user(db, current_user.id, target_user_id)
 
 
-# COMPLETED!!!
 @router.post("/{target_user_id}/password", status_code=status.HTTP_204_NO_CONTENT)
 @user_limiter.limit("5/minute")
 async def create_reset_password_request(
@@ -140,7 +132,6 @@ async def create_reset_password_request(
     )
 
 
-# COMPLETED!!!
 @router.post(
     "/{target_user_id}/resend-invite",
     status_code=status.HTTP_204_NO_CONTENT,
@@ -155,7 +146,6 @@ async def resend_activation_invite(
     await UserServiceAdmin.resend_activation_invite(db, current_user.id, target_user_id)
 
 
-# COMPLETED!!!
 @router.get(
     "/staff",
     response_model=PaginatedResponse[UserResponseAdmin],
@@ -181,7 +171,6 @@ async def get_staff(
     )
 
 
-# COMPLETED!!!
 @router.get(
     "/staff/{target_user_id}",
     response_model=UserResponseAdminDetailed | dict,
@@ -195,7 +184,6 @@ async def get_staff_by_id(
     return await UserServiceAdmin.get_staff_by_id(db, target_user_id)
 
 
-# COMPLETED!!!
 @router.get(
     "/guardians",
     response_model=PaginatedResponse[UserResponseAdmin],
@@ -221,7 +209,6 @@ async def get_guardians(
     )
 
 
-# COMPLETED!!!
 @router.get(
     "/guardians/{target_user_id}",
     response_model=UserResponseAdminDetailed | dict,

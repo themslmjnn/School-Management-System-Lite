@@ -15,7 +15,6 @@ from src.utils.base_schema import BaseSchema
 from src.utils.enums import UserRole, UserStatus
 
 
-# COMPLETED!!!
 class UserResponseAdmin(BaseModel):
     firstname: str
     lastname: str
@@ -23,7 +22,6 @@ class UserResponseAdmin(BaseModel):
     role: UserRole
 
 
-# COMPLETED!!!
 class UserResponseAdminDetailed(UserResponseAdmin, BaseSchema):
     id: int
     username: str
@@ -47,7 +45,6 @@ class UserResponseAdminDetailed(UserResponseAdmin, BaseSchema):
         return validators.format_phone_for_display(self.phone_number)
 
 
-# COMPLETED!!!
 class CreateUserBase(BaseModel):
     username: str = Field(min_length=6, max_length=20)
     firstname: str = Field(min_length=3, max_length=50)
@@ -89,7 +86,6 @@ class CreateUserBase(BaseModel):
         return v.strip().lower()
 
 
-# COMPLETED!!!
 class CreateStudentAdmin(CreateUserBase):
     type: Literal["student"] = "student"
     date_of_birth: date
@@ -101,25 +97,21 @@ class CreateStudentAdmin(CreateUserBase):
         return validators.validate_date_of_birth(v)
 
 
-# COMPLETED!!!
 class CreateStaffAdmin(CreateUserBase):
     type: Literal["staff"] = "staff"
     role: UserRole
 
 
-# COMPLETED!!!
 class CreateGuardianAdmin(CreateUserBase):
     type: Literal["guardian"] = "guardian"
 
 
-# COMPLETED!!!
 CreateRequest = Annotated[
     CreateStudentAdmin | CreateStaffAdmin | CreateGuardianAdmin,
     Field(discriminator="type"),
 ]
 
 
-# COMPLETED!!!
 class UpdateUserBase(BaseModel):
     firstname: str | None = None
     lastname: str | None = None
@@ -155,12 +147,10 @@ class UpdateUserBase(BaseModel):
         return validators.parse_and_validate_mobile_number(field)
 
 
-# COMPLETED!!!
 class UpdateStaffAndGuardianAdmin(UpdateUserBase):
     type: Literal["staff_or_guardian"] = "staff_or_guardian"
 
 
-# COMPLETED!!!
 class UpdateStudentAdmin(UpdateUserBase):
     type: Literal["student"] = "student"
     date_of_birth: date | None = None
@@ -174,14 +164,12 @@ class UpdateStudentAdmin(UpdateUserBase):
         return validators.validate_date_of_birth(field)
 
 
-# COMPLETED!!!
 UpdateUser = Annotated[
     UpdateStaffAndGuardianAdmin | UpdateStudentAdmin,
     Field(discriminator="type"),
 ]
 
 
-# COMPLETED!!!
 class UpdateUserCredentials(BaseModel):
     username: str | None = Field(min_length=6, max_length=20, default=None)
     email: EmailStr | None = None
@@ -201,7 +189,6 @@ class UpdateUserCredentials(BaseModel):
         return v.strip().lower()
 
 
-# COMPLETED!!!
 class SearchUserBase(BaseModel):
     firstname: str | None = Field(default=None, max_length=50)
     lastname: str | None = Field(default=None, max_length=50)
@@ -209,14 +196,12 @@ class SearchUserBase(BaseModel):
     status: UserStatus | None = None
 
 
-# COMPLETED!!!
 class SearchUserAdmin(SearchUserBase):
     username: str | None = Field(default=None, max_length=15)
     email: str | None = Field(default=None, max_length=20)
     phone_number: str | None = Field(default=None, max_length=15)
 
 
-# COMPLETED!!!
 class UserResponseSelf(BaseSchema):
     id: int
     username: str
@@ -239,7 +224,6 @@ class UserResponseSelf(BaseSchema):
         return validators.format_phone_for_display(self.phone_number)
 
 
-# COMPLETED!!!
 class UpdateMeProfile(BaseModel):
     firstname: str | None = None
     lastname: str | None = None
@@ -298,7 +282,6 @@ class ConfirmEmailChange(BaseModel):
     code: str
 
 
-# COMPLETED!!!
 class UpdateMePassword(BaseModel):
     current_password: str
     new_password: str = Field(min_length=8, max_length=100)

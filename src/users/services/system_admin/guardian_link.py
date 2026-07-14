@@ -8,7 +8,6 @@ from src.users.repositories.users import (
     UserRepositoryBase,
 )
 from src.users.schemas.guardian_link import (
-    ChildResponse,
     CreateGuardianLinkAdmin,
     UpdateGuardianPriorityAdmin,
 )
@@ -28,7 +27,6 @@ NON_GUARDIAN_ROLES = frozenset({UserRole.STUDENT, UserRole.SYSTEM_ADMIN})
 
 
 class GuardianLinkServiceAdmin:
-    # COMPLETED!!!
     @staticmethod
     async def link_guardian(
         db: AsyncSession, current_user_id: int, create_request: CreateGuardianLinkAdmin
@@ -108,21 +106,20 @@ class GuardianLinkServiceAdmin:
             )
 
             return new_link
-        except IntegrityError as e:
+        except IntegrityError as err:
             await db.rollback()
 
             logger.error(
                 "guardian_link_failed",
                 reason="integrity_error",
-                error=str(e.orig),
+                error=str(err.orig),
                 actor_user_id=current_user_id,
             )
 
             raise GuardianSlotAlreadyFilledError(
                 "This guardian link could not be created"
-            ) from e
+            ) from err
 
-    # COMPLETED!!!
     @staticmethod
     async def unlink_guardian(
         db: AsyncSession, current_user_id: int, guardian_id: int, student_id: int
@@ -142,7 +139,6 @@ class GuardianLinkServiceAdmin:
             student_id=student_id,
         )
 
-    # COMPLETED!!!
     @staticmethod
     async def change_priority(
         db: AsyncSession,

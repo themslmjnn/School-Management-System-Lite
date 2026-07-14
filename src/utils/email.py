@@ -101,7 +101,6 @@ async def send_safe(coro, **log_context) -> None:
         )
 
 
-# COMPLETED!!!
 def build_invite_email(invite_token: str, username: str) -> tuple[str, str, str]:
     encoded_username = urllib.parse.quote(username)
     activation_link = (
@@ -159,7 +158,6 @@ async def send_invite_email(
     await send(subject=subject, to_email=to_email, html_body=html, text_body=text)
 
 
-# COMPLETED!!!
 async def send_account_info_updated_email(email: str) -> None:
     login_link = f"{settings.APP_URL}/auth/login"
 
@@ -208,7 +206,6 @@ async def send_account_info_updated_email(email: str) -> None:
     )
 
 
-# COMPLETED!!!
 def build_admin_credentials_override_notification_email(
     old_username: str | None = None,
     new_username: str | None = None,
@@ -305,7 +302,6 @@ def build_admin_credentials_override_notification_email(
     return subject, html, text
 
 
-# COMPLETED!!!
 async def send_admin_credentials_override_notification(
     email: str,
     old_username: str | None = None,
@@ -325,7 +321,6 @@ async def send_admin_credentials_override_notification(
     )
 
 
-# COMPLETED!!!
 async def send_account_deletion_email(email: str) -> None:
     login_link = f"{settings.APP_URL}/auth/login"
 
@@ -382,7 +377,6 @@ async def send_account_deletion_email(email: str) -> None:
     )
 
 
-# COMPLETED!!!
 async def send_account_deletion_canceled_email(email: str) -> None:
     login_link = f"{settings.APP_URL}/auth/login"
 
@@ -437,7 +431,6 @@ async def send_account_deletion_canceled_email(email: str) -> None:
     )
 
 
-# COMPLETED!!!
 async def send_account_deactivation_email(email: str, role: UserRole) -> None:
     login_link = f"{settings.APP_URL}/auth/login"
 
@@ -490,7 +483,6 @@ async def send_account_deactivation_email(email: str, role: UserRole) -> None:
     )
 
 
-# COMPLETED!!!
 async def send_account_activation_email(email: str) -> None:
     login_link = f"{settings.APP_URL}/auth/login"
 
@@ -537,7 +529,6 @@ async def send_account_activation_email(email: str) -> None:
     )
 
 
-# COMPLETED!!!
 def build_reset_password_email(reset_password_token: str) -> tuple[str, str, str]:
     reset_link = f"{settings.APP_URL}/auth/reset_password?token={reset_password_token}"
 
@@ -583,7 +574,6 @@ def build_reset_password_email(reset_password_token: str) -> tuple[str, str, str
     return subject, html, text
 
 
-# COMPLETED!!!
 async def send_reset_password_token(email: str, raw_reset_token: str) -> None:
     subject, html, text = build_reset_password_email(raw_reset_token)
 
@@ -641,7 +631,61 @@ async def send_email_change_verification(new_email: str, code: str) -> None:
     )
 
 
-# COMPLETED!!!
+async def send_email_changed_notification(
+    email: str, old_email: str, new_email: str
+) -> None:
+    html = f"""
+        <!DOCTYPE html>
+        <html lang="en">
+        <body style="font-family: Arial, sans-serif; background:#f4f4f5; padding:40px;">
+            <div style="max-width:560px;margin:auto;background:white;
+                        padding:40px;border-radius:8px;">
+                <h1 style="color:#1d4ed8;">SGM | LFGS</h1>
+                <h2>Your email address was changed</h2>
+                <p>
+                    The email address associated with your account was
+                    recently changed.
+                </p>
+                <table style="width:100%;margin:24px 0;border-collapse:collapse;">
+                    <tr>
+                        <td style="padding:8px 0;color:#6b7280;font-size:13px;">Old email</td>
+                        <td style="padding:8px 0;font-weight:bold;">{old_email}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding:8px 0;color:#6b7280;font-size:13px;">New email</td>
+                        <td style="padding:8px 0;font-weight:bold;">{new_email}</td>
+                    </tr>
+                </table>
+                <p>
+                    If you made this change, no action is needed.
+                </p>
+                <p>
+                    If you did not request this change, please contact
+                    your school administration immediately.
+                </p>
+            </div>
+        </body>
+        </html>
+    """
+
+    text = (
+        "SGM | LFGS.\n\n"
+        "The email address associated with your account was recently changed.\n\n"
+        f"Old email: {old_email}\n"
+        f"New email: {new_email}\n\n"
+        "If you made this change, no action is needed.\n\n"
+        "If you did not request this change, please contact "
+        "your school administration immediately."
+    )
+
+    await send(
+        subject="Your LFGS account email was changed",
+        to_email=email,
+        html_body=html,
+        text_body=text,
+    )
+
+
 async def send_password_changed_notification(email: str) -> None:
     html = """
         <!DOCTYPE html>

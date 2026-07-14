@@ -35,9 +35,10 @@ class EmailType(StrEnum):
     ACCOUNT_DEACTIVATION = "account_deactivation"
     ACCOUNT_ACTIVATION = "account_activation"
     PASSWORD_RESET_ADMIN = "password_reset_admin"
-    ACTIVATION_WITH_TOKEN = "activation_with_token"
     EMAIL_CHANGE_CODE = "email_change_code"
+    EMAIL_CHANGED = "email_changed"
     PASSWORD_CHANGED = "password_changed"
+    ACTIVATION_WITH_TOKEN = "activation_with_token"
 
 
 class EmailSendingStatus(StrEnum):

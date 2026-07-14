@@ -73,7 +73,6 @@ DELETION_GRACE_PERIOD_DAYS = 30
 NON_GUARDIAN_ROLES = frozenset({UserRole.STUDENT, UserRole.SYSTEM_ADMIN})
 
 
-# COMPLETED!!!
 async def check_contact_limit(
     db: AsyncSession,
     current_user_id: int,
@@ -143,7 +142,6 @@ async def check_contact_limit(
             )
 
 
-# COMPLETED!!!
 class UserServiceAdmin:
     @staticmethod
     async def register_user(
@@ -295,7 +293,6 @@ class UserServiceAdmin:
                 handle_non_student_unique_contact_error(e)
             raise_unhandled_integrity_error(e)
 
-    # COMPLETED!!!
     @staticmethod
     async def update_user(
         db: AsyncSession,
@@ -386,7 +383,6 @@ class UserServiceAdmin:
                 handle_non_student_unique_contact_error(e)
             raise_unhandled_integrity_error(e)
 
-    # COMPLETED!!!
     @staticmethod
     async def update_user_credentials(
         db: AsyncSession,
@@ -523,7 +519,6 @@ class UserServiceAdmin:
                 handle_non_student_unique_contact_error(e)
             raise_unhandled_integrity_error(e)
 
-    # COMPLETED!!!
     @staticmethod
     async def create_guardian_deletion_request(
         db: AsyncSession,
@@ -586,7 +581,6 @@ class UserServiceAdmin:
             deletion_scheduled_for=deletion_scheduled_for.isoformat(),
         )
 
-    # COMPLETED!!!
     @staticmethod
     async def cancel_guardian_deletion_request(
         db: AsyncSession,
@@ -634,7 +628,6 @@ class UserServiceAdmin:
             target_user_id=target_user_id,
         )
 
-    # COMPLETED!!!
     @staticmethod
     async def deactivate_user(
         db: AsyncSession, current_user_id: int, target_user_id: int
@@ -689,7 +682,6 @@ class UserServiceAdmin:
             deactivated_by=current_user_id,
         )
 
-    # COMPLETED!!!
     @staticmethod
     async def activate_user(
         db: AsyncSession, current_user_id: int, target_user_id: int
@@ -735,7 +727,6 @@ class UserServiceAdmin:
             activated_by=current_user_id,
         )
 
-    # COMPLETED!!!
     @staticmethod
     async def create_reset_password_request(
         db: AsyncSession,
@@ -779,7 +770,6 @@ class UserServiceAdmin:
             target_user_id=target_user_id,
         )
 
-    # COMPLETED!!!
     @staticmethod
     async def resend_activation_invite(
         db: AsyncSession,
@@ -836,7 +826,6 @@ class UserServiceAdmin:
             actor_user_id=current_user_id,
         )
 
-    # COMPLETED!!!
     @staticmethod
     async def get_staff(
         db: AsyncSession,
@@ -861,7 +850,6 @@ class UserServiceAdmin:
             has_more=skip + limit < total,
         )
 
-    # COMPLETED!!!
     @staticmethod
     async def get_staff_by_id(
         db: AsyncSession,
@@ -886,7 +874,6 @@ class UserServiceAdmin:
 
         return result
 
-    # COMPLETED!!!
     @staticmethod
     async def get_guardians(
         db: AsyncSession,
@@ -912,7 +899,6 @@ class UserServiceAdmin:
             has_more=skip + limit < total,
         )
 
-    # COMPLETED!!!
     @staticmethod
     async def get_guardian_by_id(
         db: AsyncSession,
