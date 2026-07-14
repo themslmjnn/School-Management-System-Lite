@@ -199,22 +199,3 @@ class GuardianLinkServiceAdmin:
         )
 
         return link
-
-    @staticmethod
-    async def get_children_for_guardian(
-        db: AsyncSession, guardian_id: int
-    ) -> list[ChildResponse]:
-        links = await GuardianLinkRepositoryAdmin.get_children_for_guardian(
-            db, guardian_id
-        )
-
-        return [
-            ChildResponse(
-                id=link.student.id,
-                firstname=link.student.firstname,
-                lastname=link.student.lastname,
-                middlename=link.student.middlename,
-                priority=link.priority,
-            )
-            for link in links
-        ]

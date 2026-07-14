@@ -14,6 +14,7 @@ router = APIRouter(
 )
 
 
+# COMPLETED!!!
 @router.post("/users/me/deletion", status_code=status.HTTP_204_NO_CONTENT)
 async def create_guardian_self_deletion_request(
     db: async_db_dependency,

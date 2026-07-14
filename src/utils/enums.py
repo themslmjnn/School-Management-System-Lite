@@ -30,7 +30,7 @@ class EmailType(StrEnum):
     INVITE = "invite"
     UPDATING_ACCOUNT = "updating_account"
     ADMIN_CREDENTIALS_OVERRIDE = "admin_credentials_override"
-    CCOUNT_DELETION = "account_deletion"
+    ACCOUNT_DELETION = "account_deletion"
     CANCEL_ACCOUNT_DELETION = "cancel_account_deletion"
     ACCOUNT_DEACTIVATION = "account_deactivation"
     ACCOUNT_ACTIVATION = "account_activation"

@@ -290,6 +290,8 @@ class GuardianLinkRepositoryAdmin:
 
         return result.scalar_one_or_none()
 
+
+class GuardianLinkRepositoryShared:
     @staticmethod
     async def get_children_for_guardian(
         db: AsyncSession, guardian_id: int

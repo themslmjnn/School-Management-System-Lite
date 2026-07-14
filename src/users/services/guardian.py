@@ -19,6 +19,7 @@ DELETION_GRACE_PERIOD_DAYS = 30
 
 
 class UserServiceGuardian:
+    # COMPLETED!!!
     @staticmethod
     async def create_guardian_self_deletion_request(
         db: AsyncSession,
@@ -54,8 +55,8 @@ class UserServiceGuardian:
 
         asyncio.create_task(
             email_sender.send_safe(
-                email_sender.send_cancel_parent_deletion_email(target_user.email),
-                email_type=EmailType.CANCEL_ACCOUNT_DELETION,
+                email_sender.send_account_deletion_email(target_user.email),
+                email_type=EmailType.ACCOUNT_DELETION,
             )
         )
 

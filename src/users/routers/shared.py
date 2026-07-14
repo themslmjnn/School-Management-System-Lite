@@ -6,8 +6,9 @@ from src.core.dependencies import (
     CurrentUser,
     async_db_dependency,
     current_user_dependency,
-    require_system_admin_and_guardian,
+    require_roles,
 )
+from src.users.schemas.guardian_link import ChildResponse
 from src.users.schemas.users import (
     ConfirmEmailChange,
     UpdateMeCredentials,
@@ -15,7 +16,8 @@ from src.users.schemas.users import (
     UpdateMeProfile,
     UserResponseSelf,
 )
-from src.users.services.shared import UserServiceSelf
+from src.users.services.shared import GuardianLinkServiceShared, UserServiceSelf
+from src.utils.enums import UserRole
 
 router = APIRouter(
     prefix="/users",
@@ -70,3 +72,16 @@ async def update_me_password(
     update_request: UpdateMePassword,
 ):
     await UserServiceSelf.update_me_password(db, current_user.id, update_request)
+
+
+# COMPLETED!!!
+@router.get("/me/children", response_model=list[ChildResponse])
+async def get_my_children(
+    db: async_db_dependency,
+    current_user: Annotated[
+        CurrentUser, Depends(require_roles(*(UserRole.__members__.values())))
+    ],
+):
+    return await GuardianLinkServiceShared.get_children_for_guardian(
+        db, current_user.id
+    )

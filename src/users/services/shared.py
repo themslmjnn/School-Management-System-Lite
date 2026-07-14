@@ -15,7 +15,11 @@ from src.core.security import (
     verify_password,
 )
 from src.users.models.users import User
-from src.users.repositories.users import UserRepositoryBase
+from src.users.repositories.users import (
+    GuardianLinkRepositoryShared,
+    UserRepositoryBase,
+)
+from src.users.schemas.guardian_link import ChildResponse
 from src.users.schemas.users import (
     ConfirmEmailChange,
     UpdateMeCredentials,
@@ -296,3 +300,25 @@ class UserServiceSelf:
             "user_password_changed",
             target_user_id=current_user_id,
         )
+
+
+class GuardianLinkServiceShared:
+    # COMPLETED!!!
+    @staticmethod
+    async def get_children_for_guardian(
+        db: AsyncSession, guardian_id: int
+    ) -> list[ChildResponse]:
+        links = await GuardianLinkRepositoryShared.get_children_for_guardian(
+            db, guardian_id
+        )
+
+        return [
+            ChildResponse(
+                id=link.student.id,
+                firstname=link.student.firstname,
+                lastname=link.student.lastname,
+                middlename=link.student.middlename,
+                priority=link.priority,
+            )
+            for link in links
+        ]
