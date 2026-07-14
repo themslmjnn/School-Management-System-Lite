@@ -55,7 +55,7 @@ async def activate_with_token(
     "/refresh_token", response_model=LoginResponse, status_code=status.HTTP_200_OK
 )
 @ip_limiter.limit("30/minute")
-async def refresh(
+async def refresh_token(
     request: Request,
     response: Response,
     db: async_db_dependency,

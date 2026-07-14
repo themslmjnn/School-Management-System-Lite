@@ -1,3 +1,4 @@
+import asyncio
 import hmac
 import secrets
 from datetime import UTC, datetime, timedelta
@@ -31,9 +32,10 @@ from src.core.security import (
     verify_reset_password_token,
 )
 from src.users.repositories.users import UserRepositoryBase
-from src.utils.cache_keys import SessionCacheKey
+from src.utils import email as email_sender
+from src.utils.cache_keys import SessionCacheKey, UserCacheKey
 from src.utils.constants import HTTP400, HTTP401, HTTP403
-from src.utils.enums import UserStatus
+from src.utils.enums import EmailType, UserStatus
 from src.utils.exceptions import (
     AccountInactiveError,
     AccountLockedError,
@@ -167,6 +169,14 @@ class AuthService:
 
             raise InvalidCredentialsError(HTTP401.INVALID_CREDENTIALS)
 
+        if user.status == UserStatus.PENDING_ACTIVATION:
+            logger.warning(
+                "login_failed",
+                reason="account_not_activated",
+                user_id=user.id,
+            )
+            raise InvalidCredentialsError(HTTP401.INVALID_CREDENTIALS)
+
         if not await verify_password(form_data.password, user.password_hash):
             user.login_lockout.failed_login_attempts += 1
 
@@ -193,7 +203,50 @@ class AuthService:
 
             raise InvalidCredentialsError(HTTP401.INVALID_CREDENTIALS)
 
-        if user.status != UserStatus.ACTIVE:
+        if user.status == UserStatus.PENDING_DELETION:
+            grace_period_active = (
+                user.deletion_scheduled_for is not None
+                and datetime.now(UTC) < user.deletion_scheduled_for
+            )
+
+            if not grace_period_active:
+                logger.warning(
+                    "login_failed",
+                    reason="deletion_grace_period_expired",
+                    user_id=user.id,
+                )
+
+                raise AccountInactiveError(HTTP403.ACCOUNT_DEACTIVATED)
+
+            reactivated = await UserRepositoryBase.reactivate_pending_deletion_user(
+                db, user.id
+            )
+
+            if not reactivated:
+                await db.rollback()
+
+                logger.warning(
+                    "login_reactivation_lost_race",
+                    user_id=user.id,
+                    denial_reason="user_hard_deleted_before_reactivation_committed",
+                )
+
+                raise AccountInactiveError(HTTP403.ACCOUNT_DEACTIVATED)
+
+            logger.info("account_reactivated_on_login", user_id=user.id)
+
+            user_email = user.email
+
+            asyncio.create_task(
+                email_sender.send_safe(
+                    email_sender.send_account_deletion_canceled_email(user_email),
+                    email_type=EmailType.CANCEL_ACCOUNT_DELETION,
+                )
+            )
+
+            await delete_cache(UserCacheKey.user_detail_key_admin(user.id))
+
+        elif user.status != UserStatus.ACTIVE:
             logger.warning(
                 "login_failed",
                 reason="account_inactive",
@@ -334,18 +387,21 @@ class AuthService:
                 error_type=type(e).__name__,
                 error_message=str(e),
             )
-
             raise InvalidRefreshTokenError(HTTP401.INVALID_REFRESH_TOKEN) from e
 
         user = await UserRepositoryBase.get_user_by_id(db, user_id, load_session=True)
 
-        if user is None or user.session.refresh_token_hash is None:
+        if (
+            user is None
+            or user.session.refresh_token_hash is None
+            or user.session.refresh_token_family is None
+            or user.session.refresh_token_expires_at is None
+        ):
             logger.warning(
                 "refresh_token_rotation_failed",
                 reason="invalid_refresh_token",
                 user_id=user_id,
             )
-
             raise InvalidRefreshTokenError(HTTP401.INVALID_REFRESH_TOKEN)
 
         if datetime.now(UTC) > user.session.refresh_token_expires_at:
@@ -354,7 +410,6 @@ class AuthService:
                 reason="refresh_token_expired",
                 user_id=user.id,
             )
-
             raise ExpiredRefreshTokenError(HTTP401.EXPIRED_REFRESH_TOKEN)
 
         refresh_token_family_valid = hmac.compare_digest(
@@ -416,7 +471,10 @@ class AuthService:
     @staticmethod
     async def reset_password(db: AsyncSession, update_request: ResetPassword):
         user = await AuthRepository.get_user_by_username(
-            db, update_request.username, load_session=True
+            db,
+            update_request.username,
+            load_session=True,
+            load_login_lockout=True,
         )
 
         if user is None:
@@ -459,6 +517,9 @@ class AuthService:
         user.session.refresh_token_expires_at = None
         user.session.refresh_token_family = None
 
+        user.login_lockout.failed_login_attempts = 0
+        user.login_lockout.locked_until = None
+
         await db.commit()
         await db.refresh(user)
 
@@ -470,7 +531,7 @@ class AuthService:
         )
 
     @staticmethod
-    async def create_forgot_passsword_request(
+    async def create_forgot_password_request(
         db: AsyncSession,
         forgot_password_request: ForgotPasswordPublicRequest,
     ) -> MessageResponse:
@@ -478,9 +539,11 @@ class AuthService:
             db, forgot_password_request.username, load_session=True
         )
 
-        if user is not None and user.session is not None:
-            _, hashed_reset_password_token = generate_reset_password_token()
+        raw_reset_password_token, hashed_reset_password_token = (
+            generate_reset_password_token()
+        )
 
+        if user is not None and user.session is not None:
             user.session.reset_password_token_hash = hashed_reset_password_token
             user.session.reset_password_token_expires_at = datetime.now(
                 UTC
@@ -488,13 +551,18 @@ class AuthService:
 
             await db.commit()
 
-            # asyncio.create_task(
-            #     send_safe(
-            #         send_forgot_password_email(user.email, raw_reset_password_token),
-            #         email_type="forgot_password",
-            #     )
-            # )
+            asyncio.create_task(
+                email_sender.send_safe(
+                    email_sender.send_forgot_password_email(
+                        user.email, raw_reset_password_token
+                    ),
+                    email_type=EmailType.FORGOT_PASSWORD,
+                )
+            )
 
-            logger.info("forgot_password_request_processed")
+            logger.info(
+                "forgot_password_request_processed",
+                user_id=user.id,
+            )
 
         return MessageResponse(detail=PublicMessages.FORGOT_PASSWORD)

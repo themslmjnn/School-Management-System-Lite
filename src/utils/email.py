@@ -722,3 +722,53 @@ async def send_password_changed_notification(email: str) -> None:
         html_body=html,
         text_body=text,
     )
+
+
+async def send_forgot_password_email(email: str, raw_reset_token: str) -> None:
+    reset_link = f"{settings.APP_URL}/auth/reset_password?token={raw_reset_token}"
+
+    html = f"""
+        <!DOCTYPE html>
+        <html lang="en">
+        <body style="font-family: Arial, sans-serif; background:#f4f4f5; padding:40px;">
+            <div style="max-width:560px;margin:auto;background:white;
+                        padding:40px;border-radius:8px;">
+                <h1 style="color:#1d4ed8;">SGM | LFGS</h1>
+                <p>
+                    You requested a password reset for your account.
+                    Click the button below to set a new password.
+                    This link expires in
+                    <strong>{settings.RESET_PASSWORD_EXPIRES_MINUTES} minutes</strong>.
+                </p>
+                <div style="margin:40px 0;text-align:center;">
+                    <a href="{reset_link}"
+                        style="background:#1d4ed8;color:white;padding:14px 28px;
+                            border-radius:6px;text-decoration:none;font-weight:bold;">
+                        Reset Password
+                    </a>
+                </div>
+                <p style="font-size:13px;color:#6b7280;">
+                    If you did not request this, ignore this email.
+                    Your password has not been changed.
+                </p>
+            </div>
+        </body>
+        </html>
+    """
+
+    text = (
+        f"You requested a password reset for your "
+        f"LFGS account.\n\n"
+        f"Reset your password using the link below:\n\n"
+        f"{reset_link}\n\n"
+        f"This link expires in {settings.RESET_PASSWORD_EXPIRES_MINUTES} minutes.\n\n"
+        f"If you did not request this, ignore this email. "
+        f"Your password has not been changed."
+    )
+
+    await send(
+        subject="Your LFGS password reset link",
+        to_email=email,
+        html_body=html,
+        text_body=text,
+    )

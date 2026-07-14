@@ -39,6 +39,7 @@ class EmailType(StrEnum):
     EMAIL_CHANGED = "email_changed"
     PASSWORD_CHANGED = "password_changed"
     ACTIVATION_WITH_TOKEN = "activation_with_token"
+    FORGOT_PASSWORD = "forgot_password"
 
 
 class EmailSendingStatus(StrEnum):
