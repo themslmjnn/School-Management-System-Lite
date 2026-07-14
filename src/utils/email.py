@@ -7,6 +7,7 @@ import httpx
 
 from src.core.config import settings
 from src.core.logging import get_logger
+from src.utils.enums import UserRole
 
 logger = get_logger(__name__)
 
@@ -100,6 +101,7 @@ async def send_safe(coro, **log_context) -> None:
         )
 
 
+# COMPLETED!!!
 def build_invite_email(invite_token: str, username: str) -> tuple[str, str, str]:
     encoded_username = urllib.parse.quote(username)
     activation_link = (
@@ -157,6 +159,7 @@ async def send_invite_email(
     await send(subject=subject, to_email=to_email, html_body=html, text_body=text)
 
 
+# COMPLETED!!!
 async def send_account_info_updated_email(email: str) -> None:
     login_link = f"{settings.APP_URL}/auth/login"
 
@@ -205,6 +208,7 @@ async def send_account_info_updated_email(email: str) -> None:
     )
 
 
+# COMPLETED!!!
 def build_admin_credentials_override_notification_email(
     old_username: str | None = None,
     new_username: str | None = None,
@@ -301,6 +305,7 @@ def build_admin_credentials_override_notification_email(
     return subject, html, text
 
 
+# COMPLETED!!!
 async def send_admin_credentials_override_notification(
     email: str,
     old_username: str | None = None,
@@ -320,6 +325,7 @@ async def send_admin_credentials_override_notification(
     )
 
 
+# COMPLETED!!!
 async def send_account_deletion_email(email: str) -> None:
     login_link = f"{settings.APP_URL}/auth/login"
 
@@ -376,6 +382,7 @@ async def send_account_deletion_email(email: str) -> None:
     )
 
 
+# COMPLETED!!!
 async def send_account_deletion_canceled_email(email: str) -> None:
     login_link = f"{settings.APP_URL}/auth/login"
 
@@ -430,8 +437,22 @@ async def send_account_deletion_canceled_email(email: str) -> None:
     )
 
 
-async def send_account_deactivation_email(email: str) -> None:
-    html = """
+# COMPLETED!!!
+async def send_account_deactivation_email(email: str, role: UserRole) -> None:
+    login_link = f"{settings.APP_URL}/auth/login"
+
+    if role == UserRole.GUARDIAN:
+        login_button = f"""
+            <div style="margin:40px 0;text-align:center;">
+                <a href="{login_link}"
+                    style="background:#1d4ed8;color:white;padding:14px 28px;
+                        border-radius:6px;text-decoration:none;font-weight:bold;">
+                    Log In
+                </a>
+            </div>
+        """
+
+    html = f"""
         <!DOCTYPE html>
         <html lang="en">
         <body style="font-family: Arial, sans-serif; background:#f4f4f5; padding:40px;">
@@ -441,8 +462,8 @@ async def send_account_deactivation_email(email: str) -> None:
                 <h2>Your account has been deactivated</h2>
                 <p>
                     An administrator has deactivated your account.
-                    You will no longer be able to log in.
                 </p>
+                {login_button}
                 <p>
                     If you believe this was done in error, please contact
                     your LFGS administrator.
@@ -452,12 +473,13 @@ async def send_account_deactivation_email(email: str) -> None:
         </html>
     """
 
-    text = (
-        "SGM | LFGS.\n\n"
-        "An administrator has deactivated your account. "
-        "You will no longer be able to log in.\n\n"
-        "If you believe this was done in error, please contact "
-        "your LFGS administrator."
+    text = "SGM | LFGS.\n\nAn administrator has deactivated your account. "
+
+    if role == UserRole.GUARDIAN:
+        text += f"\n\nLog in: {login_link}"
+
+    text += (
+        "If you believe this was done in error, please contact your LFGS administrator."
     )
 
     await send(
@@ -468,6 +490,7 @@ async def send_account_deactivation_email(email: str) -> None:
     )
 
 
+# COMPLETED!!!
 async def send_account_activation_email(email: str) -> None:
     login_link = f"{settings.APP_URL}/auth/login"
 

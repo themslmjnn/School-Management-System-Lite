@@ -43,6 +43,7 @@ async def register_user(
     return await UserServiceAdmin.register_user(db, current_user.id, create_request)
 
 
+# COMPLETED!!!
 @router.patch(
     "/{target_user_id}",
     response_model=UserResponseAdminDetailed,
@@ -59,6 +60,7 @@ async def update_user(
     )
 
 
+# COMPLETED!!!
 @router.patch(
     "/{target_user_id}/credentials",
     status_code=status.HTTP_204_NO_CONTENT,
@@ -74,6 +76,7 @@ async def update_user_credentials(
     )
 
 
+# COMPLETED!!!
 @router.post(
     "/{target_user_id}/guardian-deletion",
     status_code=status.HTTP_204_NO_CONTENT,
@@ -88,6 +91,7 @@ async def create_guardian_deletion_request(
     )
 
 
+# COMPLETED!!!
 @router.post(
     "/{target_user_id}/cancel-deletion",
     status_code=status.HTTP_204_NO_CONTENT,
@@ -102,6 +106,7 @@ async def cancel_guardian_deletion(
     )
 
 
+# COMPLETED!!!
 @router.patch("/{target_user_id}/deactivation", status_code=status.HTTP_204_NO_CONTENT)
 async def deactivate_user(
     db: async_db_dependency,
@@ -111,6 +116,7 @@ async def deactivate_user(
     return await UserServiceAdmin.deactivate_user(db, current_user.id, target_user_id)
 
 
+# COMPLETED!!!
 @router.patch("/{target_user_id}/activation", status_code=status.HTTP_204_NO_CONTENT)
 async def activate_user(
     db: async_db_dependency,

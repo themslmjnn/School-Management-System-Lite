@@ -84,6 +84,7 @@ DELETION_GRACE_PERIOD_DAYS = 30
 NON_GUARDIAN_ROLES = frozenset({UserRole.STUDENT, UserRole.SYSTEM_ADMIN})
 
 
+# COMPLETED!!!
 async def check_contact_limit(
     db: AsyncSession,
     current_user_id: int,
@@ -305,6 +306,7 @@ class UserServiceAdmin:
                 handle_non_student_unique_contact_error(e)
             raise_unhandled_integrity_error(e)
 
+    # COMPLETED!!!
     @staticmethod
     async def update_user(
         db: AsyncSession,
@@ -395,6 +397,7 @@ class UserServiceAdmin:
                 handle_non_student_unique_contact_error(e)
             raise_unhandled_integrity_error(e)
 
+    # COMPLETED!!!
     @staticmethod
     async def update_user_credentials(
         db: AsyncSession,
@@ -531,6 +534,7 @@ class UserServiceAdmin:
                 handle_non_student_unique_contact_error(e)
             raise_unhandled_integrity_error(e)
 
+    # COMPLETED!!!
     @staticmethod
     async def create_guardian_deletion_request(
         db: AsyncSession,
@@ -593,6 +597,7 @@ class UserServiceAdmin:
             deletion_scheduled_for=deletion_scheduled_for.isoformat(),
         )
 
+    # COMPLETED!!!
     @staticmethod
     async def cancel_guardian_deletion_request(
         db: AsyncSession,
@@ -640,6 +645,7 @@ class UserServiceAdmin:
             target_user_id=target_user_id,
         )
 
+    # COMPLETED!!!
     @staticmethod
     async def deactivate_user(
         db: AsyncSession, current_user_id: int, target_user_id: int
@@ -664,6 +670,7 @@ class UserServiceAdmin:
 
         target_user.is_active = False
         target_user.status = UserStatus.DEACTIVATED
+
         target_user.session.access_token_version += 1
         target_user.session.refresh_token_hash = None
         target_user.session.refresh_token_family = None
@@ -673,16 +680,18 @@ class UserServiceAdmin:
 
         asyncio.create_task(
             email_sender.send_safe(
-                email_sender.send_account_deactivation_email(target_user.email),
+                email_sender.send_account_deactivation_email(
+                    target_user.email, target_user.role
+                ),
                 email_type=EmailType.ACCOUNT_DEACTIVATION,
             )
         )
 
         await delete_cache(
+            SessionCacheKey.access_token_version_key(target_user_id),
             UserCacheKey.user_detail_key_admin(target_user_id),
             UserCacheKey.user_detail_key_staff(target_user_id),
             UserCacheKey.user_detail_key_self(target_user_id),
-            SessionCacheKey.access_token_version_key(target_user_id),
         )
 
         logger.info(
@@ -691,6 +700,7 @@ class UserServiceAdmin:
             deactivated_by=current_user_id,
         )
 
+    # COMPLETED!!!
     @staticmethod
     async def activate_user(
         db: AsyncSession, current_user_id: int, target_user_id: int
@@ -714,6 +724,7 @@ class UserServiceAdmin:
             raise UserAlreadyActiveError("User is already activated")
 
         target_user.is_active = True
+
         target_user.login_lockout.failed_login_attempts = 0
         target_user.login_lockout.locked_until = None
 

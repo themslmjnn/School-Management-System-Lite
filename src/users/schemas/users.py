@@ -181,6 +181,7 @@ UpdateUser = Annotated[
 ]
 
 
+# COMPLETED!!!
 class UpdateUserCredentials(BaseModel):
     username: str | None = Field(min_length=6, max_length=20, default=None)
     email: EmailStr | None = None
