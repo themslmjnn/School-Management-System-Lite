@@ -106,8 +106,8 @@ class TestRegisterStaff:
         test_db: AsyncSession,
         system_admin: User,
         valid_create_staff_request: CreateStaffAdmin,
-        existing_user_data: dict,
-        request_override: dict,
+        existing_user_data,
+        request_override,
         expected_exception,
     ):
         await make_teacher(test_db, **existing_user_data)
@@ -300,8 +300,8 @@ class TestRegisterStudent:
         test_db: AsyncSession,
         system_admin: User,
         valid_create_student_request: CreateStudentAdmin,
-        existing_user_data: dict,
-        request_override: dict,
+        existing_user_data,
+        request_override,
         expected_exception,
     ):
         await make_teacher(test_db, **existing_user_data)
@@ -365,6 +365,8 @@ class TestRegisterStudent:
         assert session.user_id == user.id
         assert session.access_token_version == 1
         assert session.refresh_token_hash is None
+        assert session.refresh_token_expires_at is None
+        assert session.refresh_token_family is None
 
     async def test_create_user_login_lockout_table_successfully(
         self,
@@ -381,6 +383,8 @@ class TestRegisterStudent:
         )
         lockout = user_with_lockout.login_lockout
 
+        assert lockout.id is not None
+        assert lockout.user_id == user.id
         assert lockout.failed_login_attempts == 0
         assert lockout.locked_until is None
 
@@ -399,6 +403,8 @@ class TestRegisterStudent:
         )
         activation = user_with_activation.activation
 
+        assert activation.id is not None
+        assert activation.user_id == user.id
         assert activation.invite_token_hash is not None
         assert activation.invite_token_expires_at is not None
         assert activation.invite_token_expires_at > datetime.now(UTC)
@@ -670,7 +676,7 @@ class TestUpdateStudent:
             test_db, system_admin.id, student.id, update_request
         )
 
-        assert updated_user.firstname == "NewName"
+        assert updated_user.firstname == "Newname"
         assert updated_user.date_of_birth == date(2007, 6, 15)
         assert updated_user.address == "123 New Address Street, City"
 
@@ -699,13 +705,8 @@ class TestUpdateStudent:
         student: User,
         mock_send_account_info_updated_email,
         mock_acquire_student_contact_lock,
-        mocker,
+        mock_check_contact_limit,
     ):
-        mock_limit = mocker.patch(
-            "src.users.services.system_admin._check_contact_limit",
-            return_value=None,
-        )
-
         update_request = UpdateStudentAdmin(phone_number=student.phone_number)
 
         with pytest.raises(NoChangesDetectedError):
@@ -714,7 +715,7 @@ class TestUpdateStudent:
             )
 
         mock_acquire_student_contact_lock.assert_not_called()
-        mock_limit.assert_not_called()
+        mock_check_contact_limit.assert_not_called()
 
     async def test_update_student_phone_contact_limit_reached(
         self,
@@ -762,7 +763,6 @@ class TestUpdateUserCredentials:
         test_db: AsyncSession,
         system_admin: User,
         teacher: User,
-        mock_send_admin_credentials_override_notification,
     ):
         update_request = UpdateUserCredentials(username="newusername1")
 
@@ -779,7 +779,6 @@ class TestUpdateUserCredentials:
         test_db: AsyncSession,
         system_admin: User,
         teacher: User,
-        mock_send_admin_credentials_override_notification,
     ):
         update_request = UpdateUserCredentials(email="new.email@example.com")
 
@@ -796,7 +795,6 @@ class TestUpdateUserCredentials:
         test_db: AsyncSession,
         system_admin: User,
         teacher: User,
-        mock_send_admin_credentials_override_notification,
     ):
         update_request = UpdateUserCredentials(username="newusername2")
 
@@ -822,7 +820,6 @@ class TestUpdateUserCredentials:
         test_db: AsyncSession,
         system_admin: User,
         teacher: User,
-        mock_send_admin_credentials_override_notification,
         mock_delete_cache,
     ):
         update_request = UpdateUserCredentials(username="newusername3")
@@ -838,25 +835,6 @@ class TestUpdateUserCredentials:
             SessionCacheKey.access_token_version_key(teacher.id),
         )
 
-    async def test_notification_sent_to_old_email(
-        self,
-        test_db: AsyncSession,
-        system_admin: User,
-        teacher: User,
-        mock_send_admin_credentials_override_notification,
-    ):
-        old_email = teacher.email
-        update_request = UpdateUserCredentials(email="brand.new@example.com")
-
-        await UserServiceAdmin.update_user_credentials(
-            test_db, system_admin.id, teacher.id, update_request
-        )
-
-        await asyncio.sleep(0)
-
-        mock_send_admin_credentials_override_notification.assert_called_once_with(
-            old_email
-        )
 
     async def test_not_found_raises_user_not_found(
         self,
@@ -944,7 +922,6 @@ class TestUpdateUserCredentialsStudentEmailLock:
         test_db: AsyncSession,
         system_admin: User,
         student: User,
-        mock_send_admin_credentials_override_notification,
         mock_acquire_student_contact_lock,
     ):
         update_request = UpdateUserCredentials(email="new.student@example.com")

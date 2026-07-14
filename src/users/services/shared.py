@@ -122,7 +122,6 @@ class UserServiceSelf:
             if update_request.username is not None:
                 current_user.username = update_request.username
 
-            raw_code = None
             if email_requested:
                 raw_code, hashed_code = generate_email_change_code()
                 code_expires_at = datetime.now(UTC) + timedelta(
@@ -135,17 +134,20 @@ class UserServiceSelf:
 
             await db.commit()
 
-            if email_requested:
-                asyncio.create_task(
-                    email_sender.send_safe(
-                        email_sender.send_email_change_code_email(
-                            update_request.email, raw_code
-                        ),
-                        email_type=EmailType.EMAIL_CHANGE_CODE,
-                    )
-                )
+            print(raw_code)
+            # if email_requested:
+            #     asyncio.create_task(
+            #         email_sender.send_safe(
+            #             email_sender.send_email_change_verification(
+            #                 update_request.email, raw_code
+            #             ),
+            #             email_type=EmailType.EMAIL_CHANGE_CODE,
+            #         )
+            #     )
 
-            await delete_cache(UserCacheKey.user_detail_key_self(current_user_id))
+            await delete_cache(UserCacheKey.user_detail_key_self(current_user_id),
+                UserCacheKey.user_detail_key_admin(current_user_id),
+                UserCacheKey.user_detail_key_staff(current_user_id))
 
             logger.info(
                 "user_credentials_update_requested",
@@ -221,12 +223,12 @@ class UserServiceSelf:
 
             await db.commit()
 
-            asyncio.create_task(
-                email_sender.send_safe(
-                    email_sender.send_email_changed_notification(old_email),
-                    email_type=EmailType.EMAIL_CHANGED,
-                )
-            )
+            # asyncio.create_task(
+            #     email_sender.send_safe(
+            #         email_sender.send_email_changed_notification(old_email),
+            #         email_type=EmailType.EMAIL_CHANGED,
+            #     )
+            # )
 
             await delete_cache(UserCacheKey.user_detail_key_self(current_user_id))
 
@@ -276,12 +278,12 @@ class UserServiceSelf:
 
         await db.commit()
 
-        asyncio.create_task(
-            email_sender.send_safe(
-                email_sender.send_password_changed_notification(current_user.email),
-                email_type=EmailType.PASSWORD_CHANGED,
-            )
-        )
+        # asyncio.create_task(
+        #     email_sender.send_safe(
+        #         email_sender.send_password_changed_notification(current_user.email),
+        #         email_type=EmailType.PASSWORD_CHANGED,
+        #     )
+        # )
 
         await delete_cache(
             UserCacheKey.user_detail_key_self(current_user_id),

@@ -15,7 +15,7 @@ from src.users.schemas.guardian_link import (
     UpdateGuardianPriority,
 )
 from src.users.services.system_admin import GuardianLinkServiceAdmin
-from utils.enums import UserRole
+from src.utils.enums import UserRole
 
 router = APIRouter(
     prefix="/users/guardians",

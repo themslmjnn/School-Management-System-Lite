@@ -29,8 +29,6 @@ from tests.factories import (
 )
 from users.services.system_admin import UserServiceAdmin
 
-_URL = "/users"
-
 
 class TestRegisterUser:
     async def test_creates_staff_user_with_invite_token(
@@ -43,7 +41,7 @@ class TestRegisterUser:
         headers = await make_auth_header(test_db, system_admin)
 
         response = await client.post(
-            _URL,
+            "/users",
             json=valid_create_staff_request.model_dump(mode="json"),
             headers=headers,
         )
@@ -77,19 +75,25 @@ class TestRegisterUser:
         headers = await make_auth_header(test_db, system_admin)
 
         response = await client.post(
-            _URL,
+            "/users",
             json=valid_create_student_request.model_dump(mode="json"),
             headers=headers,
         )
 
         data = response.json()
-
-        print(response.json())
+        user_with_activation = await UserRepositoryBase.get_user_by_id(
+            test_db, data["id"], load_activation=True
+        )
+        activation = user_with_activation.activation
 
         assert response.status_code == 201
         assert data["id"] is not None
         assert data["role"] == UserRole.STUDENT.value
         assert data["is_active"] is False
+        assert activation.invite_token_hash is not None
+        assert activation.invite_token_expires_at is not None
+        assert activation.invite_token_expires_at > datetime.now(UTC)
+        assert activation.user_id == data["id"]
 
     async def test_creates_guardian_with_invite_token(
         self,
@@ -101,17 +105,25 @@ class TestRegisterUser:
         headers = await make_auth_header(test_db, system_admin)
 
         response = await client.post(
-            _URL,
+            "/users",
             json=valid_create_guardian_request.model_dump(mode="json"),
             headers=headers,
         )
 
         data = response.json()
+        user_with_activation = await UserRepositoryBase.get_user_by_id(
+            test_db, data["id"], load_activation=True
+        )
+        activation = user_with_activation.activation
 
         assert response.status_code == 201
         assert data["id"] is not None
         assert data["role"] == UserRole.GUARDIAN.value
         assert data["is_active"] is False
+        assert activation.invite_token_hash is not None
+        assert activation.invite_token_expires_at is not None
+        assert activation.invite_token_expires_at > datetime.now(UTC)
+        assert activation.user_id == data["id"]
 
     async def test_rejects_system_admin_role(
         self,
@@ -124,7 +136,7 @@ class TestRegisterUser:
         valid_create_staff_request.role = UserRole.SYSTEM_ADMIN
 
         response = await client.post(
-            _URL,
+            "/users",
             json=valid_create_staff_request.model_dump(mode="json"),
             headers=headers,
         )
@@ -143,7 +155,7 @@ class TestRegisterUser:
         valid_create_staff_request.role = UserRole.DIRECTOR
 
         response = await client.post(
-            _URL,
+            "/users",
             json=valid_create_staff_request.model_dump(mode="json"),
             headers=headers,
         )
@@ -185,7 +197,7 @@ class TestRegisterUser:
         headers = await make_auth_header(test_db, system_admin)
 
         response = await client.post(
-            _URL,
+            "/users",
             json=valid_create_staff_request.model_dump(mode="json"),
             headers=headers,
         )
@@ -205,7 +217,7 @@ class TestRegisterUser:
         headers = await make_auth_header(test_db, system_admin)
 
         response = await client.post(
-            _URL,
+            "/users",
             json=valid_create_student_request.model_dump(mode="json"),
             headers=headers,
         )
@@ -228,7 +240,7 @@ class TestRegisterUser:
         headers = await make_auth_header(test_db, system_admin)
 
         response = await client.post(
-            _URL,
+            "/users",
             json=valid_create_guardian_request.model_dump(mode="json"),
             headers=headers,
         )
@@ -245,7 +257,7 @@ class TestRegisterUser:
         headers = await make_auth_header(test_db, teacher)
 
         response = await client.post(
-            _URL,
+            "/users",
             json=valid_create_staff_request.model_dump(mode="json"),
             headers=headers,
         )
@@ -253,7 +265,7 @@ class TestRegisterUser:
         assert response.status_code == 403
 
     async def test_unauthenticated_request_returns_401(self, client):
-        response = await client.post(_URL)
+        response = await client.post("/users")
 
         assert response.status_code == 401
 
@@ -268,7 +280,7 @@ class TestRegisterUser:
         payload = valid_create_staff_request.model_dump(mode="json")
         payload["username"] = "bad-name!"
 
-        response = await client.post(_URL, json=payload, headers=headers)
+        response = await client.post("/users", json=payload, headers=headers)
 
         errors = response.json()["detail"]
         error_fields = [error["loc"][-1] for error in errors]
@@ -287,7 +299,7 @@ class TestRegisterUser:
         payload = valid_create_student_request.model_dump(mode="json")
         del payload["date_of_birth"]
 
-        response = await client.post(_URL, json=payload, headers=headers)
+        response = await client.post("/users", json=payload, headers=headers)
 
         errors = response.json()["detail"]
         error_fields = [error["loc"][-1] for error in errors]
@@ -315,7 +327,7 @@ class TestUpdateUser:
 
         assert response.status_code == 200
         body = response.json()
-        assert body["firstname"] == "UpdatedFirstName"
+        assert body["firstname"] == "Updatedfirstname"
         assert body["id"] == teacher.id
 
     async def test_update_user_returns_404_when_not_found(

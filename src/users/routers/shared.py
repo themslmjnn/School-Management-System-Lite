@@ -30,7 +30,7 @@ router = APIRouter(
 )
 async def update_me_profile(
     db: async_db_dependency,
-    current_user: Annotated[CurrentUser, Depends(require_system_admin_and_guardian)],
+    current_user: current_user_dependency,
     update_request: UpdateMeProfile,
 ):
     return await UserServiceSelf.update_me_profile(db, current_user.id, update_request)

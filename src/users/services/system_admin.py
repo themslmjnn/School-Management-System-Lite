@@ -106,6 +106,7 @@ async def check_contact_limit(
             email=None,
             exclude_user_id=exclude_user_id,
         )
+
         if phone_count >= max_allowed:
             logger.warning(
                 "user_registration_denied",
@@ -114,10 +115,12 @@ async def check_contact_limit(
                 requested_role=resolved_role,
                 denial_reason="maximum_number_of_identical_phone_numbers_reached",
             )
+
             if is_student:
                 raise MaxStudentsPerPhoneNumberError(
                     "Maximum number of students with this phone number reached"
                 )
+            
             raise MaxStaffOrGuardianPerPhoneNumberError(
                 "Maximum number of staff or guardians with this phone number reached"
             )
@@ -130,6 +133,7 @@ async def check_contact_limit(
             email=email,
             exclude_user_id=exclude_user_id,
         )
+
         if email_count >= max_allowed:
             logger.warning(
                 "user_registration_denied",
@@ -138,10 +142,12 @@ async def check_contact_limit(
                 requested_role=resolved_role,
                 denial_reason="maximum_number_of_identical_emails_reached",
             )
+
             if is_student:
                 raise MaxStudentsPerEmailError(
                     "Maximum number of students with this email reached"
                 )
+            
             raise MaxStaffOrGuardianPerEmailError(
                 "Maximum number of staff or guardians with this email reached"
             )
@@ -225,11 +231,9 @@ class UserServiceAdmin:
         try:
             new_user = User(
                 username=create_request.username,
-                firstname=create_request.firstname.capitalize(),
-                lastname=create_request.lastname.capitalize(),
-                middlename=create_request.middlename.capitalize()
-                if create_request.middlename
-                else None,
+                firstname=create_request.firstname,
+                lastname=create_request.lastname,
+                middlename=create_request.middlename,
                 phone_number=create_request.phone_number,
                 email=create_request.email,
                 role=resolved_role,
@@ -275,7 +279,7 @@ class UserServiceAdmin:
 
             await db.commit()
             await db.refresh(new_user)
-
+            print(raw_invite_token)
             logger.info(
                 "user_registered",
                 new_user_id=new_user.id,
@@ -329,7 +333,6 @@ class UserServiceAdmin:
                 "Submitted update payload type does not match the target user's role"
             )
 
-        is_student = target_user.role == UserRole.STUDENT
         phone_number_changing = (
             update_request.phone_number is not None
             and update_request.phone_number != target_user.phone_number
@@ -360,7 +363,7 @@ class UserServiceAdmin:
             asyncio.create_task(
                 email_sender.send_safe(
                     email_sender.send_account_info_updated_email(target_user.email),
-                    email_type="updating_account",
+                    email_type=EmailType.UPDATING_ACCOUNT,
                 )
             )
 
@@ -435,6 +438,8 @@ class UserServiceAdmin:
 
         try:
             old_email = target_user.email
+            old_username = target_user.username
+
             update_object(target_user, update_request)
 
             target_user.session.access_token_version += 1
@@ -445,7 +450,6 @@ class UserServiceAdmin:
             target_user.session.email_change_code_hash = None
             target_user.session.email_change_code_expires_at = None
 
-            raw_invite_token = None
             if should_reissue_activation_token:
                 raw_invite_token, hashed_invite_token = generate_invite_token()
                 invite_token_expires_at = datetime.now(UTC) + timedelta(
@@ -454,7 +458,6 @@ class UserServiceAdmin:
                 target_user.activation.invite_token_hash = hashed_invite_token
                 target_user.activation.invite_token_expires_at = invite_token_expires_at
 
-            if should_reissue_activation_token:
                 subject, html_body, text_body = email_sender.build_invite_email(
                     raw_invite_token, target_user.email
                 )
@@ -469,17 +472,28 @@ class UserServiceAdmin:
                     recipient_user_id=target_user.id,
                 )
 
-            await db.commit()
-
             if not should_reissue_activation_token:
-                asyncio.create_task(
-                    email_sender.send_safe(
-                        email_sender.send_admin_credentials_override_notification(
-                            old_email
-                        ),
-                        email_type=EmailType.ADMIN_CREDENTIALS_OVERRIDE,
-                    )
+                old_username = old_username if old_username != target_user.username else None
+                new_username = target_user.username if old_username != target_user.username else None
+                old_email = old_email if old_email != target_user.email else None
+                new_email = target_user.email if old_email != target_user.email else None
+
+                subject, html_body, text_body = email_sender.build_admin_credentials_override_notification_email(
+                    old_username, new_username, old_email, new_email
                 )
+
+                PendingEmailRepository.add_pending_email(
+                    db,
+                    recipient=target_user.email,
+                    subject=subject,
+                    html_body=html_body,
+                    text_body=text_body,
+                    email_type=EmailType.ADMIN_CREDENTIALS_OVERRIDE,
+                    triggered_by=current_user_id,
+                    recipient_user_id=target_user.id,
+                )
+
+            await db.commit()
 
             await delete_cache(
                 UserCacheKey.user_detail_key_admin(target_user_id),
@@ -489,7 +503,7 @@ class UserServiceAdmin:
             )
 
             logger.info(
-                "admin_email_override",
+                "admin_credentials_override",
                 target_user_id=target_user_id,
                 updated_by=current_user_id,
             )
@@ -498,7 +512,7 @@ class UserServiceAdmin:
             await db.rollback()
 
             logger.error(
-                "admin_email_override_failed",
+                "admin_credentials_override_failed",
                 target_user_id=target_user_id,
                 requested_by=current_user_id,
                 reason=str(e.orig),
@@ -547,6 +561,7 @@ class UserServiceAdmin:
         target_user.session.refresh_token_hash = None
         target_user.session.refresh_token_family = None
         target_user.session.refresh_token_expires_at = None
+
         target_user_email = target_user.email
 
         await db.commit()
@@ -821,7 +836,10 @@ class UserServiceAdmin:
         sort_by: str,
         order: str,
     ) -> PaginatedResponse:
-        filters.allowed_roles = STAFF_ROLES
+        
+        filters = filters.model_copy(
+            update={"allowed_roles": STAFF_ROLES}
+        )
 
         users, total = await UserRepositoryAdmin.get_users_admin(
             db, skip, limit, filters, sort_by, order
@@ -868,7 +886,9 @@ class UserServiceAdmin:
         sort_by: str,
         order: str,
     ) -> PaginatedResponse:
-        filters.allowed_roles = frozenset({UserRole.GUARDIAN})
+        filters = filters.model_copy(
+            update={"allowed_roles": frozenset({UserRole.GUARDIAN})}
+        )
 
         users, total = await UserRepositoryAdmin.get_users_admin(
             db, skip, limit, filters, sort_by, order
@@ -962,7 +982,7 @@ class GuardianLinkServiceAdmin:
 
         try:
             new_link = StudentGuardianLink(
-                parent_id=link_request.guardian_id,
+                guardian_id=link_request.guardian_id,
                 student_id=link_request.student_id,
                 priority=link_request.priority,
             )

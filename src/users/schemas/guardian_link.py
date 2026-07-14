@@ -11,7 +11,7 @@ class CreateGuardianLink(BaseModel):
 
 
 class GuardianLinkResponse(BaseSchema):
-    parent_id: int
+    guardian_id: int
     student_id: int
     priority: GuardianPriority
 

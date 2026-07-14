@@ -91,15 +91,15 @@ class UserRepositoryBase:
 
         if filters.firstname:
             base_query = base_query.filter(
-                User.firstname.ilike(f"%{filters.first_name}%")
+                User.firstname.ilike(f"%{filters.firstname}%")
             )
         if filters.lastname:
             base_query = base_query.filter(
-                User.lastname.ilike(f"%{filters.last_name}%")
+                User.lastname.ilike(f"%{filters.lastname}%")
             )
         if filters.middlename:
             base_query = base_query.filter(
-                User.middlename.ilike(f"%{filters.last_name}%")
+                User.middlename.ilike(f"%{filters.lastname}%")
             )
         if filters.allowed_roles:
             base_query = base_query.filter(User.role.in_(filters.allowed_roles))
@@ -271,7 +271,7 @@ class GuardianLinkRepositoryAdmin:
         db: AsyncSession, parent_id: int, student_id: int
     ) -> StudentGuardianLink | None:
         query = select(StudentGuardianLink).where(
-            StudentGuardianLink.parent_id == parent_id,
+            StudentGuardianLink.guardian_id == parent_id,
             StudentGuardianLink.student_id == student_id,
         )
 
@@ -299,7 +299,7 @@ class GuardianLinkRepositoryAdmin:
         query = (
             select(StudentGuardianLink)
             .options(joinedload(StudentGuardianLink.student))
-            .where(StudentGuardianLink.parent_id == guardian_id)
+            .where(StudentGuardianLink.guardian_id == guardian_id)
         )
 
         result = await db.execute(query)

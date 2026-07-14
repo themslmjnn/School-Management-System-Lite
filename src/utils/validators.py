@@ -41,7 +41,7 @@ def validate_firstname(firstname: str) -> str:
             "First name can only contain letters",
         )
 
-    return firstname
+    return firstname.capitalize()
 
 
 def validate_lastname(lastname: str) -> str:
@@ -51,7 +51,7 @@ def validate_lastname(lastname: str) -> str:
             "Last name can only contain letters",
         )
 
-    return lastname
+    return lastname.capitalize()
 
 
 def validate_middlename(middlename: str) -> str:
@@ -61,7 +61,7 @@ def validate_middlename(middlename: str) -> str:
             "Middle name can only contain letters",
         )
 
-    return middlename
+    return middlename.capitalize()
 
 
 def validate_date_of_birth(birth_date: date) -> date:

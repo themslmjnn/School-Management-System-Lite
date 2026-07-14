@@ -1,5 +1,5 @@
 import asyncio
-import datetime
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -28,7 +28,7 @@ class UserServiceGuardian:
             db,
             current_user_id,
             load_session=True,
-            allowed_roles=frozenset({UserRole.PARENT}),
+            allowed_roles=frozenset({UserRole.GUARDIAN}),
         )
         ensure_exists(target_user, UserNotFoundError(HTTP404.USER))
 
@@ -37,7 +37,7 @@ class UserServiceGuardian:
                 "Your account is already scheduled for deletion"
             )
 
-        deletion_scheduled_for = datetime.now(datetime.UTC) + datetime.timedelta(
+        deletion_scheduled_for = datetime.now(UTC) + timedelta(
             days=DELETION_GRACE_PERIOD_DAYS
         )
 

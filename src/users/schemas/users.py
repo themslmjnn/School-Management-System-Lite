@@ -204,7 +204,6 @@ class SearchUserBase(BaseModel):
     firstname: str | None = Field(default=None, max_length=50)
     lastname: str | None = Field(default=None, max_length=50)
     middlename: str | None = Field(default=None, max_length=50)
-    allowed_roles: set[UserRole] | None = None
     status: UserStatus | None = None
 
 
@@ -221,7 +220,7 @@ class UserResponseSelf(BaseSchema):
     firstname: str
     lastname: str
     middlename: str | None
-    date_of_birth: date
+    date_of_birth: date | None
     phone_number: str
     email: str
     address: str | None

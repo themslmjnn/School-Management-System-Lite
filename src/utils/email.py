@@ -149,14 +149,127 @@ def build_invite_email(invite_token: str, username: str) -> tuple[str, str, str]
     return subject, html, text
 
 
-async def send_invite_email(email: str, raw_invite_token: str) -> None:
-    subject, html, text = build_invite_email(raw_invite_token, email)
+async def send_invite_email(to_email: str, username: str, raw_invite_token: str) -> None:
+    subject, html, text = build_invite_email(raw_invite_token, username)
 
-    await send(subject=subject, to_email=email, html_body=html, text_body=text)
+    await send(subject=subject, to_email=to_email, html_body=html, text_body=text)
 
+
+def build_admin_credentials_override_notification_email(
+    old_username: str | None = None,
+    new_username: str | None = None,
+    old_email: str | None = None,
+    new_email: str | None = None,
+) -> tuple[str, str, str]:
+    changes_html = ""
+    changes_text = ""
+
+    subject = "Your LFGS account credentials were changed"
+    login_link = f"{settings.APP_URL}/auth/login"
+
+    if old_username is not None and new_username is not None:
+        changes_html += f"""
+                    <tr>
+                        <td style="padding:8px 0;color:#6b7280;font-size:13px;">
+                            Old username
+                        </td>
+                        <td style="padding:8px 0;font-weight:bold;">{old_username}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding:8px 0;color:#6b7280;font-size:13px;">
+                            New username
+                        </td>
+                        <td style="padding:8px 0;font-weight:bold;">{new_username}</td>
+                    </tr>
+        """
+        changes_text += (
+            f"Old username: {old_username}\nNew username: {new_username}\n\n"
+        )
+
+    if old_email is not None and new_email is not None:
+        changes_html += f"""
+                    <tr>
+                        <td style="padding:8px 0;color:#6b7280;font-size:13px;">
+                            Old email
+                        </td>
+                        <td style="padding:8px 0;font-weight:bold;">{old_email}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding:8px 0;color:#6b7280;font-size:13px;">
+                            New email
+                        </td>
+                        <td style="padding:8px 0;font-weight:bold;">{new_email}</td>
+                    </tr>
+        """
+        changes_text += f"Old email: {old_email}\nNew email: {new_email}\n\n"
+
+    html = f"""
+        <!DOCTYPE html>
+        <html lang="en">
+        <body style="font-family: Arial, sans-serif; background:#f4f4f5; padding:40px;">
+            <div style="max-width:560px;margin:auto;background:white;
+                        padding:40px;border-radius:8px;">
+                <h1 style="color:#1d4ed8;">SGM | LFGS</h1>
+                <h2>Your account credentials were changed</h2>
+                <p>
+                    An administrator has updated the credentials on your account.
+                </p>
+                <table style="width:100%;margin:24px 0;border-collapse:collapse;">
+                    {changes_html}
+                </table>
+                <p>
+                    If you were expecting this change, no action is needed.
+                    You will need to log in again using your new credentials.
+                </p>
+                <div style="margin:40px 0;text-align:center;">
+                    <a href="{login_link}"
+                        style="background:#1d4ed8;color:white;padding:14px 28px;
+                            border-radius:6px;text-decoration:none;font-weight:bold;">
+                        Log In
+                    </a>
+                </div>
+                <p>
+                    If you were not expecting this change, contact your
+                    administrator immediately.
+                </p>
+            </div>
+        </body>
+        </html>
+    """
+
+    text = (
+        "SGM | LFGS.\n\n"
+        "An administrator has updated the credentials on your account.\n\n"
+        f"{changes_text}"
+        "If you were expecting this change, no action is needed. "
+        "You will need to log in again using your new credentials.\n\n"
+        f"Log in at: {login_link}\n\n"
+        "If you were not expecting this change, contact your "
+        "administrator immediately."
+    )
+
+    return subject, html, text
+
+async def send_admin_credentials_override_notification(
+    email: str,
+    old_username: str | None = None,
+    new_username: str | None = None,
+    old_email: str | None = None,
+    new_email: str | None = None
+) -> None:
+    subject, html, text = build_admin_credentials_override_notification_email(old_username, new_username, old_email, new_email)
+
+    await send(
+        subject=subject,
+        to_email=email,
+        html_body=html,
+        text_body=text,
+    )
 
 async def send_account_deletion_email(email: str) -> None:
-    html = """
+    login_link = f"{settings.APP_URL}/auth/login"
+
+    html = f"""
         <!DOCTYPE html>
         <html lang="en">
         <body style="font-family: Arial, sans-serif; background:#f4f4f5; padding:40px;">
@@ -174,6 +287,13 @@ async def send_account_deletion_email(email: str) -> None:
                     You can still log in and use your account normally during this
                     30-day period.
                 </p>
+                <div style="margin:40px 0;text-align:center;">
+                    <a href="{login_link}"
+                        style="background:#1d4ed8;color:white;padding:14px 28px;
+                            border-radius:6px;text-decoration:none;font-weight:bold;">
+                        Log In
+                    </a>
+                </div>
                 <p>
                     If you believe this was done in error, please contact
                     your school administrator before the deletion date.
@@ -189,6 +309,7 @@ async def send_account_deletion_email(email: str) -> None:
         "Your account will be permanently deleted in 30 days.\n\n"
         "You can still log in and use your account normally during this "
         "30-day period.\n\n"
+        f"Log in at: {login_link}\n\n"
         "If you believe this was done in error, please contact "
         "your school administrator before the deletion date."
     )
@@ -340,7 +461,9 @@ async def send_account_activation_email(email: str) -> None:
 
 
 async def send_account_info_updated_email(email: str) -> None:
-    html = """
+    login_link = f"{settings.APP_URL}/auth/login"
+
+    html = f"""
         <!DOCTYPE html>
         <html lang="en">
         <body style="font-family: Arial, sans-serif; background:#f4f4f5; padding:40px;">
@@ -352,6 +475,13 @@ async def send_account_info_updated_email(email: str) -> None:
                     A school administrator has updated some information
                     associated with your account.
                 </p>
+                <div style="margin:40px 0;text-align:center;">
+                    <a href="{login_link}"
+                        style="background:#1d4ed8;color:white;padding:14px 28px;
+                            border-radius:6px;text-decoration:none;font-weight:bold;">
+                        Log In
+                    </a>
+                </div>
                 <p>
                     If you did not request this change, please contact
                     your school administration as soon as possible.
@@ -365,103 +495,13 @@ async def send_account_info_updated_email(email: str) -> None:
         "SGM | LFGS.\n\n"
         "A school administrator has updated some information associated "
         "with your account.\n\n"
+        f"Log in at: {login_link}\n\n"
         "If you did not request this change, please contact "
         "your school administration as soon as possible."
     )
 
     await send(
         subject="Your account information has been updated",
-        to_email=email,
-        html_body=html,
-        text_body=text,
-    )
-
-
-async def send_admin_credentials_override_notification(
-    email: str,
-    old_username: str | None = None,
-    new_username: str | None = None,
-    old_email: str | None = None,
-    new_email: str | None = None,
-) -> None:
-    changes_html = ""
-    changes_text = ""
-
-    if old_username is not None and new_username is not None:
-        changes_html += f"""
-                    <tr>
-                        <td style="padding:8px 0;color:#6b7280;font-size:13px;">
-                            Old username
-                        </td>
-                        <td style="padding:8px 0;font-weight:bold;">{old_username}</td>
-                    </tr>
-                    <tr>
-                        <td style="padding:8px 0;color:#6b7280;font-size:13px;">
-                            New username
-                        </td>
-                        <td style="padding:8px 0;font-weight:bold;">{new_username}</td>
-                    </tr>
-        """
-        changes_text += (
-            f"Old username: {old_username}\nNew username: {new_username}\n\n"
-        )
-
-    if old_email is not None and new_email is not None:
-        changes_html += f"""
-                    <tr>
-                        <td style="padding:8px 0;color:#6b7280;font-size:13px;">
-                            Old email
-                        </td>
-                        <td style="padding:8px 0;font-weight:bold;">{old_email}</td>
-                    </tr>
-                    <tr>
-                        <td style="padding:8px 0;color:#6b7280;font-size:13px;">
-                            New email
-                        </td>
-                        <td style="padding:8px 0;font-weight:bold;">{new_email}</td>
-                    </tr>
-        """
-        changes_text += f"Old email: {old_email}\nNew email: {new_email}\n\n"
-
-    html = f"""
-        <!DOCTYPE html>
-        <html lang="en">
-        <body style="font-family: Arial, sans-serif; background:#f4f4f5; padding:40px;">
-            <div style="max-width:560px;margin:auto;background:white;
-                        padding:40px;border-radius:8px;">
-                <h1 style="color:#1d4ed8;">SGM | LFGS</h1>
-                <h2>Your account credentials were changed</h2>
-                <p>
-                    An administrator has updated the credentials on your account.
-                </p>
-                <table style="width:100%;margin:24px 0;border-collapse:collapse;">
-                    {changes_html}
-                </table>
-                <p>
-                    If you were expecting this change, no action is needed.
-                    You will need to log in again using your new credentials.
-                </p>
-                <p>
-                    If you were not expecting this change, contact your
-                    administrator immediately.
-                </p>
-            </div>
-        </body>
-        </html>
-    """
-
-    text = (
-        "SGM | LFGS.\n\n"
-        "An administrator has updated the credentials on your account.\n\n"
-        f"{changes_text}"
-        "If you were expecting this change, no action is needed. "
-        "You will need to log in again using your new credentials.\n\n"
-        "If you were not expecting this change, contact your "
-        "administrator immediately."
-    )
-
-    await send(
-        subject="Your LFGS account credentials were changed",
         to_email=email,
         html_body=html,
         text_body=text,
@@ -517,3 +557,53 @@ async def send_reset_password_token(email: str, raw_reset_token: str) -> None:
     subject, html, text = build_reset_password_email(raw_reset_token)
 
     await send(subject=subject, to_email=email, html_body=html, text_body=text)
+
+async def send_email_change_verification(new_email: str, code: str) -> None:
+    html = f"""
+        <!DOCTYPE html>
+        <html lang="en">
+        <body style="font-family: Arial, sans-serif; background:#f4f4f5; padding:40px;">
+            <div style="max-width:560px;margin:auto;background:white;
+                        padding:40px;border-radius:8px;">
+                <h1 style="color:#1d4ed8;">SGM | LFGS</h1>
+                <h2>Confirm your new email address</h2>
+                <p>
+                    You requested to change your email address.
+                    Enter the code below to confirm this new address.
+                    It expires in
+                    <strong>{settings.EMAIL_CHANGE_CODE_EXPIRES_MINUTES} minutes</strong>.
+                </p>
+                <div style="text-align:center;">
+                    <div style="display:inline-block;background:#f0f4ff;
+                                border:2px solid #1d4ed8;border-radius:8px;
+                                padding:20px 48px;margin:24px 0;">
+                        <span style="font-size:36px;font-weight:700;
+                                    letter-spacing:10px;color:#1d4ed8;">
+                            {code}
+                        </span>
+                    </div>
+                </div>
+                <p style="font-size:13px;color:#6b7280;">
+                    If you did not request this change, ignore this email.
+                    Your current email address has not been changed.
+                </p>
+            </div>
+        </body>
+        </html>
+    """
+
+    text = (
+        f"Library Management System.\n\n"
+        f"You requested to change your email address.\n\n"
+        f"Your confirmation code is: {code}\n\n"
+        f"It expires in {settings.EMAIL_CHANGE_CODE_EXPIRES_MINUTES} minutes.\n\n"
+        f"If you did not request this change, ignore this email. "
+        f"Your current email address has not been changed."
+    )
+
+    await send(
+        subject="Confirm your new Library email address",
+        to_email=new_email,
+        html_body=html,
+        text_body=text,
+    )
