@@ -126,6 +126,7 @@ async def activate_user(
     return await UserServiceAdmin.activate_user(db, current_user.id, target_user_id)
 
 
+# COMPLETED!!!
 @router.post("/{target_user_id}/password", status_code=status.HTTP_204_NO_CONTENT)
 @user_limiter.limit("5/minute")
 async def create_reset_password_request(
@@ -139,11 +140,14 @@ async def create_reset_password_request(
     )
 
 
+# COMPLETED!!!
 @router.post(
     "/{target_user_id}/resend-invite",
     status_code=status.HTTP_204_NO_CONTENT,
 )
+@user_limiter.limit("5/minute")
 async def resend_activation_invite(
+    request: Request,
     db: async_db_dependency,
     current_user: Annotated[CurrentUser, Depends(require_system_admin)],
     target_user_id: Annotated[int, Path(ge=1)],
@@ -151,6 +155,7 @@ async def resend_activation_invite(
     await UserServiceAdmin.resend_activation_invite(db, current_user.id, target_user_id)
 
 
+# COMPLETED!!!
 @router.get(
     "/staff",
     response_model=PaginatedResponse[UserResponseAdmin],

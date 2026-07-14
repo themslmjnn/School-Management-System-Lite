@@ -32,10 +32,10 @@ class EmailType(StrEnum):
     ADMIN_CREDENTIALS_OVERRIDE = "admin_credentials_override"
     CCOUNT_DELETION = "account_deletion"
     CANCEL_ACCOUNT_DELETION = "cancel_account_deletion"
-    PASSWORD_RESET_ADMIN = "password_reset_admin"
-    ACTIVATION_WITH_TOKEN = "activation_with_token"
     ACCOUNT_DEACTIVATION = "account_deactivation"
     ACCOUNT_ACTIVATION = "account_activation"
+    PASSWORD_RESET_ADMIN = "password_reset_admin"
+    ACTIVATION_WITH_TOKEN = "activation_with_token"
     EMAIL_CHANGE_CODE = "email_change_code"
     PASSWORD_CHANGED = "password_changed"
 

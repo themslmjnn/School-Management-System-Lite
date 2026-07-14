@@ -537,6 +537,7 @@ async def send_account_activation_email(email: str) -> None:
     )
 
 
+# COMPLETED!!!
 def build_reset_password_email(reset_password_token: str) -> tuple[str, str, str]:
     reset_link = f"{settings.APP_URL}/auth/reset_password?token={reset_password_token}"
 
@@ -582,6 +583,7 @@ def build_reset_password_email(reset_password_token: str) -> tuple[str, str, str
     return subject, html, text
 
 
+# COMPLETED!!!
 async def send_reset_password_token(email: str, raw_reset_token: str) -> None:
     subject, html, text = build_reset_password_email(raw_reset_token)
 

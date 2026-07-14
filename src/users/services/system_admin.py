@@ -724,6 +724,7 @@ class UserServiceAdmin:
             raise UserAlreadyActiveError("User is already activated")
 
         target_user.is_active = True
+        target_user.status = UserStatus.ACTIVE
 
         target_user.login_lockout.failed_login_attempts = 0
         target_user.login_lockout.locked_until = None
@@ -745,6 +746,7 @@ class UserServiceAdmin:
             activated_by=current_user_id,
         )
 
+    # COMPLETED!!!
     @staticmethod
     async def create_reset_password_request(
         db: AsyncSession,
@@ -761,7 +763,6 @@ class UserServiceAdmin:
         ensure_exists(target_user, UserNotFoundError(HTTP404.USER))
 
         raw_reset_token, hashed_reset_token = generate_reset_password_token()
-
         target_user.session.reset_password_token_hash = hashed_reset_token
         target_user.session.reset_password_token_expires_at = datetime.now(
             UTC
@@ -789,6 +790,7 @@ class UserServiceAdmin:
             target_user_id=target_user_id,
         )
 
+    # COMPLETED!!!
     @staticmethod
     async def resend_activation_invite(
         db: AsyncSession,
@@ -819,7 +821,6 @@ class UserServiceAdmin:
         invite_token_expires_at = datetime.now(UTC) + timedelta(
             hours=settings.INVITE_TOKEN_EXPIRES_HOURS
         )
-
         target_user.activation.invite_token_hash = hashed_invite_token
         target_user.activation.invite_token_expires_at = invite_token_expires_at
 
@@ -846,6 +847,7 @@ class UserServiceAdmin:
             actor_user_id=current_user_id,
         )
 
+    # COMPLETED!!!
     @staticmethod
     async def get_staff(
         db: AsyncSession,

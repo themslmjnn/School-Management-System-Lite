@@ -201,6 +201,7 @@ class UpdateUserCredentials(BaseModel):
         return v.strip().lower()
 
 
+# COMPLETED!!!
 class SearchUserBase(BaseModel):
     firstname: str | None = Field(default=None, max_length=50)
     lastname: str | None = Field(default=None, max_length=50)
@@ -208,11 +209,11 @@ class SearchUserBase(BaseModel):
     status: UserStatus | None = None
 
 
+# COMPLETED!!!
 class SearchUserAdmin(SearchUserBase):
     username: str | None = Field(default=None, max_length=15)
     email: str | None = Field(default=None, max_length=20)
     phone_number: str | None = Field(default=None, max_length=15)
-    is_active: bool | None = None
 
 
 class UserResponseSelf(BaseSchema):
