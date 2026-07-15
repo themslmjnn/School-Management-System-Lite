@@ -251,9 +251,11 @@ def handle_subject_code_integrity_error(error: IntegrityError) -> None:
     if "ix_subjects_code" in str(error.orig):
         raise SubjectCodeAlreadyExistsError(HTTP409.SUBJECT_CODE)
 
+
 def handle_group_name_year_integrity_error(error: IntegrityError) -> None:
     if "uix_group_name_academic_year" in str(error.orig):
         raise GroupNameYearAlreadyExistsError(HTTP409.GROUP_NAME)
+
 
 def raise_unhandled_integrity_error(error: IntegrityError) -> None:
     raise error

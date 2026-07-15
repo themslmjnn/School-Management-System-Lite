@@ -1,3 +1,5 @@
+from datetime import UTC, datetime
+
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -7,6 +9,7 @@ from src.groups.repository import GroupRepository
 from src.groups.schemas import GroupCreate, GroupUpdate
 from utils.constants import HTTP404
 from utils.exceptions import (
+    GroupArchiveBlockedError,
     GroupNotFoundError,
     handle_group_name_year_integrity_error,
     raise_unhandled_integrity_error,
@@ -14,6 +17,7 @@ from utils.exceptions import (
 from utils.helpers import ensure_exists, update_object
 
 logger = get_logger(__name__)
+
 
 class GroupService:
     @staticmethod
@@ -52,7 +56,7 @@ class GroupService:
     async def update_group(
         db: AsyncSession, current_user_id: int, group_id: int, request: GroupUpdate
     ) -> Group:
-        group = await GroupRepository.get_by_id(db, group_id)
+        group = await GroupRepository.get_group_by_id(db, group_id)
         ensure_exists(group, GroupNotFoundError(HTTP404.GROUP))
 
         try:
@@ -83,3 +87,37 @@ class GroupService:
             handle_group_name_year_integrity_error(e)
             raise_unhandled_integrity_error(e)
 
+    @staticmethod
+    async def archive_group(
+        db: AsyncSession, current_user_id: int, group_id: int
+    ) -> None:
+        group = await GroupRepository.get_group_by_id(db, group_id)
+        ensure_exists(group, GroupNotFoundError(HTTP404.GROUP))
+
+        has_students = await GroupRepository.has_active_students(db, group_id)
+        has_assignments = await GroupRepository.has_active_teaching_assignments(
+            db, group_id
+        )
+        if has_students or has_assignments:
+            logger.warning(
+                "group_archive_denied",
+                group_id=group_id,
+                actor_user_id=current_user_id,
+                denial_reason="active_students_or_teaching_assignments_reference_group",
+            )
+
+            raise GroupArchiveBlockedError(
+                "Cannot archive a group with active students or teaching "
+                "assignments; reassign or remove them first"
+            )
+
+        group.is_archived = True
+        group.archived_at = datetime.now(UTC)
+
+        await db.commit()
+
+        logger.info(
+            "group_archived",
+            group_id=group_id,
+            archived_by=current_user_id,
+        )

@@ -20,6 +20,7 @@ from src.utils.enums import OrderBy
 
 router = APIRouter(prefix="/groups", tags=["Groups"])
 
+
 @router.post("", response_model=GroupResponse, status_code=status.HTTP_201_CREATED)
 async def create_group(
     db: async_db_dependency,
@@ -27,6 +28,7 @@ async def create_group(
     request: GroupCreate,
 ):
     return await GroupService.create_group(db, current_user.id, request)
+
 
 @router.patch("/{group_id}", response_model=GroupResponse)
 async def update_group(
@@ -36,3 +38,12 @@ async def update_group(
     request: GroupUpdate,
 ):
     return await GroupService.update_group(db, current_user.id, group_id, request)
+
+
+@router.patch("/{group_id}/archive", status_code=status.HTTP_204_NO_CONTENT)
+async def archive_group(
+    db: async_db_dependency,
+    current_user: Annotated[CurrentUser, Depends(require_system_admin)],
+    group_id: Annotated[int, Path(ge=1)],
+):
+    await GroupService.archive_group(db, current_user.id, group_id)
