@@ -3,17 +3,23 @@ from datetime import UTC, datetime
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from core.advisory_locks import acquire_group_capacity_lock
 from core.caching import delete_cache, get_cache, set_cache
 from pagination import PaginatedResponse
 from src.core.logging import get_logger
 from src.groups.models import Group
 from src.groups.repository import GroupRepository
 from src.groups.schemas import GroupCreate, GroupResponse, GroupUpdate, SearchGroup
+from users.repositories.users import UserRepositoryBase
 from utils.cache_keys import GroupCacheKey
 from utils.constants import HTTP404
+from utils.enums import UserRole
 from utils.exceptions import (
     GroupArchiveBlockedError,
+    GroupCapacityExceededError,
     GroupNotFoundError,
+    SubjectNotFoundError,
+    UserNotFoundError,
     handle_group_name_year_integrity_error,
     raise_unhandled_integrity_error,
 )
@@ -201,4 +207,66 @@ class GroupService:
             skip=skip,
             limit=limit,
             has_more=skip + limit < total,
+        )
+
+    @staticmethod
+    async def add_student_to_group(
+        db: AsyncSession, current_user_id: int, group_id: int, student_id: int
+    ) -> None:
+        group = await GroupRepository.get_by_id(db, group_id)
+        ensure_exists(group, GroupNotFoundError(HTTP404.GROUP))
+
+        student = await UserRepositoryBase.get_user_by_id(
+            db, student_id, allowed_roles=frozenset({UserRole.STUDENT})
+        )
+        ensure_exists(student, UserNotFoundError(HTTP404.USER))
+
+        previous_group_id = student.group_id
+
+        if group.capacity is not None:
+            await acquire_group_capacity_lock(db, group_id)
+            current_count = await GroupRepository.count_active_students(db, group_id)
+
+            if current_count >= group.capacity:
+                logger.warning(
+                    "group_capacity_exceeded",
+                    group_id=group_id,
+                    actor_user_id=current_user_id,
+                    denial_reason="group_at_capacity",
+                )
+
+                raise GroupCapacityExceededError(
+                    f"Group is at capacity ({group.capacity})"
+                )
+
+        student.group_id = group_id
+
+        await db.commit()
+
+        logger.info(
+            "student_added_to_group",
+            student_id=student_id,
+            group_id=group_id,
+            previous_group_id=previous_group_id,
+            actor_user_id=current_user_id,
+        )
+
+    @staticmethod
+    async def remove_student_from_group(
+        db: AsyncSession, current_user_id: int, group_id: int, student_id: int
+    ) -> None:
+        student = await UserRepositoryBase.get_user_by_id(
+            db, student_id, allowed_roles=frozenset({UserRole.STUDENT})
+        )
+        ensure_exists(student, UserNotFoundError(HTTP404.USER))
+
+        student.group_id = None
+
+        await db.commit()
+
+        logger.info(
+            "student_removed_from_group",
+            student_id=student_id,
+            group_id=group_id,
+            actor_user_id=current_user_id,
         )

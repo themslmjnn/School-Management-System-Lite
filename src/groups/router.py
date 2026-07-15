@@ -88,3 +88,29 @@ async def get_group_students(
     return await GroupService.get_students(
         db, group_id, pagination.skip, pagination.limit
     )
+
+
+@router.post(
+    "/{group_id}/students/{student_id}", status_code=status.HTTP_204_NO_CONTENT
+)
+async def add_student_to_group(
+    db: async_db_dependency,
+    current_user: Annotated[CurrentUser, Depends(require_system_admin)],
+    group_id: Annotated[int, Path(ge=1)],
+    student_id: Annotated[int, Path(ge=1)],
+):
+    await GroupService.add_student_to_group(db, current_user.id, group_id, student_id)
+
+
+@router.delete(
+    "/{group_id}/students/{student_id}", status_code=status.HTTP_204_NO_CONTENT
+)
+async def remove_student_from_group(
+    db: async_db_dependency,
+    current_user: Annotated[CurrentUser, Depends(require_system_admin)],
+    group_id: Annotated[int, Path(ge=1)],
+    student_id: Annotated[int, Path(ge=1)],
+):
+    await GroupService.remove_student_from_group(
+        db, current_user.id, group_id, student_id
+    )
