@@ -43,6 +43,9 @@ class User(Base):
     deletion_scheduled_for: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
+    group_id: Mapped[int | None] = mapped_column(
+        ForeignKey("groups.id"), nullable=True, index=True
+    )
 
     __table_args__ = (
         Index(
@@ -90,6 +93,7 @@ class User(Base):
         uselist=False,
         cascade="all, delete-orphan",
     )
+    group: Mapped["Group"] = relationship("Group", back_populates="students")  # noqa: F821
 
 
 class UserSession(Base):

@@ -32,3 +32,4 @@ class Group(Base):
     head_of_class_assignments: Mapped[list["HeadOfClassAssignment"]] = relationship(  # noqa: F821
         "HeadOfClassAssignment", back_populates="group"
     )
+    students: Mapped[list["User"]] = relationship("User", back_populates="group")  # noqa: F821
