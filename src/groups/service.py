@@ -3,10 +3,13 @@ from datetime import UTC, datetime
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from core.caching import delete_cache, get_cache, set_cache
+from pagination import PaginatedResponse
 from src.core.logging import get_logger
 from src.groups.models import Group
 from src.groups.repository import GroupRepository
-from src.groups.schemas import GroupCreate, GroupUpdate
+from src.groups.schemas import GroupCreate, GroupResponse, GroupUpdate, SearchGroup
+from utils.cache_keys import GroupCacheKey
 from utils.constants import HTTP404
 from utils.exceptions import (
     GroupArchiveBlockedError,
@@ -71,6 +74,8 @@ class GroupService:
                 updated_by=current_user_id,
             )
 
+            await delete_cache(GroupCacheKey.group_detail_key_admin(group_id))
+
             return group
 
         except IntegrityError as e:
@@ -120,4 +125,80 @@ class GroupService:
             "group_archived",
             group_id=group_id,
             archived_by=current_user_id,
+        )
+
+    @staticmethod
+    async def restore_group(
+        db: AsyncSession, current_user_id: int, group_id: int
+    ) -> None:
+        group = await GroupRepository.get_group_by_id(db, group_id)
+        ensure_exists(group, GroupNotFoundError(HTTP404.GROUP))
+
+        group.is_archived = False
+        group.archived_at = None
+
+        await db.commit()
+
+        logger.info(
+            "group_restored",
+            group_id=group_id,
+            restored_by=current_user_id,
+        )
+
+    @staticmethod
+    async def get_groups(
+        db: AsyncSession,
+        skip: int,
+        limit: int,
+        filters: SearchGroup,
+        sort_by: str,
+        order: str,
+    ) -> PaginatedResponse:
+        groups, total = await GroupRepository.get_groups(
+            db,
+            skip=skip,
+            limit=limit,
+            filters=filters,
+            sort_by=sort_by,
+            order=order,
+        )
+
+        return PaginatedResponse(
+            items=groups,
+            total=total,
+            skip=skip,
+            limit=limit,
+            has_more=skip + limit < total,
+        )
+
+    @staticmethod
+    async def get_group_by_id(db: AsyncSession, group_id: int) -> Group:
+        cache_key = GroupCacheKey.group_detail_key_admin(group_id)
+        cached = await get_cache(cache_key)
+        if cached is not None:
+            return GroupResponse(**cached)
+
+        group = await GroupRepository.get_by_id(db, group_id)
+        ensure_exists(group, GroupNotFoundError(HTTP404.GROUP))
+
+        result = GroupResponse.model_validate(group)
+        await set_cache(cache_key, result.model_dump(mode="json"), 900)
+
+        return result
+
+    @staticmethod
+    async def get_students(
+        db: AsyncSession, group_id: int, skip: int, limit: int
+    ) -> PaginatedResponse:
+        group = await GroupRepository.get_group_by_id(db, group_id)
+        ensure_exists(group, GroupNotFoundError(HTTP404.GROUP))
+
+        students, total = await GroupRepository.get_students(db, group_id, skip, limit)
+
+        return PaginatedResponse(
+            items=students,
+            total=total,
+            skip=skip,
+            limit=limit,
+            has_more=skip + limit < total,
         )

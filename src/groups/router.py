@@ -12,11 +12,12 @@ from src.groups.schemas import (
     GroupCreate,
     GroupResponse,
     GroupUpdate,
+    SearchGroup,
 )
 from src.groups.service import GroupService
 from src.pagination import PaginatedResponse
-from src.users.schemas.users import UserResponseAdmin
-from src.utils.enums import OrderBy
+from src.utils.enums import GroupSortField, OrderBy
+from users.schemas.users import UserResponseAdmin
 
 router = APIRouter(prefix="/groups", tags=["Groups"])
 
@@ -47,3 +48,43 @@ async def archive_group(
     group_id: Annotated[int, Path(ge=1)],
 ):
     await GroupService.archive_group(db, current_user.id, group_id)
+
+
+@router.patch("/{group_id}/restoration", status_code=status.HTTP_204_NO_CONTENT)
+async def restore_group(
+    db: async_db_dependency,
+    current_user: Annotated[CurrentUser, Depends(require_system_admin)],
+    group_id: Annotated[int, Path(ge=1)],
+):
+    await GroupService.restore_group(db, current_user.id, group_id)
+
+
+@router.get("", response_model=PaginatedResponse[GroupResponse])
+async def get_groups(
+    db: async_db_dependency,
+    _: Annotated[CurrentUser, Depends(require_system_admin)],
+    pagination: pagination_dependency,
+    filters: Annotated[SearchGroup, Depends()],
+    sort_by: str = GroupSortField.ACADEMIC_YEAR,
+    order: str = OrderBy.DESC,
+):
+    return await GroupService.get_groups(
+        db,
+        pagination.skip,
+        pagination.limit,
+        filters,
+        sort_by,
+        order,
+    )
+
+
+@router.get("/{group_id}/students", response_model=PaginatedResponse[UserResponseAdmin])
+async def get_group_students(
+    db: async_db_dependency,
+    _: Annotated[CurrentUser, Depends(require_system_admin)],
+    pagination: pagination_dependency,
+    group_id: Annotated[int, Path(ge=1)],
+):
+    return await GroupService.get_students(
+        db, group_id, pagination.skip, pagination.limit
+    )

@@ -21,4 +21,10 @@ class UserCacheKey:
 class SubjectCacheKey:
     @staticmethod
     def subject_detail_key_admin(subject_id: int) -> str:
-        return f"subejcts:{subject_id}:admin"
+        return f"subjects:{subject_id}:admin"
+
+
+class GroupCacheKey:
+    @staticmethod
+    def group_detail_key_admin(group_id: int) -> str:
+        return f"groups:{group_id}:admin"
