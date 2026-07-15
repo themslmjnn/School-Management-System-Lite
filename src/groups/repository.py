@@ -4,7 +4,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.academics.models.teaching_assignment import TeachingAssignment
 from src.groups.models import Group
 from src.groups.schemas import SearchGroup
-from src.subjects.models import Subject
 from src.users.models.user import User
 from src.utils.enums import GroupSortField, OrderBy, UserRole
 
@@ -53,13 +52,13 @@ class GroupRepository:
             return base_query
 
         if filters.name:
-            base_query = base_query.filter(Subject.name.ilike(f"%{filters.name}%"))
+            base_query = base_query.filter(Group.name.ilike(f"%{filters.name}%"))
         if filters.academic_year:
             base_query = base_query.filter(
-                Subject.code.ilike(f"%{filters.academic_year}%")
+                Group.academic_year.ilike(f"%{filters.academic_year}%")
             )
         if not filters.include_archived:
-            base_query = base_query.filter(Subject.is_archived.is_(False))
+            base_query = base_query.filter(Group.is_archived.is_(False))
 
         return base_query
 
@@ -68,7 +67,7 @@ class GroupRepository:
         if sort_by not in GroupSortField:
             sort_by = GroupSortField.CREATED_AT
 
-        sort_column = getattr(Subject, sort_by)
+        sort_column = getattr(Group, sort_by)
 
         if order == OrderBy.DESC:
             return base_query.order_by(sort_column.desc())
@@ -86,7 +85,7 @@ class GroupRepository:
         limit: int = 10,
     ) -> tuple[list[Group], int]:
 
-        query = select(Subject)
+        query = select(Group)
 
         query = GroupRepository.apply_filters(query, filters)
         query = GroupRepository.apply_sorting(query, sort_by, order)
@@ -109,11 +108,12 @@ class GroupRepository:
 
     @staticmethod
     async def has_active_teaching_assignments(db: AsyncSession, group_id: int) -> bool:
-        result = await db.execute(
-            select(func.count(TeachingAssignment.id)).filter(
-                TeachingAssignment.group_id == group_id
-            )
+        query = select(func.count(TeachingAssignment.id)).filter(
+            TeachingAssignment.group_id == group_id
         )
+
+        result = await db.execute(query)
+
         return result.scalar() > 0
 
     @staticmethod

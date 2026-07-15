@@ -20,8 +20,10 @@ from src.utils.cache_keys import GroupCacheKey
 from src.utils.constants import HTTP404
 from src.utils.enums import UserRole
 from src.utils.exceptions import (
+    GroupAlreadyArchivedError,
     GroupArchiveBlockedError,
     GroupCapacityExceededError,
+    GroupIsNotArchivedError,
     GroupNotFoundError,
     UserNotFoundError,
     handle_group_name_year_integrity_error,
@@ -35,10 +37,11 @@ logger = get_logger(__name__)
 class GroupService:
     @staticmethod
     async def create_group(
-        db: AsyncSession, current_user_id: int, request: GroupCreate
+        db: AsyncSession, current_user_id: int, create_request: GroupCreate
     ) -> Group:
         try:
-            new_group = Group(**request.model_dump())
+            new_group = Group(**create_request.model_dump())
+
             GroupRepository.add_group(db, new_group)
 
             await db.commit()
@@ -67,16 +70,19 @@ class GroupService:
 
     @staticmethod
     async def update_group(
-        db: AsyncSession, current_user_id: int, group_id: int, request: GroupUpdate
+        db: AsyncSession,
+        current_user_id: int,
+        group_id: int,
+        update_request: GroupUpdate,
     ) -> Group:
-        group = await GroupRepository.get_group_by_id(db, group_id)
-        ensure_exists(group, GroupNotFoundError(HTTP404.GROUP))
+        target_group = await GroupRepository.get_group_by_id(db, group_id)
+        ensure_exists(target_group, GroupNotFoundError(HTTP404.GROUP))
 
         try:
-            update_object(group, request)
+            update_object(target_group, update_request)
 
             await db.commit()
-            await db.refresh(group)
+            await db.refresh(target_group)
 
             logger.info(
                 "group_updated",
@@ -84,9 +90,12 @@ class GroupService:
                 updated_by=current_user_id,
             )
 
-            await delete_cache(GroupCacheKey.group_detail_key_admin(group_id))
+            await delete_cache(
+                GroupCacheKey.group_detail_key_admin(group_id),
+                GroupCacheKey.group_detail_key_non_admin(group_id),
+            )
 
-            return group
+            return target_group
 
         except IntegrityError as e:
             await db.rollback()
@@ -106,13 +115,24 @@ class GroupService:
     async def archive_group(
         db: AsyncSession, current_user_id: int, group_id: int
     ) -> None:
-        group = await GroupRepository.get_group_by_id(db, group_id)
-        ensure_exists(group, GroupNotFoundError(HTTP404.GROUP))
+        target_group = await GroupRepository.get_group_by_id(db, group_id)
+        ensure_exists(target_group, GroupNotFoundError(HTTP404.GROUP))
 
         has_students = await GroupRepository.has_active_students(db, group_id)
         has_assignments = await GroupRepository.has_active_teaching_assignments(
             db, group_id
         )
+
+        if target_group.is_archived and target_group.archived_at is not None:
+            logger.warning(
+                "group_archive_denied",
+                group_id=group_id,
+                actor_user_id=current_user_id,
+                denial_reason="group_is_already_archived",
+            )
+
+            raise GroupAlreadyArchivedError("Group is already archived")
+
         if has_students or has_assignments:
             logger.warning(
                 "group_archive_denied",
@@ -126,8 +146,10 @@ class GroupService:
                 "assignments; reassign or remove them first"
             )
 
-        group.is_archived = True
-        group.archived_at = datetime.now(UTC)
+        target_group.is_archived = True
+        target_group.archived_at = datetime.now(UTC)
+
+        await delete_cache(GroupCacheKey.group_detail_key_admin(group_id))
 
         await db.commit()
 
@@ -141,11 +163,25 @@ class GroupService:
     async def restore_group(
         db: AsyncSession, current_user_id: int, group_id: int
     ) -> None:
-        group = await GroupRepository.get_group_by_id(db, group_id)
-        ensure_exists(group, GroupNotFoundError(HTTP404.GROUP))
+        target_group = await GroupRepository.get_group_by_id(db, group_id)
+        ensure_exists(target_group, GroupNotFoundError(HTTP404.GROUP))
 
-        group.is_archived = False
-        group.archived_at = None
+        if not target_group.is_archived and target_group.archived_at is None:
+            logger.warning(
+                "group_restoration_denied",
+                group_id=group_id,
+                actor_user_id=current_user_id,
+                denial_reason="group_is_already_restored_or_has_not_been_archived",
+            )
+
+            raise GroupIsNotArchivedError(
+                "Group is already restored or has not been archived"
+            )
+
+        target_group.is_archived = False
+        target_group.archived_at = None
+
+        await delete_cache(GroupCacheKey.group_detail_key_admin(group_id))
 
         await db.commit()
 

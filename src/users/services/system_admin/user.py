@@ -270,7 +270,9 @@ class UserServiceAdmin:
 
             await db.commit()
             await db.refresh(new_user)
+
             print(raw_invite_token)
+
             logger.info(
                 "user_registered",
                 new_user_id=new_user.id,

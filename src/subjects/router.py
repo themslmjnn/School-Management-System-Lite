@@ -18,16 +18,19 @@ from src.subjects.schemas import (
 from src.subjects.service import SubjectService
 from src.utils.enums import OrderBy, SubjectSortField
 
-router = APIRouter(prefix="/subjects", tags=["Subjects"])
+router = APIRouter(
+    prefix="/subjects",
+    tags=["Subjects - System Admin"],
+)
 
 
 @router.post("", response_model=SubjectResponse, status_code=status.HTTP_201_CREATED)
 async def create_subject(
     db: async_db_dependency,
     current_user: Annotated[CurrentUser, Depends(require_system_admin)],
-    request: SubjectCreate,
+    create_request: SubjectCreate,
 ):
-    return await SubjectService.create_subject(db, current_user.id, request)
+    return await SubjectService.create_subject(db, current_user.id, create_request)
 
 
 @router.patch(
@@ -37,9 +40,11 @@ async def update_subject(
     db: async_db_dependency,
     current_user: Annotated[CurrentUser, Depends(require_system_admin)],
     subject_id: Annotated[int, Path(ge=1)],
-    request: SubjectUpdate,
+    update_request: SubjectUpdate,
 ):
-    return await SubjectService.update_subject(db, current_user.id, subject_id, request)
+    return await SubjectService.update_subject(
+        db, current_user.id, subject_id, update_request
+    )
 
 
 @router.patch("/{subject_id}/archive", status_code=status.HTTP_204_NO_CONTENT)

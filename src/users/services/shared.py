@@ -26,7 +26,7 @@ from src.users.schemas.users import (
     UpdateMePassword,
     UpdateMeProfile,
 )
-from src.users.services.system_admin.users import check_contact_limit
+from src.users.services.system_admin.user import check_contact_limit
 from src.utils import email as email_sender
 from src.utils.cache_keys import SessionCacheKey, UserCacheKey
 from src.utils.constants import HTTP400, HTTP404

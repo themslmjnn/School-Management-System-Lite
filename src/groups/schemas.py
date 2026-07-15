@@ -6,14 +6,14 @@ from src.utils.base_schema import BaseSchema
 
 
 class GroupCreate(BaseModel):
-    name: str = Field(min_length=1, max_length=50)
+    name: str = Field(min_length=2, max_length=10)
     academic_year: int = Field(ge=2000, le=2100)
     grade_level: int | None = None
     capacity: int | None = Field(gt=0, default=None)
 
 
 class GroupUpdate(BaseModel):
-    name: str = Field(min_length=1, max_length=50)
+    name: str = Field(min_length=2, max_length=10)
     grade_level: int | None = None
     capacity: int | None = Field(gt=0, default=None)
 

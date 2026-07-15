@@ -5,7 +5,7 @@ from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
-import academics.models.head_of_class_assignment
+import src.academics.models
 import src.emails.models
 import src.groups.models
 import src.subjects.models

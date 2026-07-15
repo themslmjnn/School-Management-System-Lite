@@ -22,7 +22,7 @@ from src.users.schemas.users import (
     UpdateStudentAdmin,
     UpdateUserCredentials,
 )
-from users.services.system_admin.users import UserServiceAdmin
+from users.services.system_admin.user import UserServiceAdmin
 from src.utils.enums import OrderBy, UserRole, UserSortField, UserStatus
 from src.utils.exceptions import (
     CannotCreateDirectorError,

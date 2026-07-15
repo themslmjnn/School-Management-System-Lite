@@ -27,7 +27,7 @@ from tests.factories import (
     make_teacher,
     make_user,
 )
-from users.services.system_admin.users import UserServiceAdmin
+from users.services.system_admin.user import UserServiceAdmin
 
 
 class TestRegisterUser:

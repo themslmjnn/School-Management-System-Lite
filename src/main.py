@@ -16,6 +16,8 @@ from src.core.config import settings
 from src.core.limiter import ip_limiter
 from src.core.logging import get_logger, setup_logging
 from src.core.middleware import RequestIDMiddleware
+from src.groups import router as group_system_admin_router
+from src.subjects import router as subject_system_admin_router
 from src.users.routers import guardian as user_guardian_router
 from src.users.routers import shared as users_shared_router
 from src.users.routers.system_admin import guardian_link as user_guardian_link_router
@@ -92,6 +94,8 @@ app.include_router(users_shared_router.router)
 app.include_router(user_system_admin_router.router)
 app.include_router(user_guardian_router.router)
 app.include_router(user_guardian_link_router.router)
+app.include_router(subject_system_admin_router.router)
+app.include_router(group_system_admin_router.router)
 
 EXCEPTION_STATUS_MAP = {
     exc.EmptyCredentialsError: 400,
@@ -143,7 +147,7 @@ EXCEPTION_STATUS_MAP = {
     exc.TeachingAssignmentAlreadyExistsError: 409,
     exc.GroupCapacityExceededError: 409,
     exc.GroupArchiveBlockedError: 409,
-    exc.SubjectArchiveBlockedError: 409,
+    exc.SubjectArchiveBlockedError: 403,
     exc.GroupNotArchivedError: 409,
     exc.GroupAlreadyArchivedError: 409,
     exc.SubjectNotArchivedError: 409,
@@ -152,6 +156,8 @@ EXCEPTION_STATUS_MAP = {
     exc.SubjectCodeAlreadyExistsError: 409,
     exc.GroupNotFoundError: 404,
     exc.SubjectNotFoundError: 404,
+    exc.SubjectIsNotArchivedError: 409,
+    exc.GroupIsNotArchivedError: 409,
 }
 
 

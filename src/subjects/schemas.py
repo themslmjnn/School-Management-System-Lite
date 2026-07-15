@@ -6,14 +6,14 @@ from src.utils.base_schema import BaseSchema
 
 
 class SubjectCreate(BaseModel):
-    name: str = Field(min_length=1, max_length=100)
-    code: str = Field(min_length=1, max_length=20)
+    name: str = Field(min_length=5, max_length=100)
+    code: str = Field(min_length=3, max_length=20)
     description: str | None = Field(max_length=255, default=None)
 
 
 class SubjectUpdate(BaseModel):
-    name: str | None = Field(min_length=1, max_length=100, default=None)
-    code: str | None = Field(min_length=1, max_length=20, default=None)
+    name: str | None = Field(min_length=5, max_length=100, default=None)
+    code: str | None = Field(min_length=3, max_length=20, default=None)
     description: str | None = Field(max_length=255, default=None)
 
 

@@ -19,16 +19,19 @@ from src.pagination import PaginatedResponse
 from src.users.schemas.users import UserResponseAdmin
 from src.utils.enums import GroupSortField, OrderBy
 
-router = APIRouter(prefix="/groups", tags=["Groups"])
+router = APIRouter(
+    prefix="/groups",
+    tags=["Groups - System Admin"],
+)
 
 
 @router.post("", response_model=GroupResponse, status_code=status.HTTP_201_CREATED)
 async def create_group(
     db: async_db_dependency,
     current_user: Annotated[CurrentUser, Depends(require_system_admin)],
-    request: GroupCreate,
+    create_request: GroupCreate,
 ):
-    return await GroupService.create_group(db, current_user.id, request)
+    return await GroupService.create_group(db, current_user.id, create_request)
 
 
 @router.patch("/{group_id}", response_model=GroupResponse)
@@ -36,9 +39,11 @@ async def update_group(
     db: async_db_dependency,
     current_user: Annotated[CurrentUser, Depends(require_system_admin)],
     group_id: Annotated[int, Path(ge=1)],
-    request: GroupUpdate,
+    update_request: GroupUpdate,
 ):
-    return await GroupService.update_group(db, current_user.id, group_id, request)
+    return await GroupService.update_group(
+        db, current_user.id, group_id, update_request
+    )
 
 
 @router.patch("/{group_id}/archive", status_code=status.HTTP_204_NO_CONTENT)
@@ -76,6 +81,15 @@ async def get_groups(
         sort_by,
         order,
     )
+
+
+@router.get("/{group_id}", response_model=GroupResponse)
+async def get_group_by_id(
+    db: async_db_dependency,
+    _: Annotated[CurrentUser, Depends(require_system_admin)],
+    group_id: Annotated[int, Path(ge=1)],
+):
+    return await GroupService.get_group_by_id(db, group_id)
 
 
 @router.get("/{group_id}/students", response_model=PaginatedResponse[UserResponseAdmin])
