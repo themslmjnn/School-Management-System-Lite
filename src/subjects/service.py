@@ -3,11 +3,17 @@ from datetime import UTC, datetime
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from core.caching import get_cache, set_cache
 from pagination import PaginatedResponse
 from src.core.logging import get_logger
 from src.subjects.models import Subject
 from src.subjects.repository import SubjectRepository
-from src.subjects.schemas import SearchSubject, SubjectCreate, SubjectUpdate
+from src.subjects.schemas import (
+    SearchSubject,
+    SubjectCreate,
+    SubjectResponse,
+    SubjectUpdate,
+)
 from src.utils.constants import HTTP404
 from src.utils.exceptions import (
     SubjectArchiveBlockedError,
@@ -16,6 +22,7 @@ from src.utils.exceptions import (
     raise_unhandled_integrity_error,
 )
 from src.utils.helpers import ensure_exists, update_object
+from utils.cache_keys import SubjectCacheKey
 
 logger = get_logger(__name__)
 
@@ -156,9 +163,24 @@ class SubjectService:
         )
 
         return PaginatedResponse(
-            items=subjects, 
-            total=total, 
-            skip=skip, 
+            items=subjects,
+            total=total,
+            skip=skip,
             limit=limit,
             has_more=skip + limit < total,
         )
+
+    @staticmethod
+    async def get_subject_by_id(db: AsyncSession, subject_id: int) -> Subject:
+        cache_key = SubjectCacheKey.subject_detail_key_admin(subject_id)
+        cached = await get_cache(cache_key)
+        if cached is not None:
+            return SubjectResponse(**cached)
+
+        subject = await SubjectRepository.get_subject_by_id(db, subject_id)
+        ensure_exists(subject, SubjectNotFoundError(HTTP404.SUBJECT))
+
+        result = SubjectResponse.model_validate(subject)
+        await set_cache(cache_key, result.model_dump(mode="json"), 900)
+
+        return result

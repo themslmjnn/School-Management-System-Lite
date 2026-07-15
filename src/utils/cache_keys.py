@@ -16,3 +16,9 @@ class UserCacheKey:
     @staticmethod
     def user_detail_key_self(user_id: int) -> str:
         return f"users:detail:{user_id}:self"
+
+
+class SubjectCacheKey:
+    @staticmethod
+    def subject_detail_key_admin(subject_id: int) -> str:
+        return f"subejcts:{subject_id}:admin"

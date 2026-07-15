@@ -9,7 +9,12 @@ from src.core.dependencies import (
     pagination_dependency,
     require_system_admin,
 )
-from src.subjects.schemas import SearchSubject, SubjectCreate, SubjectResponse, SubjectUpdate
+from src.subjects.schemas import (
+    SearchSubject,
+    SubjectCreate,
+    SubjectResponse,
+    SubjectUpdate,
+)
 from src.subjects.service import SubjectService
 from utils.enums import OrderBy, SubjectSortField
 
@@ -54,6 +59,7 @@ async def restore_subject(
 ):
     await SubjectService.restore_subject(db, current_user.id, subject_id)
 
+
 @router.get("", response_model=PaginatedResponse[SubjectResponse])
 async def get_subjects(
     db: async_db_dependency,
@@ -66,3 +72,12 @@ async def get_subjects(
     return await SubjectService.get_subjects(
         db, pagination.skip, pagination.limit, filters, sort_by, order
     )
+
+
+@router.get("/{subject_id}", response_model=SubjectResponse)
+async def get_subject_by_id(
+    db: async_db_dependency,
+    _: Annotated[CurrentUser, Depends(require_system_admin)],
+    subject_id: Annotated[int, Path(ge=1)],
+):
+    return await SubjectService.get_subject_by_id(db, subject_id)
