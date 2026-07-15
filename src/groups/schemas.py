@@ -9,13 +9,14 @@ class GroupCreate(BaseModel):
     name: str = Field(min_length=1, max_length=50)
     academic_year: int = Field(ge=2000, le=2100)
     grade_level: int | None = None
-    capacity:int | None = Field(gt=0, default=None)
+    capacity: int | None = Field(gt=0, default=None)
 
 
 class GroupUpdate(BaseModel):
     name: str = Field(min_length=1, max_length=50)
     grade_level: int | None = None
     capacity: int | None = Field(gt=0, default=None)
+
 
 class GroupResponse(BaseSchema):
     id: int
