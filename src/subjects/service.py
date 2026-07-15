@@ -113,7 +113,25 @@ class SubjectService:
         await db.commit()
 
         logger.info(
-            "subject_archived", 
-            subject_id=subject_id, 
+            "subject_archived",
+            subject_id=subject_id,
             archived_by=current_user_id,
+        )
+
+    @staticmethod
+    async def restore_subject(
+        db: AsyncSession, current_user_id: int, subject_id: int
+    ) -> None:
+        subject = await SubjectRepository.get_by_id(db, subject_id)
+        ensure_exists(subject, SubjectNotFoundError(HTTP404.SUBJECT))
+
+        subject.is_archived = False
+        subject.archived_at = None
+
+        await db.commit()
+
+        logger.info(
+            "subject_restored",
+            subject_id=subject_id,
+            restored_by=current_user_id,
         )
