@@ -3,10 +3,11 @@ from datetime import UTC, datetime
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from pagination import PaginatedResponse
 from src.core.logging import get_logger
 from src.subjects.models import Subject
 from src.subjects.repository import SubjectRepository
-from src.subjects.schemas import SubjectCreate, SubjectUpdate
+from src.subjects.schemas import SearchSubject, SubjectCreate, SubjectUpdate
 from src.utils.constants import HTTP404
 from src.utils.exceptions import (
     SubjectArchiveBlockedError,
@@ -134,4 +135,30 @@ class SubjectService:
             "subject_restored",
             subject_id=subject_id,
             restored_by=current_user_id,
+        )
+
+    @staticmethod
+    async def get_subjects(
+        db: AsyncSession,
+        skip: int,
+        limit: int,
+        filters: SearchSubject,
+        sort_by: str,
+        order: str,
+    ) -> PaginatedResponse:
+        subjects, total = await SubjectRepository.get_subjects(
+            db,
+            skip=skip,
+            limit=limit,
+            filters=filters,
+            sort_by=sort_by,
+            order=order,
+        )
+
+        return PaginatedResponse(
+            items=subjects, 
+            total=total, 
+            skip=skip, 
+            limit=limit,
+            has_more=skip + limit < total,
         )

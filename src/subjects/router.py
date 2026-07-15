@@ -2,13 +2,16 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Path, status
 
+from pagination import PaginatedResponse
 from src.core.dependencies import (
     CurrentUser,
     async_db_dependency,
+    pagination_dependency,
     require_system_admin,
 )
-from src.subjects.schemas import SubjectCreate, SubjectResponse, SubjectUpdate
+from src.subjects.schemas import SearchSubject, SubjectCreate, SubjectResponse, SubjectUpdate
 from src.subjects.service import SubjectService
+from utils.enums import OrderBy, SubjectSortField
 
 router = APIRouter(prefix="/subjects", tags=["Subjects"])
 
@@ -50,3 +53,16 @@ async def restore_subject(
     subject_id: Annotated[int, Path(ge=1)],
 ):
     await SubjectService.restore_subject(db, current_user.id, subject_id)
+
+@router.get("", response_model=PaginatedResponse[SubjectResponse])
+async def get_subjects(
+    db: async_db_dependency,
+    _: Annotated[CurrentUser, Depends(require_system_admin)],
+    pagination: pagination_dependency,
+    filters: Annotated[SearchSubject, Depends()],
+    sort_by: str = SubjectSortField.NAME,
+    order: str = OrderBy.ASC,
+):
+    return await SubjectService.get_subjects(
+        db, pagination.skip, pagination.limit, filters, sort_by, order
+    )
