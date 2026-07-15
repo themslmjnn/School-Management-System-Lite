@@ -30,3 +30,9 @@ class SubjectResponse(BaseSchema):
     @field_serializer("created_at", "updated_at")
     def serialize_updated_at(self, value: datetime) -> str:
         return value.strftime("%d %b %Y, %H:%M")
+
+
+class SearchSubject(BaseModel):
+    name: str | None = None
+    code: str | None = None
+    include_archived: bool = False

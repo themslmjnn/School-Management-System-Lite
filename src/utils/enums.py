@@ -59,6 +59,18 @@ class UserSortField(StrEnum):
     LASTNAME = "lastname"
 
 
+class SubjectSortField(StrEnum):
+    NAME = "name"
+    CODE = "code"
+    CREATED_AT = "created_at"
+
+
+class GroupSortField(StrEnum):
+    NAME = "name"
+    ACADEMIC_YEAR = "academic_year"
+    CREATED_AT = "created_at"
+
+
 class OrderBy(StrEnum):
     ASC = "asc"
     DESC = "desc"
