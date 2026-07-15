@@ -7,26 +7,11 @@ from src.subjects.schemas import SearchSubject
 from src.utils.enums import OrderBy, SubjectSortField
 
 
-class SharedRepository:
+class SubjectRepository:
     @staticmethod
-    def add_entity(db: AsyncSession, new_subject: Subject) -> None:
+    def add_subject(db: AsyncSession, new_subject: Subject) -> None:
         db.add(new_subject)
 
-    @staticmethod
-    async def paginate(
-        db: AsyncSession, query: Select, skip: int, limit: int
-    ) -> tuple[list, int]:
-        count_result = await db.execute(
-            select(func.count()).select_from(query.subquery())
-        )
-        total = count_result.scalar_one()
-
-        result = await db.execute(query.offset(skip).limit(limit))
-
-        return result.scalars().all(), total
-
-
-class SubjectRepository:
     @staticmethod
     async def get_subject_by_id(db: AsyncSession, subject_id: int) -> Subject | None:
         query = select(Subject).filter(Subject.id == subject_id)
@@ -42,6 +27,19 @@ class SubjectRepository:
         result = await db.execute(query)
 
         return result.scalar_one_or_none()
+
+    @staticmethod
+    async def paginate(
+        db: AsyncSession, query: Select, skip: int, limit: int
+    ) -> tuple[list, int]:
+        count_result = await db.execute(
+            select(func.count()).select_from(query.subquery())
+        )
+        total = count_result.scalar_one()
+
+        result = await db.execute(query.offset(skip).limit(limit))
+
+        return result.scalars().all(), total
 
     @staticmethod
     def apply_filters(base_query: Select, filters: SearchSubject | None) -> Select:
@@ -85,7 +83,7 @@ class SubjectRepository:
         query = SubjectRepository.apply_filters(query, filters)
         query = SubjectRepository.apply_sorting(query, sort_by, order)
 
-        return await SharedRepository.paginate(db, query, skip, limit)
+        return await SubjectRepository.paginate(db, query, skip, limit)
 
     @staticmethod
     async def has_active_teaching_assignments(
