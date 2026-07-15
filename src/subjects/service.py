@@ -2,13 +2,16 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.logging import get_logger
-from subjects.models import Subject
-from subjects.repository import SubjectRepository
-from subjects.schemas import SubjectCreate
-from utils.exceptions import (
+from src.subjects.models import Subject
+from src.subjects.repository import SubjectRepository
+from src.subjects.schemas import SubjectCreate, SubjectUpdate
+from src.utils.constants import HTTP404
+from src.utils.exceptions import (
+    SubjectNotFoundError,
     handle_subject_code_integrity_error,
     raise_unhandled_integrity_error,
 )
+from src.utils.helpers import ensure_exists, update_object
 
 logger = get_logger(__name__)
 
@@ -40,6 +43,41 @@ class SubjectService:
                 "subject_creation_failed",
                 reason="integrity_error",
                 error=str(e.orig),
+                requested_by=current_user_id,
+            )
+
+            handle_subject_code_integrity_error(e)
+            raise_unhandled_integrity_error(e)
+
+    @staticmethod
+    async def update_subject(
+        db: AsyncSession, current_user_id: int, subject_id: int, request: SubjectUpdate
+    ) -> Subject:
+        subject = await SubjectRepository.get_by_id(db, subject_id)
+        ensure_exists(subject, SubjectNotFoundError(HTTP404.SUBJECT))
+
+        try:
+            update_object(subject, request)
+
+            await db.commit()
+            await db.refresh(subject)
+
+            logger.info(
+                "subject_updated",
+                subject_id=subject_id,
+                updated_by=current_user_id,
+            )
+
+            return subject
+
+        except IntegrityError as e:
+            await db.rollback()
+
+            logger.warning(
+                "subject_update_failed",
+                reason="integrity_error",
+                error=str(e.orig),
+                subject_id=subject_id,
                 requested_by=current_user_id,
             )
 
