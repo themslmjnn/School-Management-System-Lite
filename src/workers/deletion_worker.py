@@ -21,6 +21,7 @@ async def _run_deletion_sweep() -> None:
                 error=str(e),
                 exc_info=True,
             )
+
             return
 
     if not user_ids_due:

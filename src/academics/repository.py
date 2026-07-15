@@ -1,7 +1,7 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.academics.models import (
+from academics.models.head_of_class_assignment import (
     HeadOfClassAssignment,
     StudentSubjectEnrollment,
     TeachingAssignment,

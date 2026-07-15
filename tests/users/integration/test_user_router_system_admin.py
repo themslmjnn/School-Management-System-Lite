@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.core.security import verify_invite_token
 from src.emails.models import PendingEmail
 from src.emails.repository import PendingEmailRepository
-from src.users.models.users import User
+from users.models.user import User
 from src.users.repositories.users import UserRepositoryBase
 from src.users.schemas.users import (
     CreateGuardianAdmin,

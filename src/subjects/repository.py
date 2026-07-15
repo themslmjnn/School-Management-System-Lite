@@ -1,7 +1,7 @@
 from sqlalchemy import Select, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.academics.models import TeachingAssignment
+from src.academics.models.teaching_assignment import TeachingAssignment
 from src.subjects.models import Subject
 from src.subjects.schemas import SearchSubject
 from src.utils.enums import OrderBy, SubjectSortField

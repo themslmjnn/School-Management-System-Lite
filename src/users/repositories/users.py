@@ -4,8 +4,11 @@ from sqlalchemy import Select, delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
+from src.users.models.activation import UserActivation
 from src.users.models.guardian_link import StudentGuardianLink
-from src.users.models.users import User, UserActivation, UserLoginLockout, UserSession
+from src.users.models.login_lockout import UserLoginLockout
+from src.users.models.session import UserSession
+from src.users.models.user import User
 from src.users.schemas.users import SearchUserAdmin, SearchUserBase
 from src.utils.enums import (
     GuardianPriority,

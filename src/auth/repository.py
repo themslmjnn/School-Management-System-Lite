@@ -2,7 +2,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
-from src.users.models.users import User
+from src.users.models.user import User
 
 
 class AuthRepository:

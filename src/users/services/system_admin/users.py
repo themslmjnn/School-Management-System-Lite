@@ -13,7 +13,10 @@ from src.core.logging import get_logger
 from src.core.security import generate_invite_token, generate_reset_password_token
 from src.emails.repository import PendingEmailRepository
 from src.pagination import PaginatedResponse
-from src.users.models.users import User, UserActivation, UserLoginLockout, UserSession
+from src.users.models.activation import UserActivation
+from src.users.models.login_lockout import UserLoginLockout
+from src.users.models.session import UserSession
+from src.users.models.user import User
 from src.users.repositories.users import (
     UserRepositoryAdmin,
     UserRepositoryBase,

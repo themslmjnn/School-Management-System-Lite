@@ -14,7 +14,7 @@ from src.core.security import (
     verify_email_change_code,
     verify_password,
 )
-from src.users.models.users import User
+from src.users.models.user import User
 from src.users.repositories.users import (
     GuardianLinkRepositoryShared,
     UserRepositoryBase,

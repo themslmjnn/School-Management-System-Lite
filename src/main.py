@@ -6,7 +6,9 @@ from fastapi.responses import JSONResponse
 from slowapi.errors import RateLimitExceeded
 from slowapi.extension import _rate_limit_exceeded_handler
 from slowapi.middleware import SlowAPIMiddleware
+from sqlalchemy.orm import configure_mappers
 
+import src.models  # noqa: F401
 from src.api.health import router as health_router
 from src.auth.router import router as auth_router
 from src.core.caching import redis_client
@@ -21,6 +23,8 @@ from src.users.routers.system_admin import users as user_system_admin_router
 from src.utils import exceptions as exc
 from src.workers.deletion_worker import start_deletion_worker
 from src.workers.email_worker import run_email_worker
+
+configure_mappers()
 
 setup_logging()
 
@@ -129,6 +133,25 @@ EXCEPTION_STATUS_MAP = {
     exc.DuplicateEmailChangeRequestError: 409,
     exc.InvalidGuardianLinkError: 400,
     exc.GuardianLinkNotFoundError: 404,
+    exc.StudentSubjectEnrollmentNotFoundError: 404,
+    exc.StudentNotFoundError: 404,
+    exc.SubjectIsArchivedError: 409,
+    exc.StudentNotInGroupError: 404,
+    exc.StudentAlreadyEnrolledError: 409,
+    exc.TeacherAlreadyHeadOfClassForGroupError: 409,
+    exc.HeadOfClassSlotAlreadyFilledError: 409,
+    exc.TeachingAssignmentAlreadyExistsError: 409,
+    exc.GroupCapacityExceededError: 409,
+    exc.GroupArchiveBlockedError: 409,
+    exc.SubjectArchiveBlockedError: 409,
+    exc.GroupNotArchivedError: 409,
+    exc.GroupAlreadyArchivedError: 409,
+    exc.SubjectNotArchivedError: 409,
+    exc.SubjectAlreadyArchivedError: 409,
+    exc.GroupNameYearAlreadyExistsError: 409,
+    exc.SubjectCodeAlreadyExistsError: 409,
+    exc.GroupNotFoundError: 404,
+    exc.SubjectNotFoundError: 404,
 }
 
 

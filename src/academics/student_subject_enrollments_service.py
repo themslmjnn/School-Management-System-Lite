@@ -1,6 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.academics.models import StudentSubjectEnrollment
+from academics.models.head_of_class_assignment import StudentSubjectEnrollment
 from src.academics.repository import StudentSubjectEnrollmentRepository
 from src.core.logging import get_logger
 from src.subjects.repository import SubjectRepository

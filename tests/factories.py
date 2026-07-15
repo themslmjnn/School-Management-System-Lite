@@ -4,7 +4,7 @@ from datetime import UTC, date, datetime, timedelta
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.security import generate_invite_token, hash_password
-from src.users.models.users import User, UserActivation, UserLoginLockout, UserSession
+from users.models.user import User, UserActivation, UserLoginLockout, UserSession
 from src.utils.enums import UserRole, UserStatus
 from users.repositories.users import UserRepositoryBase
 

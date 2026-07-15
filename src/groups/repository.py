@@ -1,11 +1,11 @@
 from sqlalchemy import Select, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.academics.models import TeachingAssignment
+from src.academics.models.teaching_assignment import TeachingAssignment
 from src.groups.models import Group
 from src.groups.schemas import SearchGroup
 from src.subjects.models import Subject
-from src.users.models.users import User
+from src.users.models.user import User
 from src.utils.enums import GroupSortField, OrderBy, UserRole
 
 

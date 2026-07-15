@@ -2,13 +2,13 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Path, status
 
-from pagination import PaginatedResponse
 from src.core.dependencies import (
     CurrentUser,
     async_db_dependency,
     pagination_dependency,
     require_system_admin,
 )
+from src.pagination import PaginatedResponse
 from src.subjects.schemas import (
     SearchSubject,
     SubjectCreate,
@@ -16,7 +16,7 @@ from src.subjects.schemas import (
     SubjectUpdate,
 )
 from src.subjects.service import SubjectService
-from utils.enums import OrderBy, SubjectSortField
+from src.utils.enums import OrderBy, SubjectSortField
 
 router = APIRouter(prefix="/subjects", tags=["Subjects"])
 

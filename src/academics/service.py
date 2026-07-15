@@ -1,7 +1,10 @@
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.academics.models import HeadOfClassAssignment, TeachingAssignment
+from academics.models.head_of_class_assignment import (
+    HeadOfClassAssignment,
+    TeachingAssignment,
+)
 from src.academics.repository import HeadOfClassRepository, TeachingAssignmentRepository
 from src.academics.schemas import HeadOfClassCreate, TeachingAssignmentCreate
 from src.core.logging import get_logger
