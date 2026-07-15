@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from sqlalchemy import DateTime, String, UniqueConstraint
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.database import Base
 
@@ -21,4 +21,8 @@ class Group(Base):
 
     __table_args__ = (
         UniqueConstraint("name", "academic_year", name="uix_group_name_academic_year"),
+    )
+
+    teaching_assignments: Mapped[list["TeachingAssignment"]] = relationship(  # noqa: F821
+        "TeachingAssignment", back_populates="group"
     )
