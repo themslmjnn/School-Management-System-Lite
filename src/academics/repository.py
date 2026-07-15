@@ -120,3 +120,25 @@ class StudentSubjectEnrollmentRepository:
         result = await db.execute(query)
 
         return list(result.scalars().all())
+
+    @staticmethod
+    async def get_by_student_and_subject(
+        db: AsyncSession, student_id: int, subject_id: int
+    ) -> "StudentSubjectEnrollment | None":
+        result = await db.execute(
+            select(StudentSubjectEnrollment).filter(
+                StudentSubjectEnrollment.student_id == student_id,
+                StudentSubjectEnrollment.subject_id == subject_id,
+            )
+        )
+        return result.scalar_one_or_none()
+
+    @staticmethod
+    async def create_single(
+        db: AsyncSession, student_id: int, subject_id: int, group_id: int
+    ) -> "StudentSubjectEnrollment":
+        enrollment = StudentSubjectEnrollment(
+            student_id=student_id, subject_id=subject_id, group_id=group_id
+        )
+        db.add(enrollment)
+        return enrollment

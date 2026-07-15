@@ -231,6 +231,22 @@ class StudentAlreadyEnrolledError(AppException):
     pass
 
 
+class StudentNotInGroupError(AppException):
+    pass
+
+
+class SubjectIsArchivedError(AppException):
+    pass
+
+
+class StudentNotFoundError(AppException):
+    pass
+
+
+class StudentSubjectEnrollmentNotFoundError(AppException):
+    pass
+
+
 # INTEGRITY ERROR HANDLERS
 def handle_username_integrity_error(error: IntegrityError) -> None:
     if "users_username_key" in str(error.orig):
