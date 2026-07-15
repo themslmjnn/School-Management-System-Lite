@@ -34,3 +34,4 @@ class HTTP409:
     DUPLICATE_PHONE_NUMBER = "Phone number already taken"
     DUPLICATE_EMAIL = "Email already taken"
     SUBJECT_CODE = "Subject with this code already exists"
+    GROUP_NAME = "Group with this name and academic year already exists"
