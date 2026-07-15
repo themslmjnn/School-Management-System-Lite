@@ -23,7 +23,9 @@ class HTTP403:
 
 class HTTP404:
     USER = "User not found"
-    GUARDIAN_LINK = "This guardian link does not exist"
+    GUARDIAN_LINK = "Guardian link not found"
+    SUBJECT = "Subject not found"
+    GROUP = "Group not found"
 
 
 class HTTP409:
@@ -31,3 +33,4 @@ class HTTP409:
     DUPLICATE_VALUE = "User with the following credentials already exists"
     DUPLICATE_PHONE_NUMBER = "Phone number already taken"
     DUPLICATE_EMAIL = "Email already taken"
+    SUBJECT_CODE = "Subject with this code already exists"

@@ -41,3 +41,11 @@ async def acquire_student_contact_lock(
                 "key": key,
             },
         )
+
+
+async def acquire_group_capacity_lock(db: AsyncSession, group_id: int) -> None:
+    lock_key = int(
+        hashlib.sha256(f"group_capacity:{group_id}".encode()).hexdigest(), 16
+    ) % (2**63)
+
+    await db.execute(text("SELECT pg_advisory_xact_lock(:key)"), {"key": lock_key})

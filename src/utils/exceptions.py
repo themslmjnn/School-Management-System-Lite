@@ -171,6 +171,66 @@ class CannotCreateSystemAdminError(AppException):
     pass
 
 
+class SubjectNotFoundError(AppException):
+    pass
+
+
+class GroupNotFoundError(AppException):
+    pass
+
+
+class SubjectCodeAlreadyExistsError(AppException):
+    pass
+
+
+class GroupNameYearAlreadyExistsError(AppException):
+    pass
+
+
+class SubjectAlreadyArchivedError(AppException):
+    pass
+
+
+class SubjectNotArchivedError(AppException):
+    pass
+
+
+class GroupAlreadyArchivedError(AppException):
+    pass
+
+
+class GroupNotArchivedError(AppException):
+    pass
+
+
+class SubjectArchiveBlockedError(AppException):
+    pass
+
+
+class GroupArchiveBlockedError(AppException):
+    pass
+
+
+class GroupCapacityExceededError(AppException):
+    pass
+
+
+class TeachingAssignmentAlreadyExistsError(AppException):
+    pass
+
+
+class HeadOfClassSlotAlreadyFilledError(AppException):
+    pass
+
+
+class TeacherAlreadyHeadOfClassForGroupError(AppException):
+    pass
+
+
+class StudentAlreadyEnrolledError(AppException):
+    pass
+
+
 # INTEGRITY ERROR HANDLERS
 def handle_username_integrity_error(error: IntegrityError) -> None:
     if "users_username_key" in str(error.orig):
@@ -185,6 +245,11 @@ def handle_non_student_unique_contact_error(error: IntegrityError) -> None:
 
     if "uix_non_student_unique_email" in error_detail:
         raise DuplicateEmailError(HTTP409.DUPLICATE_EMAIL)
+
+
+def handle_subject_code_integrity_error(error: IntegrityError) -> None:
+    if "ix_subjects_code" in str(error.orig):
+        raise SubjectCodeAlreadyExistsError(HTTP409.SUBJECT_CODE)
 
 
 def raise_unhandled_integrity_error(error: IntegrityError) -> None:
