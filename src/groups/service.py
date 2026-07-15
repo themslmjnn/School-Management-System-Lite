@@ -4,11 +4,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.core.logging import get_logger
 from src.groups.models import Group
 from src.groups.repository import GroupRepository
-from src.groups.schemas import GroupCreate
+from src.groups.schemas import GroupCreate, GroupUpdate
+from utils.constants import HTTP404
 from utils.exceptions import (
+    GroupNotFoundError,
     handle_group_name_year_integrity_error,
     raise_unhandled_integrity_error,
 )
+from utils.helpers import ensure_exists, update_object
 
 logger = get_logger(__name__)
 
@@ -44,3 +47,39 @@ class GroupService:
 
             handle_group_name_year_integrity_error(e)
             raise_unhandled_integrity_error(e)
+
+    @staticmethod
+    async def update_group(
+        db: AsyncSession, current_user_id: int, group_id: int, request: GroupUpdate
+    ) -> Group:
+        group = await GroupRepository.get_by_id(db, group_id)
+        ensure_exists(group, GroupNotFoundError(HTTP404.GROUP))
+
+        try:
+            update_object(group, request)
+
+            await db.commit()
+            await db.refresh(group)
+
+            logger.info(
+                "group_updated",
+                group_id=group_id,
+                updated_by=current_user_id,
+            )
+
+            return group
+
+        except IntegrityError as e:
+            await db.rollback()
+
+            logger.warning(
+                "group_update_failed",
+                reason="integrity_error",
+                error=str(e.orig),
+                group_id=group_id,
+                requested_by=current_user_id,
+            )
+
+            handle_group_name_year_integrity_error(e)
+            raise_unhandled_integrity_error(e)
+

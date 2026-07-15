@@ -1,7 +1,6 @@
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Path, status
-from src.groups.services import GroupService
 
 from src.core.dependencies import (
     CurrentUser,
@@ -14,6 +13,7 @@ from src.groups.schemas import (
     GroupResponse,
     GroupUpdate,
 )
+from src.groups.service import GroupService
 from src.pagination import PaginatedResponse
 from src.users.schemas.users import UserResponseAdmin
 from src.utils.enums import OrderBy
@@ -27,3 +27,12 @@ async def create_group(
     request: GroupCreate,
 ):
     return await GroupService.create_group(db, current_user.id, request)
+
+@router.patch("/{group_id}", response_model=GroupResponse)
+async def update_group(
+    db: async_db_dependency,
+    current_user: Annotated[CurrentUser, Depends(require_system_admin)],
+    group_id: Annotated[int, Path(ge=1)],
+    request: GroupUpdate,
+):
+    return await GroupService.update_group(db, current_user.id, group_id, request)
