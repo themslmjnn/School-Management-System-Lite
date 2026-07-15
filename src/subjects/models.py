@@ -23,3 +23,6 @@ class Subject(Base):
     teaching_assignments: Mapped[list["TeachingAssignment"]] = relationship(  # noqa: F821
         "TeachingAssignment", back_populates="subject"
     )
+    enrollments: Mapped[list["StudentSubjectEnrollment"]] = relationship(  # noqa: F821
+        "StudentSubjectEnrollment", back_populates="subject"
+    )
