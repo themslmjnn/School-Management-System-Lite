@@ -1,7 +1,7 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from academics.models import (
+from src.academics.models import (
     HeadOfClassAssignment,
     StudentSubjectEnrollment,
     TeachingAssignment,
@@ -9,6 +9,10 @@ from academics.models import (
 
 
 class TeachingAssignmentRepository:
+    @staticmethod
+    def add_assignment(db: AsyncSession, new_assignment: TeachingAssignment) -> None:
+        db.add(new_assignment)
+
     @staticmethod
     async def get_assignment_by_id(
         db: AsyncSession, assignment_id: int
@@ -47,6 +51,12 @@ class TeachingAssignmentRepository:
 
 
 class HeadOfClassRepository:
+    @staticmethod
+    def add_head_of_class(
+        db: AsyncSession, new_head_of_class: HeadOfClassAssignment
+    ) -> None:
+        db.add(new_head_of_class)
+
     @staticmethod
     async def get_by_group(
         db: AsyncSession, group_id: int

@@ -16,8 +16,8 @@ from src.groups.schemas import (
 )
 from src.groups.service import GroupService
 from src.pagination import PaginatedResponse
+from src.users.schemas.users import UserResponseAdmin
 from src.utils.enums import GroupSortField, OrderBy
-from users.schemas.users import UserResponseAdmin
 
 router = APIRouter(prefix="/groups", tags=["Groups"])
 

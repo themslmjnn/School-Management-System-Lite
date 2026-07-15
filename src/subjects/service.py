@@ -3,9 +3,9 @@ from datetime import UTC, datetime
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from core.caching import get_cache, set_cache
-from pagination import PaginatedResponse
+from src.core.caching import get_cache, set_cache
 from src.core.logging import get_logger
+from src.pagination import PaginatedResponse
 from src.subjects.models import Subject
 from src.subjects.repository import SubjectRepository
 from src.subjects.schemas import (
@@ -14,6 +14,7 @@ from src.subjects.schemas import (
     SubjectResponse,
     SubjectUpdate,
 )
+from src.utils.cache_keys import SubjectCacheKey
 from src.utils.constants import HTTP404
 from src.utils.exceptions import (
     SubjectArchiveBlockedError,
@@ -22,7 +23,6 @@ from src.utils.exceptions import (
     raise_unhandled_integrity_error,
 )
 from src.utils.helpers import ensure_exists, update_object
-from utils.cache_keys import SubjectCacheKey
 
 logger = get_logger(__name__)
 

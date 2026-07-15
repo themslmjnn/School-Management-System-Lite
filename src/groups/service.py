@@ -3,27 +3,31 @@ from datetime import UTC, datetime
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from core.advisory_locks import acquire_group_capacity_lock
-from core.caching import delete_cache, get_cache, set_cache
-from pagination import PaginatedResponse
+from src.core.advisory_locks import acquire_group_capacity_lock
+from src.core.caching import delete_cache, get_cache, set_cache
 from src.core.logging import get_logger
 from src.groups.models import Group
 from src.groups.repository import GroupRepository
-from src.groups.schemas import GroupCreate, GroupResponse, GroupUpdate, SearchGroup
-from users.repositories.users import UserRepositoryBase
-from utils.cache_keys import GroupCacheKey
-from utils.constants import HTTP404
-from utils.enums import UserRole
-from utils.exceptions import (
+from src.groups.schemas import (
+    GroupCreate,
+    GroupResponse,
+    GroupUpdate,
+    SearchGroup,
+)
+from src.pagination import PaginatedResponse
+from src.users.repositories.users import UserRepositoryBase
+from src.utils.cache_keys import GroupCacheKey
+from src.utils.constants import HTTP404
+from src.utils.enums import UserRole
+from src.utils.exceptions import (
     GroupArchiveBlockedError,
     GroupCapacityExceededError,
     GroupNotFoundError,
-    SubjectNotFoundError,
     UserNotFoundError,
     handle_group_name_year_integrity_error,
     raise_unhandled_integrity_error,
 )
-from utils.helpers import ensure_exists, update_object
+from src.utils.helpers import ensure_exists, update_object
 
 logger = get_logger(__name__)
 
