@@ -48,6 +48,11 @@ class EmailSendingStatus(StrEnum):
     FAILED = "failed"
 
 
+class HeadOfClassRole(StrEnum):
+    PRIMARY = "primary"
+    DEPUTY = "depity"
+
+
 class UserSortField(StrEnum):
     CREATED_AT = "created_at"
     FIRSTNAME = "firstname"
