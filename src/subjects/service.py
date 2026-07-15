@@ -1,3 +1,5 @@
+from datetime import UTC, datetime
+
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -7,6 +9,7 @@ from src.subjects.repository import SubjectRepository
 from src.subjects.schemas import SubjectCreate, SubjectUpdate
 from src.utils.constants import HTTP404
 from src.utils.exceptions import (
+    SubjectArchiveBlockedError,
     SubjectNotFoundError,
     handle_subject_code_integrity_error,
     raise_unhandled_integrity_error,
@@ -83,3 +86,34 @@ class SubjectService:
 
             handle_subject_code_integrity_error(e)
             raise_unhandled_integrity_error(e)
+
+    @staticmethod
+    async def archive_subject(
+        db: AsyncSession, current_user_id: int, subject_id: int
+    ) -> None:
+        subject = await SubjectRepository.get_subject_by_id(db, subject_id)
+        ensure_exists(subject, SubjectNotFoundError(HTTP404.SUBJECT))
+
+        if await SubjectRepository.has_active_teaching_assignments(db, subject_id):
+            logger.warning(
+                "subject_archive_denied",
+                subject_id=subject_id,
+                actor_user_id=current_user_id,
+                denial_reason="active_teaching_assignments_reference_subject",
+            )
+
+            raise SubjectArchiveBlockedError(
+                "Cannot archive a subject with active teaching assignments; "
+                "reassign or remove them first"
+            )
+
+        subject.is_archived = True
+        subject.archived_at = datetime.now(UTC)
+
+        await db.commit()
+
+        logger.info(
+            "subject_archived", 
+            subject_id=subject_id, 
+            archived_by=current_user_id,
+        )

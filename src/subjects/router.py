@@ -32,3 +32,11 @@ async def update_subject(
     request: SubjectUpdate,
 ):
     return await SubjectService.update_subject(db, current_user.id, subject_id, request)
+
+@router.patch("/{subject_id}/archive", status_code=status.HTTP_204_NO_CONTENT)
+async def archive_subject(
+    db: async_db_dependency,
+    current_user: Annotated[CurrentUser, Depends(require_system_admin)],
+    subject_id: Annotated[int, Path(ge=1)],
+):
+    await SubjectService.archive_subject(db, current_user.id, subject_id)
