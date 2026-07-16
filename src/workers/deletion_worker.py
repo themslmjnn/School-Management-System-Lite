@@ -2,7 +2,7 @@ import asyncio
 
 from src.core.logging import get_logger
 from src.database import AsyncSessionLocal
-from users.repositories.user import UserRepositoryBase
+from src.users.repositories.user import UserRepositoryBase
 
 logger = get_logger(__name__)
 

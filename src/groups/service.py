@@ -6,6 +6,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.core.advisory_locks import acquire_group_capacity_lock
 from src.core.caching import delete_cache, get_cache, set_cache
 from src.core.logging import get_logger
+from src.groups.exceptions.constants import HTTP404
+from src.groups.exceptions.exceptions import (
+    GroupAlreadyArchivedError,
+    GroupArchiveBlockedError,
+    GroupCapacityExceededError,
+    GroupIsNotArchivedError,
+    GroupNotFoundError,
+    handle_group_name_year_integrity_error,
+)
 from src.groups.models import Group
 from src.groups.repository import GroupRepository
 from src.groups.schemas import (
@@ -15,20 +24,11 @@ from src.groups.schemas import (
     SearchGroup,
 )
 from src.pagination import PaginatedResponse
+from src.users.exceptions.exceptions import UserNotFoundError
 from src.users.repositories.user import UserRepositoryBase
+from src.utils.base_exception import raise_unhandled_integrity_error
 from src.utils.cache_keys import GroupCacheKey
-from utils.base_constant import HTTP404
 from src.utils.enums import UserRole
-from utils.base_exception import (
-    GroupAlreadyArchivedError,
-    GroupArchiveBlockedError,
-    GroupCapacityExceededError,
-    GroupIsNotArchivedError,
-    GroupNotFoundError,
-    UserNotFoundError,
-    handle_group_name_year_integrity_error,
-    raise_unhandled_integrity_error,
-)
 from src.utils.helpers import ensure_exists, update_object
 
 logger = get_logger(__name__)

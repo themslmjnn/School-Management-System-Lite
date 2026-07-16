@@ -112,44 +112,6 @@ class TestRegisterUser:
         assert activation.invite_token_expires_at > datetime.now(UTC)
         assert activation.user_id == data["id"]
 
-    async def test_rejects_system_admin_role(
-        self,
-        test_db: AsyncSession,
-        client: AsyncClient,
-        system_admin: User,
-        valid_create_staff_request: CreateStaffAdmin,
-    ):
-        headers = await make_auth_header(test_db, system_admin)
-        valid_create_staff_request.role = UserRole.SYSTEM_ADMIN
-
-        response = await client.post(
-            "/users",
-            json=valid_create_staff_request.model_dump(mode="json"),
-            headers=headers,
-        )
-
-        assert response.status_code == 403
-        assert response.json()["detail"] == "System admin creation via api is forbidden"
-
-    async def test_rejects_director_role(
-        self,
-        test_db: AsyncSession,
-        client: AsyncClient,
-        system_admin: User,
-        valid_create_staff_request: CreateStaffAdmin,
-    ):
-        headers = await make_auth_header(test_db, system_admin)
-        valid_create_staff_request.role = UserRole.DIRECTOR
-
-        response = await client.post(
-            "/users",
-            json=valid_create_staff_request.model_dump(mode="json"),
-            headers=headers,
-        )
-
-        assert response.status_code == 403
-        assert response.json()["detail"] == "Director creation via api is forbidden"
-
     @pytest.mark.parametrize(
         ("existing_user_data", "request_override"),
         [

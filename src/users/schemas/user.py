@@ -99,7 +99,7 @@ class CreateStudentAdmin(CreateUserBase):
 
 class CreateStaffAdmin(CreateUserBase):
     type: Literal["staff"] = "staff"
-    role: UserRole
+    role: Literal[UserRole.VICE_DIRECTOR, UserRole.TEACHER]
 
 
 class CreateGuardianAdmin(CreateUserBase):

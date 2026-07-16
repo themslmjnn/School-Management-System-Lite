@@ -15,8 +15,6 @@ from src.emails.repository import PendingEmailRepository
 from src.pagination import PaginatedResponse
 from src.users.exceptions.constants import HTTP404
 from src.users.exceptions.exceptions import (
-    CannotCreateDirectorError,
-    CannotCreateSystemAdminError,
     MaxStaffOrGuardianPerEmailError,
     MaxStaffOrGuardianPerPhoneNumberError,
     MaxStudentsPerEmailError,
@@ -29,7 +27,6 @@ from src.users.exceptions.exceptions import (
     UserTypeMismatchError,
     handle_non_student_unique_contact_error,
     handle_username_integrity_error,
-    raise_unhandled_integrity_error,
 )
 from src.users.models.activation import UserActivation
 from src.users.models.login_lockout import UserLoginLockout
@@ -51,6 +48,7 @@ from src.users.schemas.user import (
     UserResponseAdminDetailed,
 )
 from src.utils import email as email_sender
+from src.utils.base_exception import raise_unhandled_integrity_error
 from src.utils.cache_keys import SessionCacheKey, UserCacheKey
 from src.utils.enums import EmailType, UserRole, UserStatus
 from src.utils.helpers import ensure_exists, update_object
@@ -59,12 +57,6 @@ logger = get_logger(__name__)
 
 STUDENT_MAX_SHARED_CONTACT = 3
 STAFF_AND_GUARDIAN_MAX_SHARED_CONTACT = 1
-BLOCKED_ROLES_VIA_API = frozenset(
-    {
-        UserRole.SYSTEM_ADMIN,
-        UserRole.DIRECTOR,
-    }
-)
 STAFF_ROLES = frozenset(
     {
         UserRole.VICE_DIRECTOR,
@@ -154,29 +146,6 @@ class UserServiceAdmin:
     ) -> User:
         match create_request:
             case CreateStaffAdmin():
-                if create_request.role in BLOCKED_ROLES_VIA_API:
-                    denial_reason = {
-                        UserRole.SYSTEM_ADMIN: "system_admin_creation_via_api_is_forbidden",
-                        UserRole.DIRECTOR: "director_creation_via_api_is_forbidden",
-                    }[create_request.role]
-
-                    exception_map = {
-                        UserRole.SYSTEM_ADMIN: CannotCreateSystemAdminError,
-                        UserRole.DIRECTOR: CannotCreateDirectorError,
-                    }
-
-                    logger.warning(
-                        "user_registration_denied",
-                        actor_user_id=current_user_id,
-                        target_username=create_request.username,
-                        requested_role=create_request.role.value,
-                        denial_reason=denial_reason,
-                    )
-
-                    raise exception_map[create_request.role](
-                        denial_reason.replace("_", " ").capitalize()
-                    )
-
                 resolved_role = create_request.role
                 contact_limit_role = None
                 max_allowed = STAFF_AND_GUARDIAN_MAX_SHARED_CONTACT
@@ -270,8 +239,6 @@ class UserServiceAdmin:
 
             await db.commit()
             await db.refresh(new_user)
-
-            print(raw_invite_token)
 
             logger.info(
                 "user_registered",

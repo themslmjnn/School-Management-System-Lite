@@ -25,10 +25,6 @@ class PendingEmailNotFoundError(AppException):
     pass
 
 
-class NoChangesDetectedError(AppException):
-    pass
-
-
 class UserAlreadyActiveError(AppException):
     pass
 

@@ -20,13 +20,11 @@ from src.users.exceptions.exceptions import (
     EmailChangeCodeExpiredError,
     IncorrectPasswordError,
     InvalidEmailChangeCodeError,
-    NoChangesDetectedError,
     NoPendingEmailChangeError,
     ProfileFieldsNotEditableForRoleError,
     UserNotFoundError,
     handle_non_student_unique_contact_error,
     handle_username_integrity_error,
-    raise_unhandled_integrity_error,
 )
 from src.users.models.user import User
 from src.users.repositories.guardian_link import GuardianLinkRepositoryShared
@@ -41,6 +39,10 @@ from src.users.schemas.user import (
 from src.users.services.system_admin.user import check_contact_limit
 from src.utils import email as email_sender
 from src.utils.base_constant import HTTP400
+from src.utils.base_exception import (
+    NoChangesDetectedError,
+    raise_unhandled_integrity_error,
+)
 from src.utils.cache_keys import SessionCacheKey, UserCacheKey
 from src.utils.enums import EmailType, UserRole
 from src.utils.helpers import ensure_exists, update_object

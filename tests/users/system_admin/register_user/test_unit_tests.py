@@ -5,6 +5,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.emails.models import EmailType
 from src.emails.repository import PendingEmailRepository
+from src.users.exceptions.exceptions import (
+    DuplicateEmailError,
+    DuplicatePhoneNumberError,
+    MaxStaffOrGuardianPerEmailError,
+    MaxStaffOrGuardianPerPhoneNumberError,
+    MaxStudentsPerEmailError,
+    MaxStudentsPerPhoneNumberError,
+    UsernameAlreadyTakenError,
+)
 from src.users.models.user import User
 from src.users.repositories.user import UserRepositoryBase
 from src.users.schemas.user import (
@@ -14,17 +23,6 @@ from src.users.schemas.user import (
 )
 from src.users.services.system_admin.user import UserServiceAdmin
 from src.utils.enums import UserRole, UserStatus
-from utils.base_exception import (
-    CannotCreateDirectorError,
-    CannotCreateSystemAdminError,
-    DuplicateEmailError,
-    DuplicatePhoneNumberError,
-    MaxStaffOrGuardianPerEmailError,
-    MaxStaffOrGuardianPerPhoneNumberError,
-    MaxStudentsPerEmailError,
-    MaxStudentsPerPhoneNumberError,
-    UsernameAlreadyTakenError,
-)
 from tests.factories import (
     make_guardian,
     make_student,
@@ -33,32 +31,6 @@ from tests.factories import (
 
 
 class TestRegisterStaff:
-    async def test_block_system_admin_creation(
-        self,
-        test_db: AsyncSession,
-        system_admin: User,
-        valid_create_staff_request: CreateStaffAdmin,
-    ):
-        valid_create_staff_request.role = UserRole.SYSTEM_ADMIN
-
-        with pytest.raises(CannotCreateSystemAdminError):
-            await UserServiceAdmin.register_user(
-                test_db, system_admin.id, valid_create_staff_request
-            )
-
-    async def test_block_director_creation(
-        self,
-        test_db: AsyncSession,
-        system_admin: User,
-        valid_create_staff_request: CreateStaffAdmin,
-    ):
-        valid_create_staff_request.role = UserRole.DIRECTOR
-
-        with pytest.raises(CannotCreateDirectorError):
-            await UserServiceAdmin.register_user(
-                test_db, system_admin.id, valid_create_staff_request
-            )
-
     @pytest.mark.parametrize(
         ("existing_user_data", "request_override", "expected_exception"),
         [

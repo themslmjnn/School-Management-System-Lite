@@ -6,6 +6,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.core.caching import delete_cache, get_cache, set_cache
 from src.core.logging import get_logger
 from src.pagination import PaginatedResponse
+from src.subjects.exceptions.constants import HTTP404
+from src.subjects.exceptions.exceptions import (
+    SubjectAlreadyArchivedError,
+    SubjectArchiveBlockedError,
+    SubjectIsNotArchivedError,
+    SubjectNotFoundError,
+    handle_subject_code_integrity_error,
+)
 from src.subjects.models import Subject
 from src.subjects.repository import SubjectRepository
 from src.subjects.schemas import (
@@ -14,16 +22,8 @@ from src.subjects.schemas import (
     SubjectResponse,
     SubjectUpdate,
 )
+from src.utils.base_exception import raise_unhandled_integrity_error
 from src.utils.cache_keys import SubjectCacheKey
-from utils.base_constant import HTTP404
-from utils.base_exception import (
-    SubjectAlreadyArchivedError,
-    SubjectArchiveBlockedError,
-    SubjectIsNotArchivedError,
-    SubjectNotFoundError,
-    handle_subject_code_integrity_error,
-    raise_unhandled_integrity_error,
-)
 from src.utils.helpers import ensure_exists, update_object
 
 logger = get_logger(__name__)
