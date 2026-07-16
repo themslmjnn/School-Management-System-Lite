@@ -564,6 +564,7 @@ class UserServiceAdmin:
             db, target_user_id
         )
         ensure_exists(target_user, UserNotFoundError(HTTP404.USER))
+
         target_user_email = target_user.email
 
         reactivated = await UserRepositoryBase.reactivate_pending_deletion_user(
@@ -591,9 +592,7 @@ class UserServiceAdmin:
             )
         )
 
-        await delete_cache(
-            UserCacheKey.user_detail_key_admin(target_user_id),
-        )
+        await delete_cache(UserCacheKey.user_detail_key_admin(target_user_id))
 
         logger.info(
             "guardian_deletion_cancelled",

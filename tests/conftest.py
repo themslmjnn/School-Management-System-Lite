@@ -254,6 +254,6 @@ def mock_send_account_deletion_email(mocker):
 @pytest.fixture
 def mock_send_account_deletion_canceled_email(mocker):
     return mocker.patch(
-        "src.users.services.system_admin.email_sender.send_account_deletion_canceled_email",
+        "src.users.services.system_admin.user.email_sender.send_account_deletion_canceled_email",
         new_callable=AsyncMock,
     )
