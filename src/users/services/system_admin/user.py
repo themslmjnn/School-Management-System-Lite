@@ -763,6 +763,7 @@ class UserServiceAdmin:
                 actor_user_id=current_user_id,
                 denial_reason="user_not_pending_activation",
             )
+
             raise UserNotPendingActivationError(
                 "Cannot resend an activation invite to a user who is not "
                 "pending activation"
