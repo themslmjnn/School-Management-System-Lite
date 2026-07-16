@@ -8,7 +8,7 @@ from src.users.models.activation import UserActivation
 from src.users.models.login_lockout import UserLoginLockout
 from src.users.models.session import UserSession
 from src.users.models.user import User
-from users.repositories.user import UserRepositoryBase
+from src.users.repositories.user import UserRepositoryBase
 from src.utils.enums import UserRole, UserStatus
 
 _counter = itertools.count(1)
