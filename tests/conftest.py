@@ -17,7 +17,7 @@ from src.core.security import create_access_token
 from src.database import Base
 from src.main import app
 from src.users.models import User
-from users.repositories.user import UserRepositoryBase
+from src.users.repositories.user import UserRepositoryBase
 from src.users.schemas.user import (
     CreateGuardianAdmin,
     CreateStaffAdmin,
@@ -230,15 +230,7 @@ def mock_advisory_lock(mocker):
 @pytest.fixture
 def mock_check_contact_limit(mocker):
     return mocker.patch(
-        "src.users.services.system_admin.check_contact_limit",
-        return_value=None,
-    )
-
-
-@pytest.fixture
-def mock_acquire_student_contact_lock(mocker):
-    return mocker.patch(
-        "src.users.services.system_admin.acquire_student_contact_lock",
+        "src.users.services.system_admin.user.check_contact_limit",
         return_value=None,
     )
 
@@ -246,7 +238,7 @@ def mock_acquire_student_contact_lock(mocker):
 @pytest.fixture
 def mock_send_account_info_updated_email(mocker):
     return mocker.patch(
-        "src.users.services.system_admin.email_sender.send_account_info_updated_email",
+        "src.users.services.system_admin.user.email_sender.send_account_info_updated_email",
         new_callable=AsyncMock,
     )
 

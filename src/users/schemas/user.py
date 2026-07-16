@@ -113,9 +113,9 @@ CreateRequest = Annotated[
 
 
 class UpdateUserBase(BaseModel):
-    firstname: str | None = None
-    lastname: str | None = None
-    middlename: str | None = None
+    firstname: str | None = Field(min_length=3, max_length=50, default=None)
+    lastname: str | None = Field(min_length=3, max_length=50, default=None)
+    middlename: str | None = Field(min_length=3, max_length=50, default=None)
     phone_number: str | None = None
 
     @field_validator("firstname")
