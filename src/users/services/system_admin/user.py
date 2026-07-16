@@ -421,6 +421,7 @@ class UserServiceAdmin:
                 subject, html_body, text_body = email_sender.build_invite_email(
                     raw_invite_token, target_user.email
                 )
+
                 PendingEmailRepository.add_pending_email(
                     db,
                     recipient=target_user.email,
