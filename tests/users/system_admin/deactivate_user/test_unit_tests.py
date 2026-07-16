@@ -39,6 +39,7 @@ class TestDeactivateUser:
         test_db: AsyncSession,
         system_admin: User,
         teacher: User,
+        mock_send_account_deactivation_email,
         mock_delete_cache,
     ):
         await UserServiceAdmin.deactivate_user(test_db, system_admin.id, teacher.id)
