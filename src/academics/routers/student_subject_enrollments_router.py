@@ -2,15 +2,15 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Path, status
 
-from src.academics.schemas import StudentSubjectEnrollmentResponse
-from src.academics.student_subject_enrollments_service import (
+from academics.schemas.teaching_assingment import StudentSubjectEnrollmentResponse
+from academics.services.student_subject_enrollment import (
     StudentSubjectEnrollmentService,
 )
 from src.core.dependencies import CurrentUser, async_db_dependency, require_system_admin
 
 student_subjects_router = APIRouter(
     prefix="/students",
-    tags=["Student Subject Enrollment"],
+    tags=["Student Subject Enrollment - System Admin"],
 )
 
 

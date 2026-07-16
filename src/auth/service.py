@@ -31,12 +31,12 @@ from src.core.security import (
     verify_refresh_token,
     verify_reset_password_token,
 )
-from src.users.repositories.users import UserRepositoryBase
+from src.users.repositories.user import UserRepositoryBase
 from src.utils import email as email_sender
 from src.utils.cache_keys import SessionCacheKey, UserCacheKey
-from src.utils.constants import HTTP400, HTTP401, HTTP403
+from utils.base_constant import HTTP400, HTTP401, HTTP403
 from src.utils.enums import EmailType, UserStatus
-from src.utils.exceptions import (
+from utils.base_exception import (
     AccountInactiveError,
     AccountLockedError,
     EmptyCredentialsError,

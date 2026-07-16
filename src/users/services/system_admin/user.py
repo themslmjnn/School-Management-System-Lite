@@ -13,30 +13,8 @@ from src.core.logging import get_logger
 from src.core.security import generate_invite_token, generate_reset_password_token
 from src.emails.repository import PendingEmailRepository
 from src.pagination import PaginatedResponse
-from src.users.models.activation import UserActivation
-from src.users.models.login_lockout import UserLoginLockout
-from src.users.models.session import UserSession
-from src.users.models.user import User
-from src.users.repositories.users import (
-    UserRepositoryAdmin,
-    UserRepositoryBase,
-)
-from src.users.schemas.users import (
-    CreateGuardianAdmin,
-    CreateRequest,
-    CreateStaffAdmin,
-    CreateStudentAdmin,
-    SearchUserAdmin,
-    UpdateStudentAdmin,
-    UpdateUser,
-    UpdateUserCredentials,
-    UserResponseAdminDetailed,
-)
-from src.utils import email as email_sender
-from src.utils.cache_keys import SessionCacheKey, UserCacheKey
-from src.utils.constants import HTTP404
-from src.utils.enums import EmailType, UserRole, UserStatus
-from src.utils.exceptions import (
+from src.users.exceptions.constants import HTTP404
+from src.users.exceptions.exceptions import (
     CannotCreateDirectorError,
     CannotCreateSystemAdminError,
     MaxStaffOrGuardianPerEmailError,
@@ -53,6 +31,28 @@ from src.utils.exceptions import (
     handle_username_integrity_error,
     raise_unhandled_integrity_error,
 )
+from src.users.models.activation import UserActivation
+from src.users.models.login_lockout import UserLoginLockout
+from src.users.models.session import UserSession
+from src.users.models.user import User
+from src.users.repositories.user import (
+    UserRepositoryAdmin,
+    UserRepositoryBase,
+)
+from src.users.schemas.user import (
+    CreateGuardianAdmin,
+    CreateRequest,
+    CreateStaffAdmin,
+    CreateStudentAdmin,
+    SearchUserAdmin,
+    UpdateStudentAdmin,
+    UpdateUser,
+    UpdateUserCredentials,
+    UserResponseAdminDetailed,
+)
+from src.utils import email as email_sender
+from src.utils.cache_keys import SessionCacheKey, UserCacheKey
+from src.utils.enums import EmailType, UserRole, UserStatus
 from src.utils.helpers import ensure_exists, update_object
 
 logger = get_logger(__name__)

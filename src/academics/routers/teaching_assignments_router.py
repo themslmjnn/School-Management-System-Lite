@@ -2,11 +2,17 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Path, status
 
-from src.academics.schemas import TeachingAssignmentCreate, TeachingAssignmentResponse
-from src.academics.service import TeachingAssignmentService
+from academics.schemas.teaching_assingment import (
+    TeachingAssignmentCreate,
+    TeachingAssignmentResponse,
+)
+from academics.services.teaching_assignment import TeachingAssignmentService
 from src.core.dependencies import CurrentUser, async_db_dependency, require_system_admin
 
-router = APIRouter(prefix="/teaching-assignments", tags=["Teaching Assignments"])
+router = APIRouter(
+    prefix="/teaching-assignments",
+    tags=["Teaching Assignments - System Admin"],
+)
 
 
 @router.post(

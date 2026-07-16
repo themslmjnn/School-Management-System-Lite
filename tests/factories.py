@@ -4,9 +4,12 @@ from datetime import UTC, date, datetime, timedelta
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.security import generate_invite_token, hash_password
-from users.models.user import User, UserActivation, UserLoginLockout, UserSession
+from src.users.models.activation import UserActivation
+from src.users.models.login_lockout import UserLoginLockout
+from src.users.models.session import UserSession
+from src.users.models.user import User
+from users.repositories.user import UserRepositoryBase
 from src.utils.enums import UserRole, UserStatus
-from users.repositories.users import UserRepositoryBase
 
 _counter = itertools.count(1)
 

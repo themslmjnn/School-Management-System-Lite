@@ -15,8 +15,8 @@ from src.subjects.schemas import (
     SubjectUpdate,
 )
 from src.utils.cache_keys import SubjectCacheKey
-from src.utils.constants import HTTP404
-from src.utils.exceptions import (
+from utils.base_constant import HTTP404
+from utils.base_exception import (
     SubjectAlreadyArchivedError,
     SubjectArchiveBlockedError,
     SubjectIsNotArchivedError,

@@ -1,13 +1,15 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from academics.models.head_of_class_assignment import StudentSubjectEnrollment
-from src.academics.repository import StudentSubjectEnrollmentRepository
+from src.academics.models.student_subject_enrollment import StudentSubjectEnrollment
+from src.academics.repositories.student_subject_assignment import (
+    StudentSubjectEnrollmentRepository,
+)
 from src.core.logging import get_logger
 from src.subjects.repository import SubjectRepository
-from src.users.repositories.users import UserRepositoryBase
-from src.utils.constants import HTTP404
+from src.users.repositories.user import UserRepositoryBase
+from utils.base_constant import HTTP404
 from src.utils.enums import UserRole
-from src.utils.exceptions import (
+from utils.base_exception import (
     StudentAlreadyEnrolledError,
     StudentNotFoundError,
     StudentNotInGroupError,

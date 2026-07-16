@@ -17,7 +17,8 @@ from src.core.security import create_access_token
 from src.database import Base
 from src.main import app
 from src.users.models import User
-from src.users.schemas.users import (
+from users.repositories.user import UserRepositoryBase
+from src.users.schemas.user import (
     CreateGuardianAdmin,
     CreateStaffAdmin,
     CreateStudentAdmin,
@@ -31,7 +32,6 @@ from tests.factories import (
     make_teacher,
     make_vice_director,
 )
-from users.repositories.users import UserRepositoryBase
 
 ASYNC_DB_URL = (
     f"postgresql+asyncpg://{settings.DB_USER}:{settings.DB_PSSW}"
@@ -222,7 +222,7 @@ def mock_delete_cache(mocker):
 @pytest.fixture
 def mock_advisory_lock(mocker):
     return mocker.patch(
-        "src.users.services.system_admin.acquire_student_contact_lock",
+        "src.users.services.system_admin.user.acquire_student_contact_lock",
         return_value=None,
     )
 

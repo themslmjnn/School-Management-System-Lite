@@ -14,24 +14,8 @@ from src.core.security import (
     verify_email_change_code,
     verify_password,
 )
-from src.users.models.user import User
-from src.users.repositories.users import (
-    GuardianLinkRepositoryShared,
-    UserRepositoryBase,
-)
-from src.users.schemas.guardian_link import ChildResponse
-from src.users.schemas.users import (
-    ConfirmEmailChange,
-    UpdateMeCredentials,
-    UpdateMePassword,
-    UpdateMeProfile,
-)
-from src.users.services.system_admin.user import check_contact_limit
-from src.utils import email as email_sender
-from src.utils.cache_keys import SessionCacheKey, UserCacheKey
-from src.utils.constants import HTTP400, HTTP404
-from src.utils.enums import EmailType, UserRole
-from src.utils.exceptions import (
+from src.users.exceptions.constants import HTTP404
+from src.users.exceptions.exceptions import (
     DuplicateEmailChangeRequestError,
     EmailChangeCodeExpiredError,
     IncorrectPasswordError,
@@ -44,6 +28,21 @@ from src.utils.exceptions import (
     handle_username_integrity_error,
     raise_unhandled_integrity_error,
 )
+from src.users.models.user import User
+from src.users.repositories.guardian_link import GuardianLinkRepositoryShared
+from src.users.repositories.user import UserRepositoryBase
+from src.users.schemas.guardian_link import ChildResponse
+from src.users.schemas.user import (
+    ConfirmEmailChange,
+    UpdateMeCredentials,
+    UpdateMePassword,
+    UpdateMeProfile,
+)
+from src.users.services.system_admin.user import check_contact_limit
+from src.utils import email as email_sender
+from src.utils.base_constant import HTTP400
+from src.utils.cache_keys import SessionCacheKey, UserCacheKey
+from src.utils.enums import EmailType, UserRole
 from src.utils.helpers import ensure_exists, update_object
 
 logger = get_logger(__name__)
@@ -168,7 +167,7 @@ class UserServiceSelf:
                 session.email_change_code_expires_at = code_expires_at
 
             await db.commit()
-            print(raw_code)
+
             if email_requested:
                 asyncio.create_task(
                     email_sender.send_safe(

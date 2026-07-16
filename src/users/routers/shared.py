@@ -9,7 +9,7 @@ from src.core.dependencies import (
     require_roles,
 )
 from src.users.schemas.guardian_link import ChildResponse
-from src.users.schemas.users import (
+from src.users.schemas.user import (
     ConfirmEmailChange,
     UpdateMeCredentials,
     UpdateMePassword,

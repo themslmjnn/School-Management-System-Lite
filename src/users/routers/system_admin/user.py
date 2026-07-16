@@ -10,7 +10,7 @@ from src.core.dependencies import (
 )
 from src.core.limiter import user_limiter
 from src.pagination import PaginatedResponse
-from src.users.schemas.users import (
+from src.users.schemas.user import (
     CreateRequest,
     SearchUserAdmin,
     UpdateUser,

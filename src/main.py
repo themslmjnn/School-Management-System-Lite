@@ -21,8 +21,8 @@ from src.subjects import router as subject_system_admin_router
 from src.users.routers import guardian as user_guardian_router
 from src.users.routers import shared as users_shared_router
 from src.users.routers.system_admin import guardian_link as user_guardian_link_router
-from src.users.routers.system_admin import users as user_system_admin_router
-from src.utils import exceptions as exc
+from src.users.routers.system_admin import user as user_system_admin_router
+from utils import base_exception as exc
 from src.workers.deletion_worker import start_deletion_worker
 from src.workers.email_worker import run_email_worker
 

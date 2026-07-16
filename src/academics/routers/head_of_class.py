@@ -2,23 +2,24 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Path, status
 
-from src.academics.repository import (
-    HeadOfClassRepository,
-    TeachingAssignmentRepository,
-)
-from src.academics.schemas import (
+from src.academics.repositories.head_of_class import HeadOfClassRepository
+from src.academics.repositories.teaching_assignment import TeachingAssignmentRepository
+from academics.schemas.teaching_assingment import (
     HeadOfClassCreate,
     HeadOfClassResponse,
     TeachingAssignmentResponse,
 )
-from src.academics.service import HeadOfClassService
+from academics.services.teaching_assignment import HeadOfClassService
 from src.core.dependencies import (
     CurrentUser,
     async_db_dependency,
     require_system_admin,
 )
 
-router = APIRouter(prefix="/groups", tags=["Academics"])
+router = APIRouter(
+    prefix="/groups",
+    tags=["Academics - System Admin"],
+)
 
 
 @router.get(

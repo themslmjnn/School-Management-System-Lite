@@ -12,7 +12,7 @@ logger = get_logger(__name__)
 
 router = APIRouter(
     prefix="/health",
-    tags=["health"],
+    tags=["Health"],
 )
 
 

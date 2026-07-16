@@ -9,7 +9,7 @@ from passlib.context import CryptContext
 
 from src.auth.schemas import CreateAccessToken, CreateRefreshToken
 from src.core.config import ALGORITHM, settings
-from src.utils.constants import HTTP401
+from utils.base_constant import HTTP401
 
 bcrypt_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 

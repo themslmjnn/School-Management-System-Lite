@@ -2,23 +2,21 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.logging import get_logger
-from src.users.models.guardian_link import StudentGuardianLink
-from src.users.repositories.users import (
-    GuardianLinkRepositoryAdmin,
-    UserRepositoryBase,
-)
-from src.users.schemas.guardian_link import (
-    CreateGuardianLinkAdmin,
-    UpdateGuardianPriorityAdmin,
-)
-from src.utils.constants import HTTP404
-from src.utils.enums import UserRole
-from src.utils.exceptions import (
+from src.users.exceptions.constants import HTTP404
+from src.users.exceptions.exceptions import (
     GuardianLinkAlreadyExistsError,
     GuardianLinkNotFoundError,
     GuardianSlotAlreadyFilledError,
     InvalidGuardianLinkError,
 )
+from src.users.models.guardian_link import StudentGuardianLink
+from src.users.repositories.guardian_link import GuardianLinkRepositoryAdmin
+from src.users.repositories.user import UserRepositoryBase
+from src.users.schemas.guardian_link import (
+    CreateGuardianLinkAdmin,
+    UpdateGuardianPriorityAdmin,
+)
+from src.utils.enums import UserRole
 from src.utils.helpers import ensure_exists, update_object
 
 logger = get_logger(__name__)
