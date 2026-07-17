@@ -22,12 +22,11 @@ class UserResponseAdmin(BaseModel):
     role: UserRole
 
 
-class UserResponseAdminDetailed(UserResponseAdmin, BaseSchema):
+class UserCacheSchema(UserResponseAdmin, BaseSchema):
     id: int
-    username: str
     date_of_birth: date | None
-    phone_number: str = Field(exclude=True)
-    email: EmailStr
+    phone_number: str
+    email: str
     address: str | None
     status: UserStatus
     is_active: bool
@@ -35,8 +34,12 @@ class UserResponseAdminDetailed(UserResponseAdmin, BaseSchema):
     created_at: datetime
     updated_at: datetime
 
+
+class UserResponseAdminDetailed(UserCacheSchema):
+    phone_number: str = Field(exclude=True)
+
     @field_serializer("created_at", "updated_at")
-    def serialize_updated_at(self, value: datetime) -> str:
+    def serialize_datetimes(self, value: datetime) -> str:
         return value.strftime("%d %b %Y, %H:%M")
 
     @computed_field

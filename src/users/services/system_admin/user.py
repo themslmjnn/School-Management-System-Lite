@@ -45,6 +45,7 @@ from src.users.schemas.user import (
     UpdateStudentAdmin,
     UpdateUser,
     UpdateUserCredentials,
+    UserCacheSchema,
     UserResponseAdminDetailed,
 )
 from src.utils import email as email_sender
@@ -821,28 +822,24 @@ class UserServiceAdmin:
         )
 
     @staticmethod
-    async def get_staff_by_id(
-        db: AsyncSession,
-        target_user_id: int,
-    ) -> UserResponseAdminDetailed:
+    async def get_staff_by_id(db, target_user_id) -> UserResponseAdminDetailed:
         cache_key = UserCacheKey.user_detail_key_admin(target_user_id)
         cached = await get_cache(cache_key)
 
         if cached is not None:
-            return UserResponseAdminDetailed(**cached)
+            raw = UserCacheSchema.model_validate(cached)
+
+            return UserResponseAdminDetailed.model_validate(raw.model_dump())
 
         user = await UserRepositoryBase.get_user_by_id(
-            db,
-            target_user_id,
-            allowed_roles=STAFF_ROLES,
+            db, target_user_id, allowed_roles=STAFF_ROLES
         )
         ensure_exists(user, UserNotFoundError(HTTP404.USER))
 
-        result = UserResponseAdminDetailed.model_validate(user)
+        raw = UserCacheSchema.model_validate(user)
+        await set_cache(cache_key, raw.model_dump(mode="json"), 900)
 
-        await set_cache(cache_key, result.model_dump(mode="json"), 900)
-
-        return result
+        return UserResponseAdminDetailed.model_validate(user)
 
     @staticmethod
     async def get_guardians(
