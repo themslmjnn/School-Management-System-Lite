@@ -1,22 +1,25 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 
+import src.academics.exceptions.constants as academic_exc_const
+import src.subjects.exceptions.constants as subject_exc_const
+from src.academics.exceptions.exceptions import (
+    StudentAlreadyEnrolledError,
+    StudentNotFoundError,
+    StudentNotInGroupError,
+    StudentSubjectEnrollmentNotFoundError,
+)
 from src.academics.models.student_subject_enrollment import StudentSubjectEnrollment
 from src.academics.repositories.student_subject_assignment import (
     StudentSubjectEnrollmentRepository,
 )
 from src.core.logging import get_logger
-from src.subjects.repository import SubjectRepository
-from src.users.repositories.user import UserRepositoryBase
-from utils.base_constant import HTTP404
-from src.utils.enums import UserRole
-from utils.base_exception import (
-    StudentAlreadyEnrolledError,
-    StudentNotFoundError,
-    StudentNotInGroupError,
-    StudentSubjectEnrollmentNotFoundError,
+from src.subjects.exceptions.exceptions import (
     SubjectIsArchivedError,
     SubjectNotFoundError,
 )
+from src.subjects.repository import SubjectRepository
+from src.users.repositories.user import UserRepositoryBase
+from src.utils.enums import UserRole
 from src.utils.helpers import ensure_exists
 
 logger = get_logger(__name__)
@@ -30,7 +33,7 @@ class StudentSubjectEnrollmentService:
         student = await UserRepositoryBase.get_user_by_id(
             db, student_id, allowed_roles=frozenset({UserRole.STUDENT})
         )
-        ensure_exists(student, StudentNotFoundError(HTTP404.USER))
+        ensure_exists(student, StudentNotFoundError(academic_exc_const.HTTP404.STUDENT))
 
         if student.group_id is None:
             logger.warning(
@@ -46,7 +49,7 @@ class StudentSubjectEnrollmentService:
             )
 
         subject = await SubjectRepository.get_subject_by_id(db, subject_id)
-        ensure_exists(subject, SubjectNotFoundError(HTTP404.SUBJECT))
+        ensure_exists(subject, SubjectNotFoundError(subject_exc_const.HTTP404.SUBJECT))
 
         if subject.is_archived:
             logger.warning(
@@ -93,7 +96,8 @@ class StudentSubjectEnrollmentService:
             )
         )
         ensure_exists(
-            enrollment, StudentSubjectEnrollmentNotFoundError(HTTP404.SUBJECT)
+            enrollment,
+            StudentSubjectEnrollmentNotFoundError(subject_exc_const.HTTP404.SUBJECT),
         )
 
         await db.delete(enrollment)
@@ -113,6 +117,6 @@ class StudentSubjectEnrollmentService:
         student = await UserRepositoryBase.get_user_by_id(
             db, student_id, allowed_roles=frozenset({UserRole.STUDENT})
         )
-        ensure_exists(student, StudentNotFoundError(HTTP404.USER))
+        ensure_exists(student, StudentNotFoundError(academic_exc_const.HTTP404.STUDENT))
 
         return await StudentSubjectEnrollmentRepository.get_by_student(db, student_id)

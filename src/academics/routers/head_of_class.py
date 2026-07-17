@@ -4,12 +4,9 @@ from fastapi import APIRouter, Depends, Path, status
 
 from src.academics.repositories.head_of_class import HeadOfClassRepository
 from src.academics.repositories.teaching_assignment import TeachingAssignmentRepository
-from academics.schemas.teaching_assingment import (
-    HeadOfClassCreate,
-    HeadOfClassResponse,
-    TeachingAssignmentResponse,
-)
-from academics.services.teaching_assignment import HeadOfClassService
+from src.academics.schemas.head_of_class import HeadOfClassCreate, HeadOfClassResponse
+from src.academics.schemas.teaching_assingment import TeachingAssignmentResponse
+from src.academics.services.head_of_class import HeadOfClassService
 from src.core.dependencies import (
     CurrentUser,
     async_db_dependency,

@@ -220,6 +220,11 @@ def mock_delete_cache(mocker):
 
 
 @pytest.fixture
+def mock_set_cache(mocker):
+    return mocker.patch("src.users.services.system_admin.user.set_cache")
+
+
+@pytest.fixture
 def mock_advisory_lock(mocker):
     return mocker.patch(
         "src.users.services.system_admin.user.acquire_student_contact_lock",
