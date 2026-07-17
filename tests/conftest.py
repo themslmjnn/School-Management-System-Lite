@@ -215,8 +215,13 @@ def valid_create_student_request():
 
 
 @pytest.fixture
-def mock_delete_cache(mocker):
+def mock_delete_cache_users_system_admin(mocker):
     return mocker.patch("src.users.services.system_admin.user.delete_cache")
+
+
+@pytest.fixture
+def mock_delete_cache_users_shared(mocker):
+    return mocker.patch("src.users.services.shared.delete_cache")
 
 
 @pytest.fixture

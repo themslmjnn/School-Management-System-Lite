@@ -7,6 +7,7 @@ from src.core.dependencies import (
     async_db_dependency,
     current_user_dependency,
     require_roles,
+    require_system_admin_and_guardian,
 )
 from src.users.schemas.guardian_link import ChildResponse
 from src.users.schemas.user import (
@@ -32,7 +33,7 @@ router = APIRouter(
 )
 async def update_me_profile(
     db: async_db_dependency,
-    current_user: current_user_dependency,
+    current_user: Annotated[CurrentUser, Depends(require_system_admin_and_guardian)],
     update_request: UpdateMeProfile,
 ):
     return await UserServiceSelf.update_me_profile(db, current_user.id, update_request)

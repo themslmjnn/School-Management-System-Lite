@@ -21,7 +21,6 @@ from src.users.exceptions.exceptions import (
     IncorrectPasswordError,
     InvalidEmailChangeCodeError,
     NoPendingEmailChangeError,
-    ProfileFieldsNotEditableForRoleError,
     UserNotFoundError,
     handle_non_student_unique_contact_error,
     handle_username_integrity_error,
@@ -62,18 +61,6 @@ class UserServiceSelf:
     ) -> User:
         current_user = await UserRepositoryBase.get_user_by_id(db, current_user_id)
         ensure_exists(current_user, UserNotFoundError(HTTP404.USER))
-
-        if current_user.role not in PROFILE_EDITABLE_ROLES:
-            logger.warning(
-                "profile_update_denied",
-                target_user_id=current_user_id,
-                target_role=current_user.role.value,
-                denial_reason="role_not_permitted_to_edit_profile_fields",
-            )
-            raise ProfileFieldsNotEditableForRoleError(
-                "Your role does not permit editing profile fields directly. "
-                "Contact a system administrator for changes."
-            )
 
         try:
             update_object(current_user, update_request)
