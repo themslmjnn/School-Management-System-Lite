@@ -850,12 +850,14 @@ class UserServiceAdmin:
         sort_by: str,
         order: str,
     ) -> PaginatedResponse:
-        filters = filters.model_copy(
-            update={"allowed_roles": frozenset({UserRole.GUARDIAN})}
-        )
-
         users, total = await UserRepositoryAdmin.get_users_admin(
-            db, skip, limit, filters, sort_by, order
+            db,
+            skip,
+            limit,
+            filters,
+            sort_by,
+            order,
+            allowed_roles=frozenset({UserRole.GUARDIAN}),
         )
 
         return PaginatedResponse(
