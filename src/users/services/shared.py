@@ -156,6 +156,7 @@ class UserServiceSelf:
                 session.email_change_code_expires_at = code_expires_at
 
             await db.commit()
+            await db.refresh(target_user)
 
             if email_requested:
                 asyncio.create_task(
@@ -178,12 +179,18 @@ class UserServiceSelf:
                     SessionCacheKey.access_token_version_key(target_user.id)
                 )
 
-            logger.info(
-                "user_credentials_update_requested",
-                target_user_id=current_user_id,
-                username_changed=username_changing,
-                email_change_requested=email_requested,
-            )
+                logger.info(
+                    "user_username_updated",
+                    target_user_id=current_user_id,
+                    new_username=target_user.username,
+                )
+
+            if email_requested:
+                logger.info(
+                    "user_email_update_requested",
+                    target_user_id=current_user_id,
+                    email_change_requested=target_user.email,
+                )
 
         except IntegrityError as e:
             await db.rollback()
