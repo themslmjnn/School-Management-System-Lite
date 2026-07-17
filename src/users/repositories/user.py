@@ -85,25 +85,28 @@ class UserRepositoryBase:
 
     @staticmethod
     def apply_base_filters(
-        base_query: Select, filters: SearchUserBase | SearchUserAdmin | None
+        base_query: Select,
+        filters: SearchUserBase | SearchUserAdmin | None,
+        allowed_roles: frozenset[UserRole] | None = None,
     ) -> Select:
-        if filters is None:
-            return base_query
+        if filters is not None:
+            if filters.firstname:
+                base_query = base_query.filter(
+                    User.firstname.ilike(f"%{filters.firstname}%")
+                )
+            if filters.lastname:
+                base_query = base_query.filter(
+                    User.lastname.ilike(f"%{filters.lastname}%")
+                )
+            if filters.middlename:
+                base_query = base_query.filter(
+                    User.middlename.ilike(f"%{filters.middlename}%")
+                )
+            if filters.status:
+                base_query = base_query.filter(User.status == filters.status)
 
-        if filters.firstname:
-            base_query = base_query.filter(
-                User.firstname.ilike(f"%{filters.firstname}%")
-            )
-        if filters.lastname:
-            base_query = base_query.filter(User.lastname.ilike(f"%{filters.lastname}%"))
-        if filters.middlename:
-            base_query = base_query.filter(
-                User.middlename.ilike(f"%{filters.middlename}%")
-            )
-        if filters.status:
-            base_query = base_query.filter(User.status == filters.status)
-        if filters.allowed_roles:
-            base_query = base_query.filter(User.role.in_(filters.allowed_roles))
+        if allowed_roles:
+            base_query = base_query.filter(User.role.in_(allowed_roles))
 
         return base_query
 
@@ -222,8 +225,14 @@ class UserRepositoryBase:
 
 class UserRepositoryAdmin:
     @staticmethod
-    def _apply_admin_filters(base_query, filters: SearchUserAdmin) -> Select:
-        base_query = UserRepositoryBase.apply_base_filters(base_query, filters)
+    def _apply_admin_filters(
+        base_query: Select,
+        filters: SearchUserAdmin,
+        allowed_roles: frozenset[UserRole] | None = None,
+    ) -> Select:
+        base_query = UserRepositoryBase.apply_base_filters(
+            base_query, filters, allowed_roles
+        )
 
         if filters.username:
             base_query = base_query.filter(User.username.ilike(f"%{filters.username}%"))
@@ -244,12 +253,15 @@ class UserRepositoryAdmin:
         filters: SearchUserAdmin | None = None,
         sort_by: str = UserSortField.CREATED_AT,
         order: str = OrderBy.DESC,
+        allowed_roles: frozenset[UserRole] | None = None,
     ) -> tuple[list[User], int]:
         base_query = select(User).filter(
             User.role.not_in({UserRole.SYSTEM_ADMIN, UserRole.DIRECTOR})
         )
 
-        query = UserRepositoryAdmin._apply_admin_filters(base_query, filters)
+        query = UserRepositoryAdmin._apply_admin_filters(
+            base_query, filters, allowed_roles
+        )
         query = UserRepositoryBase.apply_sorting(query, sort_by, order)
 
         return await UserRepositoryBase.paginate(
