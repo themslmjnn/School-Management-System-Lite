@@ -202,7 +202,7 @@ class SearchUserBase(BaseModel):
 class SearchUserAdmin(SearchUserBase):
     username: str | None = Field(default=None, max_length=15)
     email: str | None = Field(default=None, max_length=20)
-    phone_number: str | None = Field(default=None, max_length=15)
+    phone_number: str | None = Field(default=None, max_length=16)
 
 
 class UserResponseSelf(BaseSchema):

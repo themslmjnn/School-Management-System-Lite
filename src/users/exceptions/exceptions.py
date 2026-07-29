@@ -6,100 +6,96 @@ from src.utils.base_exception import AppException
 
 # USER
 class UserNotFoundError(AppException):
-    pass
+    status_code = 404
 
 
 class UsernameAlreadyTakenError(AppException):
-    pass
+    status_code = 409
 
 
 class DuplicateEmailError(AppException):
-    pass
+    status_code = 409
 
 
 class DuplicatePhoneNumberError(AppException):
-    pass
+    status_code = 409
 
 
 class PendingEmailNotFoundError(AppException):
-    pass
+    status_code = 404
 
 
 class UserAlreadyActiveError(AppException):
-    pass
+    status_code = 409
 
 
 class UserAlreadyInactiveError(AppException):
-    pass
+    status_code = 409
 
 
 class UserAlreadyPendingDeletionError(AppException):
-    pass
+    status_code = 409
 
 
 class MaxStudentsPerEmailError(AppException):
-    pass
+    status_code = 409
 
 
 class MaxStudentsPerPhoneNumberError(AppException):
-    pass
+    status_code = 409
 
 
 class MaxStaffOrGuardianPerEmailError(AppException):
-    pass
+    status_code = 409
 
 
 class MaxStaffOrGuardianPerPhoneNumberError(AppException):
-    pass
+    status_code = 409
 
 
 class UserTypeMismatchError(AppException):
-    pass
+    status_code = 400
 
 
 class UserNotPendingActivationError(AppException):
-    pass
-
-
-class ProfileFieldsNotEditableForRoleError(AppException):
-    pass
+    status_code = 404
 
 
 class NoPendingEmailChangeError(AppException):
-    pass
+    status_code = 404
 
 
 class EmailChangeCodeExpiredError(AppException):
-    pass
+    status_code = 400
 
 
 class InvalidEmailChangeCodeError(AppException):
-    pass
+    status_code = 400
 
 
 class IncorrectPasswordError(AppException):
-    pass
+    status_code = 400
 
 
 # GUARDIAN LINK
 class GuardianSlotAlreadyFilledError(AppException):
-    pass
+    status_code = 409
 
 
 class GuardianLinkAlreadyExistsError(AppException):
-    pass
+    status_code = 409
 
 
 class InvalidGuardianLinkError(AppException):
-    pass
+    status_code = 400
 
 
 class GuardianLinkNotFoundError(AppException):
-    pass
+    status_code = 404
 
 
 class DuplicateEmailChangeRequestError(AppException):
-    pass
+    status_code = 409
 
 
 # INTEGRITY ERROR HANDLERS
@@ -116,3 +112,22 @@ def handle_non_student_unique_contact_error(error: IntegrityError) -> None:
 
     if "uix_non_student_unique_email" in error_detail:
         raise DuplicateEmailError(HTTP409.DUPLICATE_EMAIL)
+
+
+def handle_guardian_student_pair_error(error: IntegrityError) -> None:
+    if "uix_guardian_student_pair" in str(error.orig):
+        raise GuardianLinkAlreadyExistsError("This guardian link could not be created")
+
+
+def handle_one_primary_guardian_per_student_error(error: IntegrityError) -> None:
+    if "uix_one_primary_guardian_per_student" in str(error.orig):
+        raise GuardianSlotAlreadyFilledError(
+            "Guardian with this priority already exists"
+        )
+
+
+def handle_one_secondary_guardian_per_student_error(error: IntegrityError) -> None:
+    if "uix_one_secondary_guardian_per_student" in str(error.orig):
+        raise GuardianSlotAlreadyFilledError(
+            "Guardian with this priority already exists"
+        )

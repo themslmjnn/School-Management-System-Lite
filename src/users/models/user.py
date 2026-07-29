@@ -38,7 +38,7 @@ class User(Base):
         SQLEnum(UserRole), nullable=False, default=UserRole.STUDENT
     )
     status: Mapped[UserStatus] = mapped_column(
-        SQLEnum(UserStatus), nullable=False, default=UserStatus.ACTIVE
+        SQLEnum(UserStatus), nullable=False, default=UserStatus.PENDING_ACTIVATION
     )
     is_active: Mapped[bool] = mapped_column(nullable=False, default=False)
 

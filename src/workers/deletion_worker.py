@@ -73,5 +73,17 @@ async def start_deletion_worker() -> None:
     logger.info("deletion_worker_started")
 
     while True:
-        await _run_deletion_sweep()
+        try:
+            await _run_deletion_sweep()
+        except asyncio.CancelledError:
+            logger.info("deletion_worker_stopping")
+
+            raise
+        except Exception as exc:
+            logger.error(
+                "deletion_worker_unexpected_error",
+                error=str(exc),
+                error_type=type(exc).__name__,
+            )
+
         await asyncio.sleep(DELETION_SWEEP_INTERVAL_SECONDS)

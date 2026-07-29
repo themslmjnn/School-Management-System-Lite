@@ -5,31 +5,31 @@ from src.utils.base_exception import AppException
 
 
 class SubjectNotFoundError(AppException):
-    pass
+    status_code = 404
 
 
 class SubjectCodeAlreadyExistsError(AppException):
-    pass
+    status_code = 409
 
 
 class SubjectAlreadyArchivedError(AppException):
-    pass
+    status_code = 409
 
 
 class SubjectNotArchivedError(AppException):
-    pass
+    status_code = 409
 
 
 class SubjectArchiveBlockedError(AppException):
-    pass
+    status_code = 409
 
 
 class SubjectIsArchivedError(AppException):
-    pass
+    status_code = 409
 
 
 class SubjectIsNotArchivedError(AppException):
-    pass
+    status_code = 409
 
 
 # INTEGRITY ERROR HANDLERS

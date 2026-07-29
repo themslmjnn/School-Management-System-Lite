@@ -34,6 +34,8 @@ async def process_batch() -> None:
 
                 await PendingEmailRepository.mark_sent(db, record)
 
+                await db.commit()
+
                 logger.info(
                     "pending_email_sent",
                     email_id=record.id,
@@ -43,6 +45,8 @@ async def process_batch() -> None:
 
             except Exception as exc:
                 await PendingEmailRepository.mark_failed_attempt(db, record, str(exc))
+
+                await db.commit()
 
                 logger.warning(
                     "pending_email_attempt_failed",

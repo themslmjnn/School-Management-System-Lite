@@ -8,6 +8,9 @@ from src.users.exceptions.exceptions import (
     GuardianLinkNotFoundError,
     GuardianSlotAlreadyFilledError,
     InvalidGuardianLinkError,
+    handle_guardian_student_pair_error,
+    handle_one_primary_guardian_per_student_error,
+    handle_one_secondary_guardian_per_student_error,
 )
 from src.users.models.guardian_link import StudentGuardianLink
 from src.users.repositories.guardian_link import GuardianLinkRepositoryAdmin
@@ -104,19 +107,19 @@ class GuardianLinkServiceAdmin:
             )
 
             return new_link
-        except IntegrityError as err:
+        except IntegrityError as e:
             await db.rollback()
 
             logger.error(
                 "guardian_link_failed",
                 reason="integrity_error",
-                error=str(err.orig),
+                error=str(e.orig),
                 actor_user_id=current_user_id,
             )
 
-            raise GuardianSlotAlreadyFilledError(
-                "This guardian link could not be created"
-            ) from err
+            handle_guardian_student_pair_error(e)
+            handle_one_primary_guardian_per_student_error(e)
+            handle_one_secondary_guardian_per_student_error(e)
 
     @staticmethod
     async def unlink_guardian(
@@ -179,6 +182,14 @@ class GuardianLinkServiceAdmin:
 
         except IntegrityError as e:
             await db.rollback()
+
+            logger.info(
+                "guardian_priority_change_failed",
+                actor_user_id=current_user_id,
+                guardian_id=guardian_id,
+                student_id=student_id,
+                reason=str(e.orig),
+            )
 
             raise GuardianSlotAlreadyFilledError(
                 "Could not update priority due to a conflicting guardian slot"

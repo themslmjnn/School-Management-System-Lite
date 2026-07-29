@@ -58,6 +58,7 @@ async def update_user(
     )
 
 
+@user_limiter.limit("5/minute")
 @router.patch(
     "/{target_user_id}/credentials",
     status_code=status.HTTP_204_NO_CONTENT,
@@ -173,7 +174,7 @@ async def get_staff(
 
 @router.get(
     "/staff/{target_user_id}",
-    response_model=UserResponseAdminDetailed | dict,
+    response_model=UserResponseAdminDetailed,
     status_code=status.HTTP_200_OK,
 )
 async def get_staff_by_id(
@@ -211,7 +212,7 @@ async def get_guardians(
 
 @router.get(
     "/guardians/{target_user_id}",
-    response_model=UserResponseAdminDetailed | dict,
+    response_model=UserResponseAdminDetailed,
     status_code=status.HTTP_200_OK,
 )
 async def get_guardian_by_id(

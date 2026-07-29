@@ -80,7 +80,7 @@ def decode_refresh_token(refresh_token: str) -> dict:
 
         return payload
     except ExpiredSignatureError as exc:
-        raise ValueError(HTTP401.EXPIRED_ACCESS_TOKEN) from exc
+        raise ValueError(HTTP401.EXPIRED_REFRESH_TOKEN) from exc
     except JWTError as exc:
         raise ValueError(HTTP401.INVALID_REFRESH_TOKEN) from exc
 

@@ -5,31 +5,31 @@ from src.utils.base_exception import AppException
 
 
 class GroupNotFoundError(AppException):
-    pass
+    status_code = 404
 
 
 class GroupNameYearAlreadyExistsError(AppException):
-    pass
+    status_code = 409
 
 
 class GroupAlreadyArchivedError(AppException):
-    pass
+    status_code = 409
 
 
 class GroupNotArchivedError(AppException):
-    pass
+    status_code = 409
 
 
 class GroupArchiveBlockedError(AppException):
-    pass
+    status_code = 409
 
 
 class GroupCapacityExceededError(AppException):
-    pass
+    status_code = 409
 
 
 class GroupIsNotArchivedError(AppException):
-    pass
+    status_code = 409
 
 
 # INTEGRITY ERROR HANDLERS

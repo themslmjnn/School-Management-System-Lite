@@ -50,7 +50,7 @@ class EmailSendingStatus(StrEnum):
 
 class HeadOfClassRole(StrEnum):
     PRIMARY = "primary"
-    DEPUTY = "depity"
+    DEPUTY = "deputy"
 
 
 class UserSortField(StrEnum):

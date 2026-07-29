@@ -454,7 +454,7 @@ class UserServiceAdmin:
 
                 PendingEmailRepository.add_pending_email(
                     db,
-                    recipient=target_user.email,
+                    recipient=old_email,
                     subject=subject,
                     html_body=html_body,
                     text_body=text_body,
@@ -668,7 +668,7 @@ class UserServiceAdmin:
         ensure_exists(target_user, UserNotFoundError(HTTP404.USER))
 
         if target_user.is_active:
-            logger.error(
+            logger.warning(
                 "activate_user_failed",
                 target_user_id=target_user_id,
                 requested_by=current_user_id,

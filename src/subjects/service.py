@@ -110,7 +110,7 @@ class SubjectService:
         target_subject = await SubjectRepository.get_subject_by_id(db, subject_id)
         ensure_exists(target_subject, SubjectNotFoundError(HTTP404.SUBJECT))
 
-        if target_subject.is_archived and target_subject.archived_at is not None:
+        if target_subject.is_archived or target_subject.archived_at is not None:
             logger.warning(
                 "subject_archive_denied",
                 subject_id=subject_id,
@@ -153,7 +153,7 @@ class SubjectService:
         target_subject = await SubjectRepository.get_subject_by_id(db, subject_id)
         ensure_exists(target_subject, SubjectNotFoundError(HTTP404.SUBJECT))
 
-        if not target_subject.is_archived and target_subject.archived_at is None:
+        if not target_subject.is_archived or target_subject.archived_at is None:
             logger.warning(
                 "subject_restoration_denied",
                 subject_id=subject_id,

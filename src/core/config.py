@@ -76,6 +76,18 @@ class Settings(BaseSettings):
             raise ValueError("DB_HOST is set to localhost in production")
         return self
 
+    @model_validator(mode="after")
+    def validate_redis_in_production(self) -> "Settings":
+        if self.ENVIRONMENT == "production" and not self.REDIS_PASSWORD:
+            raise ValueError("REDIS_PASSWORD cannot be empty in production")
+        if self.ENVIRONMENT == "production" and self.REDIS_HOST in (
+            "localhost",
+            "127.0.0.1",
+        ):
+            raise ValueError("REDIS_HOST is set to localhost in production")
+
+        return self
+
     @field_validator("REDIS_PORT")
     @classmethod
     def validate_redis_port(cls, v: int) -> int:

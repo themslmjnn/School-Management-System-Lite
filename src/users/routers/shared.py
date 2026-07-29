@@ -6,9 +6,11 @@ from src.core.dependencies import (
     CurrentUser,
     async_db_dependency,
     current_user_dependency,
+    require_guardians,
     require_roles,
     require_system_admin_and_guardian,
 )
+from src.core.limiter import user_limiter
 from src.users.schemas.guardian_link import ChildResponse
 from src.users.schemas.user import (
     ConfirmEmailChange,
@@ -31,6 +33,7 @@ router = APIRouter(
     response_model=UserResponseSelf,
     status_code=status.HTTP_200_OK,
 )
+@user_limiter.limit("10/minute")
 async def update_me_profile(
     db: async_db_dependency,
     current_user: Annotated[CurrentUser, Depends(require_system_admin_and_guardian)],
@@ -43,6 +46,7 @@ async def update_me_profile(
     "/me/credentials",
     status_code=status.HTTP_204_NO_CONTENT,
 )
+@user_limiter.limit("10/minute")
 async def update_me_credentials(
     db: async_db_dependency,
     current_user: current_user_dependency,
@@ -55,6 +59,7 @@ async def update_me_credentials(
     "/me/credentials/confirm-email",
     status_code=status.HTTP_204_NO_CONTENT,
 )
+@user_limiter.limit("5/minute")
 async def confirm_email_change(
     db: async_db_dependency,
     current_user: current_user_dependency,
@@ -67,6 +72,7 @@ async def confirm_email_change(
     "/me/password",
     status_code=status.HTTP_204_NO_CONTENT,
 )
+@user_limiter.limit("10/minute")
 async def update_me_password(
     db: async_db_dependency,
     current_user: current_user_dependency,
@@ -79,7 +85,8 @@ async def update_me_password(
 async def get_my_children(
     db: async_db_dependency,
     current_user: Annotated[
-        CurrentUser, Depends(require_roles(*(UserRole.__members__.values())))
+        CurrentUser,
+        Depends(require_guardians),
     ],
 ):
     return await GuardianLinkServiceShared.get_children_for_guardian(

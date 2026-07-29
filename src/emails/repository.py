@@ -136,23 +136,17 @@ class PendingEmailRepository:
         return result.scalars().all()
 
     @staticmethod
-    async def mark_sent(db: AsyncSession, record: PendingEmail) -> None:
+    async def mark_sent(record: PendingEmail) -> None:
         record.status = "sent"
         record.sent_at = datetime.now(UTC)
 
-        await db.commit()
-
     @staticmethod
-    async def mark_failed_attempt(
-        db: AsyncSession, record: PendingEmail, error: str
-    ) -> None:
+    async def mark_failed_attempt(record: PendingEmail, error: str) -> None:
         record.retry_count += 1
         record.last_error = error
 
         if record.retry_count >= 3:
             record.status = EmailSendingStatus.FAILED
-
-        await db.commit()
 
     @staticmethod
     async def reset_for_retry(

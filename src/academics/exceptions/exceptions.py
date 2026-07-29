@@ -2,28 +2,28 @@ from src.utils.base_exception import AppException
 
 
 class TeachingAssignmentAlreadyExistsError(AppException):
-    pass
+    status_code = 409
 
 
 class HeadOfClassSlotAlreadyFilledError(AppException):
-    pass
+    status_code = 409
 
 
 class TeacherAlreadyHeadOfClassForGroupError(AppException):
-    pass
+    status_code = 409
 
 
 class StudentAlreadyEnrolledError(AppException):
-    pass
+    status_code = 409
 
 
 class StudentNotInGroupError(AppException):
-    pass
+    status_code = 409
 
 
 class StudentNotFoundError(AppException):
-    pass
+    status_code = 404
 
 
 class StudentSubjectEnrollmentNotFoundError(AppException):
-    pass
+    status_code = 404

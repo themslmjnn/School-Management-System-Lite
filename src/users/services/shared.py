@@ -75,7 +75,11 @@ class UserServiceSelf:
                 )
             )
 
-            await delete_cache(UserCacheKey.user_detail_key_self(current_user_id))
+            await delete_cache(
+                UserCacheKey.user_detail_key_self(current_user_id),
+                UserCacheKey.user_detail_key_admin(current_user_id),
+                UserCacheKey.user_detail_key_staff(current_user_id),
+            )
 
             logger.info(
                 "user_profile_updated",

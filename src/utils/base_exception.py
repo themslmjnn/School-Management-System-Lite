@@ -2,6 +2,8 @@ from sqlalchemy.exc import IntegrityError
 
 
 class AppException(Exception):
+    status_code: int = 500
+
     def __init__(self, detail: str):
         self.detail = detail
         super().__init__(detail)
@@ -9,57 +11,49 @@ class AppException(Exception):
 
 # AUTHENTICATION
 class EmptyCredentialsError(AppException):
-    pass
+    status_code = 400
 
 
 class InvalidCredentialsError(AppException):
-    pass
+    status_code = 401
 
 
 class InvalidAccessTokenError(AppException):
-    pass
+    status_code = 401
 
 
 class InvalidRefreshTokenError(AppException):
-    pass
+    status_code = 401
 
 
 class ExpiredRefreshTokenError(AppException):
-    pass
+    status_code = 401
 
 
 class AccountInactiveError(AppException):
-    pass
+    status_code = 409
 
 
 class AccountLockedError(AppException):
-    pass
+    status_code = 403
 
 
 # AUTHORIZATION
 class AccessDeniedError(AppException):
-    pass
+    status_code = 403
 
 
 # NON-AUTH TOKENS
 class InvalidInviteTokenError(AppException):
-    pass
+    status_code = 400
 
 
 class ExpiredInviteTokenError(AppException):
-    pass
-
-
-class InvalidResetPasswordTokenError(AppException):
-    pass
-
-
-class ExpiredResetPasswordTokenError(AppException):
-    pass
+    status_code = 400
 
 
 class NoChangesDetectedError(AppException):
-    pass
+    status_code = 409
 
 
 def raise_unhandled_integrity_error(error: IntegrityError) -> None:
