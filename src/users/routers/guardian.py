@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Request, status
 
 from src.core.dependencies import (
     CurrentUser,
@@ -18,6 +18,7 @@ router = APIRouter(
 @router.post("/users/me/deletion", status_code=status.HTTP_204_NO_CONTENT)
 @user_limiter.limit("3/minute")
 async def create_guardian_self_deletion_request(
+    request: Request,
     db: async_db_dependency,
     current_user: Annotated[CurrentUser, Depends(require_guardian)],
 ):

@@ -56,5 +56,13 @@ class NoChangesDetectedError(AppException):
     status_code = 409
 
 
+class ExpiredResetPasswordTokenError(AppException):
+    status_code = 400
+
+
+class InvalidResetPasswordTokenError(AppException):
+    status_code = 400
+
+
 def raise_unhandled_integrity_error(error: IntegrityError) -> None:
     raise error

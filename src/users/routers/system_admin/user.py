@@ -44,10 +44,11 @@ async def register_user(
 
 @router.patch(
     "/{target_user_id}",
-    response_model=UserResponseAdminDetailed,
-    status_code=status.HTTP_200_OK,
+    status_code=status.HTTP_204_NO_CONTENT,
 )
+@user_limiter.limit("10/minute")
 async def update_user(
+    request: Request,
     db: async_db_dependency,
     current_user: Annotated[CurrentUser, Depends(require_system_admin)],
     target_user_id: Annotated[int, Path(ge=1)],
@@ -58,12 +59,13 @@ async def update_user(
     )
 
 
-@user_limiter.limit("5/minute")
 @router.patch(
     "/{target_user_id}/credentials",
     status_code=status.HTTP_204_NO_CONTENT,
 )
+@user_limiter.limit("5/minute")
 async def update_user_credentials(
+    request: Request,
     db: async_db_dependency,
     current_user: Annotated[CurrentUser, Depends(require_system_admin)],
     target_user_id: Annotated[int, Path(ge=1)],
@@ -78,7 +80,9 @@ async def update_user_credentials(
     "/{target_user_id}/guardian-deletion",
     status_code=status.HTTP_204_NO_CONTENT,
 )
+@user_limiter.limit("3/minute")
 async def create_guardian_deletion_request(
+    request: Request,
     db: async_db_dependency,
     current_user: Annotated[CurrentUser, Depends(require_system_admin)],
     target_user_id: int,
@@ -92,7 +96,9 @@ async def create_guardian_deletion_request(
     "/{target_user_id}/cancel-deletion",
     status_code=status.HTTP_204_NO_CONTENT,
 )
+@user_limiter.limit("3/minute")
 async def cancel_guardian_deletion_request(
+    request: Request,
     db: async_db_dependency,
     current_user: Annotated[CurrentUser, Depends(require_system_admin)],
     target_user_id: int,

@@ -32,7 +32,7 @@ async def process_batch() -> None:
                     text_body=record.text_body,
                 )
 
-                await PendingEmailRepository.mark_sent(db, record)
+                await PendingEmailRepository.mark_sent(record)
 
                 await db.commit()
 
@@ -44,7 +44,7 @@ async def process_batch() -> None:
                 )
 
             except Exception as exc:
-                await PendingEmailRepository.mark_failed_attempt(db, record, str(exc))
+                await PendingEmailRepository.mark_failed_attempt(record, str(exc))
 
                 await db.commit()
 

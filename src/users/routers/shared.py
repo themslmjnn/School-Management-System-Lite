@@ -1,13 +1,12 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Request, status
 
 from src.core.dependencies import (
     CurrentUser,
     async_db_dependency,
     current_user_dependency,
     require_guardians,
-    require_roles,
     require_system_admin_and_guardian,
 )
 from src.core.limiter import user_limiter
@@ -20,7 +19,6 @@ from src.users.schemas.user import (
     UserResponseSelf,
 )
 from src.users.services.shared import GuardianLinkServiceShared, UserServiceSelf
-from src.utils.enums import UserRole
 
 router = APIRouter(
     prefix="/users",
@@ -35,6 +33,7 @@ router = APIRouter(
 )
 @user_limiter.limit("10/minute")
 async def update_me_profile(
+    request: Request,
     db: async_db_dependency,
     current_user: Annotated[CurrentUser, Depends(require_system_admin_and_guardian)],
     update_request: UpdateMeProfile,
@@ -48,6 +47,7 @@ async def update_me_profile(
 )
 @user_limiter.limit("10/minute")
 async def update_me_credentials(
+    request: Request,
     db: async_db_dependency,
     current_user: current_user_dependency,
     update_request: UpdateMeCredentials,
@@ -61,6 +61,7 @@ async def update_me_credentials(
 )
 @user_limiter.limit("5/minute")
 async def confirm_email_change(
+    request: Request,
     db: async_db_dependency,
     current_user: current_user_dependency,
     confirm_request: ConfirmEmailChange,
@@ -74,6 +75,7 @@ async def confirm_email_change(
 )
 @user_limiter.limit("10/minute")
 async def update_me_password(
+    request: Request,
     db: async_db_dependency,
     current_user: current_user_dependency,
     update_request: UpdateMePassword,

@@ -166,7 +166,7 @@ class UserRepositoryBase:
 
     @staticmethod
     async def delete_user_if_due(db: AsyncSession, user_id: int) -> bool:
-        query = delete(User).where(
+        query = select(User).where(
             User.id == user_id,
             User.status == UserStatus.PENDING_DELETION,
             User.deletion_scheduled_for <= datetime.now(UTC),
@@ -174,7 +174,7 @@ class UserRepositoryBase:
 
         result = await db.execute(query)
 
-        return result.rowcount > 0
+        return result.scalar_one_or_none()
 
     @staticmethod
     async def get_user_ids_due_for_hard_deletion(db: AsyncSession) -> list[int]:

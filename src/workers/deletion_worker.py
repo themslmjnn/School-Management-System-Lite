@@ -1,12 +1,25 @@
 import asyncio
 
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from src.core.logging import get_logger
 from src.database import AsyncSessionLocal
 from src.users.repositories.user import UserRepositoryBase
 
 logger = get_logger(__name__)
 
-DELETION_SWEEP_INTERVAL_SECONDS = 60 * 60 * 24
+DELETION_SWEEP_INTERVAL_SECONDS = 60 * 60 * 24  # 24 hours
+
+
+async def _delete_user_if_still_due(db: AsyncSession, user_id: int) -> bool:
+    user = await UserRepositoryBase.delete_user_if_due(db, user_id)
+
+    if user is None:
+        return False
+
+    await db.delete(user)
+
+    return True
 
 
 async def _run_deletion_sweep() -> None:
@@ -29,7 +42,9 @@ async def _run_deletion_sweep() -> None:
             "deletion_sweep_completed",
             accounts_deleted=0,
             accounts_skipped=0,
+            accounts_failed=0,
         )
+
         return
 
     deleted_ids: list[int] = []
@@ -39,20 +54,33 @@ async def _run_deletion_sweep() -> None:
     async with AsyncSessionLocal() as db:
         for user_id in user_ids_due:
             try:
-                was_deleted = await UserRepositoryBase.delete_user_if_due(db, user_id)
+                was_deleted = await _delete_user_if_still_due(db, user_id)
+
                 await db.commit()
 
                 if was_deleted:
                     deleted_ids.append(user_id)
+
+                    logger.info(
+                        "guardian_hard_deleted",
+                        user_id=user_id,
+                    )
                 else:
                     skipped_ids.append(user_id)
 
+                    logger.info(
+                        "guardian_deletion_skipped",
+                        user_id=user_id,
+                        reason="conditions_no_longer_met",
+                    )
+
             except Exception as e:
                 await db.rollback()
+
                 failed_ids.append(user_id)
 
                 logger.error(
-                    "deletion_sweep_account_failed",
+                    "guardian_deletion_failed",
                     user_id=user_id,
                     error=str(e),
                     exc_info=True,
@@ -73,17 +101,11 @@ async def start_deletion_worker() -> None:
     logger.info("deletion_worker_started")
 
     while True:
+        await _run_deletion_sweep()
+
         try:
-            await _run_deletion_sweep()
+            await asyncio.sleep(DELETION_SWEEP_INTERVAL_SECONDS)
         except asyncio.CancelledError:
             logger.info("deletion_worker_stopping")
 
             raise
-        except Exception as exc:
-            logger.error(
-                "deletion_worker_unexpected_error",
-                error=str(exc),
-                error_type=type(exc).__name__,
-            )
-
-        await asyncio.sleep(DELETION_SWEEP_INTERVAL_SECONDS)
