@@ -289,10 +289,10 @@ class AuthService:
         AuthService._set_refresh_token_cookie(response, raw_refresh_token)
         AuthService._set_refresh_family_cookie(response, new_family)
 
-        return {
-            "access_token": access_token,
-            "token_type": "bearer",
-        }
+        return LoginResponse(
+            access_token=access_token,
+            token_type="bearer",
+        )
 
     @staticmethod
     async def logout(
@@ -320,7 +320,7 @@ class AuthService:
             logger.warning(
                 "activation_failed",
                 reason="invalid_invite_token",
-                email=activation_request.email,
+                username=activation_request.username,
             )
 
             raise InvalidInviteTokenError(HTTP400.INVALID_INVITE_TOKEN)
@@ -374,20 +374,22 @@ class AuthService:
             payload = decode_refresh_token(raw_refresh_token)
             user_id = int(payload.get("sub"))
 
-        except ExpiredSignatureError as e:
+        except ExpiredRefreshTokenError:
             logger.warning(
                 "refresh_token_rotation_failed",
                 reason="token_expired",
             )
-            raise ExpiredRefreshTokenError(HTTP401.EXPIRED_REFRESH_TOKEN) from e
 
-        except (ValueError, TypeError) as e:
+            raise
+
+        except (InvalidRefreshTokenError, ValueError, TypeError) as exc:
             logger.warning(
                 "invalid_jwt",
-                error_type=type(e).__name__,
-                error_message=str(e),
+                error_type=type(exc).__name__,
+                error_message=str(exc),
             )
-            raise InvalidRefreshTokenError(HTTP401.INVALID_REFRESH_TOKEN) from e
+
+            raise InvalidRefreshTokenError(HTTP401.INVALID_REFRESH_TOKEN) from exc
 
         user = await UserRepositoryBase.get_user_by_id(db, user_id, load_session=True)
 
@@ -402,6 +404,7 @@ class AuthService:
                 reason="invalid_refresh_token",
                 user_id=user_id,
             )
+
             raise InvalidRefreshTokenError(HTTP401.INVALID_REFRESH_TOKEN)
 
         if datetime.now(UTC) > user.session.refresh_token_expires_at:
@@ -410,6 +413,7 @@ class AuthService:
                 reason="refresh_token_expired",
                 user_id=user.id,
             )
+
             raise ExpiredRefreshTokenError(HTTP401.EXPIRED_REFRESH_TOKEN)
 
         refresh_token_family_valid = hmac.compare_digest(
@@ -463,10 +467,10 @@ class AuthService:
         AuthService._set_refresh_token_cookie(response, raw_refresh_token)
         AuthService._set_refresh_family_cookie(response, new_family)
 
-        return {
-            "access_token": access_token,
-            "token_type": "bearer",
-        }
+        return LoginResponse(
+            access_token=access_token,
+            token_type="bearer",
+        )
 
     @staticmethod
     async def reset_password(db: AsyncSession, update_request: ResetPassword):

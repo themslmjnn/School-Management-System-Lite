@@ -20,7 +20,6 @@ from src.users.exceptions.exceptions import (
     UserAlreadyInactiveError,
     UserAlreadyPendingDeletionError,
     UserNotFoundError,
-    UserNotPendingActivationError,
     UserTypeMismatchError,
     handle_non_student_unique_contact_error,
     handle_username_integrity_error,
@@ -461,12 +460,12 @@ class UserServiceAdmin:
 
         await db.commit()
 
-        # asyncio.create_task(
-        #     email_sender.send_safe(
-        #         email_sender.send_account_deletion_email(target_user_email),
-        #         email_type=EmailType.ACCOUNT_DELETION,
-        #     )
-        # )
+        asyncio.create_task(
+            email_sender.send_safe(
+                email_sender.send_account_deletion_email(target_user_email),
+                email_type=EmailType.ACCOUNT_DELETION,
+            )
+        )
 
         await delete_cache(
             SessionCacheKey.access_token_version_key(target_user_id),
@@ -690,10 +689,7 @@ class UserServiceAdmin:
                 denial_reason="user_not_pending_activation",
             )
 
-            raise UserNotPendingActivationError(
-                "Cannot resend an activation invite to a user who is not "
-                "pending activation"
-            )
+            raise UserAlreadyActiveError("User is already activated")
 
         raw_invite_token, hashed_invite_token = generate_invite_token()
         invite_token_expires_at = datetime.now(UTC) + timedelta(

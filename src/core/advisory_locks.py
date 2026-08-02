@@ -1,17 +1,23 @@
 import hashlib
+import re
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-ADVISORY_LOCK_NAMESPACE_STUDENT_PHONE = 9001
-ADVISORY_LOCK_NAMESPACE_STUDENT_EMAIL = 9002
+from src.core.logging import get_logger
+
+logger = get_logger(__name__)
+
+NAMESPACE_STUDENT_PHONE = 9001
+NAMESPACE_STUDENT_EMAIL = 9002
+NAMESPACE_GROUP_CAPACITY = 9003
 
 
-def compute_contact_lock_key(normalized_value: str) -> int:
-    digest = hashlib.sha256(normalized_value.encode("utf-8")).digest()
-    unsigned_32 = int.from_bytes(digest[:4], byteorder="big", signed=False)
+def _compute_lock_key(value: str) -> int:
+    digest = hashlib.sha256(value.encode("utf-8")).digest()
+    unsigned = int.from_bytes(digest[:4], byteorder="big", signed=False)
 
-    return unsigned_32 - 2**32 if unsigned_32 >= 2**31 else unsigned_32
+    return unsigned - 2**32 if unsigned >= 2**31 else unsigned
 
 
 async def acquire_student_contact_lock(
@@ -21,31 +27,72 @@ async def acquire_student_contact_lock(
     email: str | None,
 ) -> None:
     if phone_number:
-        key = compute_contact_lock_key(phone_number)
+        normalized_phone = re.sub(r"[\s\-().]", "", phone_number).lower()
+        key = _compute_lock_key(normalized_phone)
+
+        logger.debug(
+            "acquiring_advisory_lock",
+            lock_type="student_phone",
+            namespace=NAMESPACE_STUDENT_PHONE,
+            key=key,
+        )
 
         await db.execute(
             text("SELECT pg_advisory_xact_lock(:ns, :key)"),
-            {
-                "ns": ADVISORY_LOCK_NAMESPACE_STUDENT_PHONE,
-                "key": key,
-            },
+            {"ns": NAMESPACE_STUDENT_PHONE, "key": key},
+        )
+
+        logger.debug(
+            "advisory_lock_acquired",
+            lock_type="student_phone",
+            namespace=NAMESPACE_STUDENT_PHONE,
+            key=key,
         )
 
     if email:
-        key = compute_contact_lock_key(email.strip().lower())
+        normalized_email = email.strip().lower()
+        key = _compute_lock_key(normalized_email)
+
+        logger.debug(
+            "acquiring_advisory_lock",
+            lock_type="student_email",
+            namespace=NAMESPACE_STUDENT_EMAIL,
+            key=key,
+        )
 
         await db.execute(
             text("SELECT pg_advisory_xact_lock(:ns, :key)"),
-            {
-                "ns": ADVISORY_LOCK_NAMESPACE_STUDENT_EMAIL,
-                "key": key,
-            },
+            {"ns": NAMESPACE_STUDENT_EMAIL, "key": key},
+        )
+
+        logger.debug(
+            "advisory_lock_acquired",
+            lock_type="student_email",
+            namespace=NAMESPACE_STUDENT_EMAIL,
+            key=key,
         )
 
 
 async def acquire_group_capacity_lock(db: AsyncSession, group_id: int) -> None:
-    lock_key = int(
-        hashlib.sha256(f"group_capacity:{group_id}".encode()).hexdigest(), 16
-    ) % (2**63)
+    key = _compute_lock_key(f"group:{group_id}")
 
-    await db.execute(text("SELECT pg_advisory_xact_lock(:key)"), {"key": lock_key})
+    logger.debug(
+        "acquiring_advisory_lock",
+        lock_type="group_capacity",
+        namespace=NAMESPACE_GROUP_CAPACITY,
+        group_id=group_id,
+        key=key,
+    )
+
+    await db.execute(
+        text("SELECT pg_advisory_xact_lock(:ns, :key)"),
+        {"ns": NAMESPACE_GROUP_CAPACITY, "key": key},
+    )
+
+    logger.debug(
+        "advisory_lock_acquired",
+        lock_type="group_capacity",
+        namespace=NAMESPACE_GROUP_CAPACITY,
+        group_id=group_id,
+        key=key,
+    )

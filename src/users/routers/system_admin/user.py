@@ -23,7 +23,7 @@ from src.utils.enums import OrderBy, UserSortField
 
 router = APIRouter(
     prefix="/users",
-    tags=["Users - System Admin"],
+    tags=["Users - System Admin - User"],
 )
 
 
