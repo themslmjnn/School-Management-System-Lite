@@ -78,7 +78,7 @@ class PendingEmailService:
         ensure_exists(failed_email, PendingEmailNotFoundError(HTTP404.PENDING_EMAIL))
 
         if (
-            current_user.role != UserRole.system_admin
+            current_user.role != UserRole.SYSTEM_ADMIN
             and failed_email.triggered_by != current_user.id
         ):
             raise AccessDeniedError(HTTP403.ACCESS_DENIED)

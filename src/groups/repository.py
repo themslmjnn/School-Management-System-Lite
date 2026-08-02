@@ -54,9 +54,7 @@ class GroupRepository:
         if filters.name:
             base_query = base_query.filter(Group.name.ilike(f"%{filters.name}%"))
         if filters.academic_year:
-            base_query = base_query.filter(
-                Group.academic_year.ilike(f"%{filters.academic_year}%")
-            )
+            base_query = base_query.filter(Group.academic_year == filters.academic_year)
         if not filters.include_archived:
             base_query = base_query.filter(Group.is_archived.is_(False))
 

@@ -18,6 +18,7 @@ from src.subjects.models import Subject
 from src.subjects.repository import SubjectRepository
 from src.subjects.schemas import (
     SearchSubject,
+    SubjectCacheSchema,
     SubjectCreate,
     SubjectResponse,
     SubjectUpdate,
@@ -205,16 +206,19 @@ class SubjectService:
         )
 
     @staticmethod
-    async def get_subject_by_id(db: AsyncSession, subject_id: int) -> Subject:
+    async def get_subject_by_id(db: AsyncSession, subject_id: int) -> SubjectResponse:
         cache_key = SubjectCacheKey.subject_detail_key_admin(subject_id)
         cached = await get_cache(cache_key)
+
         if cached is not None:
-            return SubjectResponse(**cached)
+            raw = SubjectCacheSchema.model_validate(cached)
+
+            return SubjectResponse.model_validate(raw.model_dump())
 
         subject = await SubjectRepository.get_subject_by_id(db, subject_id)
         ensure_exists(subject, SubjectNotFoundError(HTTP404.SUBJECT))
 
-        result = SubjectResponse.model_validate(subject)
-        await set_cache(cache_key, result.model_dump(mode="json"), 900)
+        raw = SubjectCacheSchema.model_validate(subject)
+        await set_cache(cache_key, raw.model_dump(mode="json"), 900)
 
-        return result
+        return SubjectResponse.model_validate(subject)

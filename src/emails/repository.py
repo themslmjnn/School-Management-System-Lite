@@ -19,7 +19,7 @@ class PendingEmailRepository:
         email_type: str,
         triggered_by: int | None = None,
         recipient_user_id: int | None = None,
-    ) -> PendingEmail:
+    ) -> None:
         record = PendingEmail(
             recipient=recipient,
             subject=subject,
@@ -137,7 +137,7 @@ class PendingEmailRepository:
 
     @staticmethod
     async def mark_sent(record: PendingEmail) -> None:
-        record.status = "sent"
+        record.status = EmailSendingStatus.SENT
         record.sent_at = datetime.now(UTC)
 
     @staticmethod

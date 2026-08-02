@@ -18,6 +18,7 @@ from src.groups.exceptions.exceptions import (
 from src.groups.models import Group
 from src.groups.repository import GroupRepository
 from src.groups.schemas import (
+    GroupCacheSchema,
     GroupCreate,
     GroupResponse,
     GroupUpdate,
@@ -218,26 +219,28 @@ class GroupService:
         )
 
     @staticmethod
-    async def get_group_by_id(db: AsyncSession, group_id: int) -> Group:
+    async def get_group_by_id(db: AsyncSession, group_id: int) -> GroupResponse:
         cache_key = GroupCacheKey.group_detail_key_admin(group_id)
         cached = await get_cache(cache_key)
-        if cached is not None:
-            return GroupResponse(**cached)
 
-        group = await GroupRepository.get_by_id(db, group_id)
+        if cached is not None:
+            raw = GroupCacheSchema.model_validate(cached)
+
+            return GroupResponse.model_validate(raw.model_dump())
+
+        group = await GroupRepository.get_group_by_id(db, group_id)
         ensure_exists(group, GroupNotFoundError(HTTP404.GROUP))
 
-        result = GroupResponse.model_validate(group)
-        await set_cache(cache_key, result.model_dump(mode="json"), 900)
+        raw = GroupCacheSchema.model_validate(group)
+        await set_cache(cache_key, raw.model_dump(mode="json"), 900)
 
-        return result
+        return GroupResponse.model_validate(group)
 
     @staticmethod
     async def get_students(
         db: AsyncSession, group_id: int, skip: int, limit: int
     ) -> PaginatedResponse:
-        group = await GroupRepository.get_group_by_id(db, group_id)
-        ensure_exists(group, GroupNotFoundError(HTTP404.GROUP))
+        await GroupService.get_group_by_id(db, group_id)
 
         students, total = await GroupRepository.get_students(db, group_id, skip, limit)
 
@@ -253,7 +256,7 @@ class GroupService:
     async def add_student_to_group(
         db: AsyncSession, current_user_id: int, group_id: int, student_id: int
     ) -> None:
-        group = await GroupRepository.get_by_id(db, group_id)
+        group = await GroupRepository.get_group_by_id(db, group_id)
         ensure_exists(group, GroupNotFoundError(HTTP404.GROUP))
 
         student = await UserRepositoryBase.get_user_by_id(

@@ -18,7 +18,7 @@ class GroupUpdate(BaseModel):
     capacity: int | None = Field(gt=0, default=None)
 
 
-class GroupResponse(BaseSchema):
+class GroupCacheSchema(BaseSchema):
     id: int
     name: str
     academic_year: int
@@ -29,6 +29,8 @@ class GroupResponse(BaseSchema):
     created_at: datetime
     updated_at: datetime
 
+
+class GroupResponse(GroupCacheSchema):
     @field_serializer("created_at", "updated_at")
     def serialize_updated_at(self, value: datetime) -> str:
         return value.strftime("%d %b %Y, %H:%M")

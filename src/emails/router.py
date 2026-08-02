@@ -12,7 +12,6 @@ from src.core.dependencies import (
 from src.emails.schemas import PendingEmailResponse
 from src.emails.service import PendingEmailService
 from src.pagination import PaginatedResponse
-from src.users.models import User
 
 router = APIRouter(
     prefix="/emails",
@@ -28,7 +27,7 @@ router = APIRouter(
 async def get_failed_emails(
     db: async_db_dependency,
     pagination: pagination_dependency,
-    _: Annotated[User, Depends(require_system_admin)],
+    _: Annotated[CurrentUser, Depends(require_system_admin)],
 ):
     return await PendingEmailService.get_failed_emails(
         db,
@@ -40,7 +39,7 @@ async def get_failed_emails(
 @router.post("/{email_id}/retry", status_code=status.HTTP_204_NO_CONTENT)
 async def retry_failed_email(
     db: async_db_dependency,
-    _: Annotated[User, Depends(require_system_admin)],
+    _: Annotated[CurrentUser, Depends(require_system_admin)],
     email_id: Annotated[int, Path(ge=1)],
 ):
     await PendingEmailService.retry_failed_email(db, email_id)

@@ -151,3 +151,7 @@ def format_phone_for_display(canonical_digits: str) -> str:
     return phonenumbers.format_number(
         parsed, phonenumbers.PhoneNumberFormat.INTERNATIONAL
     )
+
+
+def normalize_subject_code(value: str) -> str:
+    return value.strip().upper()
