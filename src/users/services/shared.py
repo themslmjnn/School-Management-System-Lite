@@ -28,13 +28,13 @@ from src.users.exceptions.exceptions import (
 from src.users.models.user import User
 from src.users.repositories.guardian_link import GuardianLinkRepositoryShared
 from src.users.repositories.user import UserRepositoryBase
-from users.schemas.system_admin.guardian_link import ChildResponse
-from users.schemas.system_admin.user import (
+from src.users.schemas.shared import (
     ConfirmEmailChange,
     UpdateMeCredentials,
     UpdateMePassword,
     UpdateMeProfile,
 )
+from src.users.schemas.system_admin.guardian_link import ChildResponse
 from src.users.services.system_admin.user import check_contact_limit
 from src.utils import email as email_sender
 from src.utils.base_constant import HTTP400
@@ -76,9 +76,9 @@ class UserServiceSelf:
             )
 
             await delete_cache(
-                UserCacheKey.user_detail_key_self(current_user_id),
                 UserCacheKey.user_detail_key_admin(current_user_id),
                 UserCacheKey.user_detail_key_staff(current_user_id),
+                UserCacheKey.user_detail_key_self(current_user_id),
             )
 
             logger.info(
@@ -86,8 +86,6 @@ class UserServiceSelf:
                 target_user_id=current_user_id,
                 method="self_update",
             )
-
-            return current_user
 
         except IntegrityError as e:
             await db.rollback()
@@ -131,6 +129,7 @@ class UserServiceSelf:
                 session.email_change_code_expires_at is not None
                 and session.email_change_code_expires_at > datetime.now(UTC)
             )
+
             if (
                 session.pending_new_email == update_request.email
                 and pending_still_active
@@ -155,6 +154,7 @@ class UserServiceSelf:
                 code_expires_at = datetime.now(UTC) + timedelta(
                     minutes=settings.EMAIL_CHANGE_CODE_EXPIRES_MINUTES
                 )
+
                 session.pending_new_email = update_request.email
                 session.email_change_code_hash = hashed_code
                 session.email_change_code_expires_at = code_expires_at
@@ -173,9 +173,9 @@ class UserServiceSelf:
                 )
 
             await delete_cache(
-                UserCacheKey.user_detail_key_self(target_user.id),
                 UserCacheKey.user_detail_key_admin(target_user.id),
                 UserCacheKey.user_detail_key_staff(target_user.id),
+                UserCacheKey.user_detail_key_self(target_user.id),
             )
 
             if username_changing:

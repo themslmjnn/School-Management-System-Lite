@@ -16,6 +16,7 @@ from src.core.config import settings
 from src.core.limiter import ip_limiter
 from src.core.logging import get_logger, setup_logging
 from src.core.middleware import RequestIDMiddleware
+from src.users.routers import shared as user_shared_router
 from src.users.routers.system_admin import user as user_system_admin_router
 from src.utils import base_exception as base_exc
 from src.workers.deletion_worker import start_deletion_worker
@@ -97,6 +98,7 @@ app.add_middleware(SlowAPIMiddleware)
 
 app.include_router(health_router)
 app.include_router(auth_router)
+app.include_router(user_shared_router.router)
 app.include_router(user_system_admin_router.router)
 
 
