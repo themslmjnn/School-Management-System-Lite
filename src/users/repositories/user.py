@@ -1,12 +1,9 @@
 from datetime import UTC, datetime
 
-from sqlalchemy import Select, delete, func, select, update
+from sqlalchemy import Select, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
-from src.users.models.activation import UserActivation
-from src.users.models.login_lockout import UserLoginLockout
-from src.users.models.session import UserSession
 from src.users.models.user import User
 from src.users.schemas.user import SearchUserAdmin, SearchUserBase
 from src.utils.enums import (
@@ -16,15 +13,8 @@ from src.utils.enums import (
     UserStatus,
 )
 
-ENTITY_TYPE = User | UserSession | UserActivation | UserLoginLockout
-
 
 class UserRepositoryBase:
-    @staticmethod
-    def add_entity(db: AsyncSession, **new_entity: ENTITY_TYPE) -> None:
-        for entity in new_entity.values():
-            db.add(entity)
-
     @staticmethod
     async def count_users_with_contact(
         db: AsyncSession,

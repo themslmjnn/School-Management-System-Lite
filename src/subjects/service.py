@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.caching import delete_cache, get_cache, set_cache
 from src.core.logging import get_logger
-from src.pagination import PaginatedResponse
+from src.core.pagination import PaginatedResponse
 from src.subjects.exceptions.constants import HTTP404
 from src.subjects.exceptions.exceptions import (
     SubjectAlreadyArchivedError,

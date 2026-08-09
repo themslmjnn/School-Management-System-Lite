@@ -1,7 +1,7 @@
 import asyncio
 
 from src.core.logging import get_logger
-from src.database import AsyncSessionLocal
+from src.database.connection import AsyncSessionLocal
 from src.emails.repository import PendingEmailRepository
 from src.utils.email import send
 

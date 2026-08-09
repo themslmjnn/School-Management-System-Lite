@@ -8,6 +8,7 @@ from src.core.dependencies import (
     pagination_dependency,
     require_system_admin,
 )
+from src.core.pagination import PaginatedResponse
 from src.groups.schemas import (
     GroupCreate,
     GroupResponse,
@@ -15,7 +16,6 @@ from src.groups.schemas import (
     SearchGroup,
 )
 from src.groups.service import GroupService
-from src.pagination import PaginatedResponse
 from src.users.schemas.user import UserResponseAdmin
 from src.utils.enums import GroupSortField, OrderBy
 

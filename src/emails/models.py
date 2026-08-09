@@ -4,7 +4,7 @@ from sqlalchemy import DateTime, ForeignKey, String, Text
 from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from src.database import Base
+from src.database.connection import Base
 from src.utils.enums import EmailSendingStatus, EmailType
 
 

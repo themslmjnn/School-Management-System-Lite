@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.core.advisory_locks import acquire_group_capacity_lock
 from src.core.caching import delete_cache, get_cache, set_cache
 from src.core.logging import get_logger
+from src.core.pagination import PaginatedResponse
 from src.groups.exceptions.constants import HTTP404
 from src.groups.exceptions.exceptions import (
     GroupAlreadyArchivedError,
@@ -24,7 +25,6 @@ from src.groups.schemas import (
     GroupUpdate,
     SearchGroup,
 )
-from src.pagination import PaginatedResponse
 from src.users.exceptions.exceptions import UserNotFoundError
 from src.users.repositories.user import UserRepositoryBase
 from src.utils.base_exception import raise_unhandled_integrity_error

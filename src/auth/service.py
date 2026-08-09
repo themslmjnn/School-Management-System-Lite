@@ -5,7 +5,6 @@ from datetime import UTC, datetime, timedelta
 
 from fastapi import Response
 from fastapi.security import OAuth2PasswordRequestForm
-from jose import ExpiredSignatureError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.auth.repository import AuthRepository

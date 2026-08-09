@@ -6,7 +6,7 @@ from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from src.database import Base
+from src.database.connection import Base
 from src.utils.enums import UserRole, UserStatus
 
 

@@ -1,14 +1,14 @@
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.academics.exceptions.exceptions import (
+    HeadOfClassSlotAlreadyFilledError,
+    TeacherAlreadyHeadOfClassForGroupError,
+)
 from src.academics.models.head_of_class_assignment import HeadOfClassAssignment
 from src.academics.repositories.head_of_class import HeadOfClassRepository
 from src.academics.schemas.head_of_class import HeadOfClassCreate
 from src.core.logging import get_logger
-from utils.base_exception import (
-    HeadOfClassSlotAlreadyFilledError,
-    TeacherAlreadyHeadOfClassForGroupError,
-)
 
 logger = get_logger(__name__)
 

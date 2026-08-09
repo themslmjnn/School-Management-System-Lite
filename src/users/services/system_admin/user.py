@@ -5,6 +5,7 @@ from typing import assert_never
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from core.pagination import PaginatedResponse
 from src.core.advisory_locks import acquire_student_contact_lock
 from src.core.caching import delete_cache, get_cache, set_cache
 from src.core.check_contact_limit import check_contact_limit
@@ -13,7 +14,6 @@ from src.core.dependencies import CurrentUser
 from src.core.logging import get_logger
 from src.core.security import generate_invite_token, generate_reset_password_token
 from src.emails.repository import PendingEmailRepository
-from src.pagination import PaginatedResponse
 from src.users.exceptions.constants import HTTP404
 from src.users.exceptions.exceptions import (
     UserAlreadyActiveError,

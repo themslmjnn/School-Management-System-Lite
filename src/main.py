@@ -16,11 +16,6 @@ from src.core.config import settings
 from src.core.limiter import ip_limiter
 from src.core.logging import get_logger, setup_logging
 from src.core.middleware import RequestIDMiddleware
-from src.groups import router as group_system_admin_router
-from src.subjects import router as subject_system_admin_router
-from src.users.routers import guardian as user_guardian_router
-from src.users.routers import shared as users_shared_router
-from src.users.routers.system_admin import guardian_link as user_guardian_link_router
 from src.users.routers.system_admin import user as user_system_admin_router
 from src.utils import base_exception as base_exc
 from src.workers.deletion_worker import start_deletion_worker
@@ -42,9 +37,21 @@ async def lifespan(app: FastAPI):
 
         logger.info("redis_connected")
     except Exception as e:
+        if settings.ENVIRONMENT == "production":
+            logger.error(
+                "redis_unavailable_startup_aborted",
+                error=str(e),
+            )
+
+            raise RuntimeError(
+                "Redis is required in production and is currently unavailable. "
+                "Aborting startup."
+            ) from e
+
         logger.warning(
             "redis_unavailable",
             error=str(e),
+            impact="rate_limiting_will_fail_on_rate_limited_endpoints",
         )
 
     email_task = asyncio.create_task(run_email_worker())
@@ -90,12 +97,7 @@ app.add_middleware(SlowAPIMiddleware)
 
 app.include_router(health_router)
 app.include_router(auth_router)
-app.include_router(users_shared_router.router)
 app.include_router(user_system_admin_router.router)
-app.include_router(user_guardian_router.router)
-app.include_router(user_guardian_link_router.router)
-app.include_router(subject_system_admin_router.router)
-app.include_router(group_system_admin_router.router)
 
 
 @app.exception_handler(base_exc.AppException)

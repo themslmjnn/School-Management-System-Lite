@@ -9,7 +9,7 @@ from src.core.dependencies import (
     require_system_admin,
 )
 from src.core.limiter import user_limiter
-from src.pagination import PaginatedResponse
+from src.core.pagination import PaginatedResponse
 from src.users.schemas.user import (
     CreateRequest,
     SearchUserAdmin,

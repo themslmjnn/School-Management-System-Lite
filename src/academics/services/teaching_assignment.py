@@ -1,11 +1,11 @@
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.academics.exceptions.exceptions import TeachingAssignmentAlreadyExistsError
 from src.academics.models.teaching_assignment import TeachingAssignment
 from src.academics.repositories.teaching_assignment import TeachingAssignmentRepository
 from src.academics.schemas.teaching_assingment import TeachingAssignmentCreate
 from src.core.logging import get_logger
-from utils.base_exception import TeachingAssignmentAlreadyExistsError
 
 logger = get_logger(__name__)
 

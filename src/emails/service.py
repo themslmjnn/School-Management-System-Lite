@@ -1,10 +1,10 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.dependencies import CurrentUser
+from src.core.pagination import PaginatedResponse
 from src.emails.exceptions.constants import HTTP404
 from src.emails.exceptions.exceptions import PendingEmailNotFoundError
 from src.emails.repository import PendingEmailRepository
-from src.pagination import PaginatedResponse
 from src.utils.base_constant import HTTP403
 from src.utils.base_exception import AccessDeniedError
 from src.utils.enums import UserRole

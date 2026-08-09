@@ -14,7 +14,7 @@ from src.core.config import settings
 from src.core.dependencies import get_db
 from src.core.limiter import ip_limiter
 from src.core.security import create_access_token
-from src.database import Base
+from database.connection import Base
 from src.main import app
 from src.users.models import User
 from src.users.repositories.user import UserRepositoryBase

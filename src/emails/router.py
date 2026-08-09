@@ -9,9 +9,9 @@ from src.core.dependencies import (
     pagination_dependency,
     require_system_admin,
 )
+from src.core.pagination import PaginatedResponse
 from src.emails.schemas import PendingEmailResponse
 from src.emails.service import PendingEmailService
-from src.pagination import PaginatedResponse
 
 router = APIRouter(
     prefix="/emails",

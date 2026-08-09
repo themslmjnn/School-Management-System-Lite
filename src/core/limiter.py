@@ -3,13 +3,24 @@ from slowapi import Limiter
 from slowapi.util import get_remote_address
 
 from src.core.config import settings
+from src.core.security import decode_access_token
 
 
 def get_user_identifier(request: Request) -> str:
-    user = getattr(request.state, "user", None)
+    auth_header = request.headers.get("Authorization", "")
 
-    if user is not None:
-        return f"user:{user.id}"
+    if auth_header.startswith("Bearer "):
+        token = auth_header[len("Bearer ") :]
+
+        try:
+            payload = decode_access_token(token)
+            user_id = payload.get("sub")
+
+            if user_id:
+                return f"user:{user_id}"
+
+        except Exception:
+            pass
 
     return get_remote_address(request)
 

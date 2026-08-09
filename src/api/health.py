@@ -26,7 +26,10 @@ async def check_postgres(session: AsyncSession) -> dict:
         async with asyncio.timeout(2.0):
             await session.execute(text("SELECT 1"))
 
-        return {"status": "ok"}
+        return {
+            "status": "ok",
+        }
+
     except TimeoutError:
         logger.warning("health_check_postgres_timeout")
 
@@ -34,6 +37,7 @@ async def check_postgres(session: AsyncSession) -> dict:
             "status": "error",
             "detail": "timed out",
         }
+
     except Exception as e:
         logger.warning(
             "health_check_postgres_failed",
@@ -53,6 +57,7 @@ async def check_redis(redis_client: redis.Redis) -> dict:
             pong = await redis_client.ping()
 
         return {"status": "ok" if pong else "error"}
+
     except TimeoutError:
         logger.warning("health_check_redis_timeout")
 
@@ -60,6 +65,7 @@ async def check_redis(redis_client: redis.Redis) -> dict:
             "status": "error",
             "detail": "timed out",
         }
+
     except Exception as e:
         logger.warning(
             "health_check_redis_failed",
@@ -102,6 +108,7 @@ async def readiness(
             error=str(pg_result),
             error_type=type(pg_result).__name__,
         )
+
     if isinstance(redis_result, Exception):
         logger.error(
             "health_check_redis_unhandled",
@@ -109,18 +116,14 @@ async def readiness(
             error_type=type(redis_result).__name__,
         )
 
-    critical_ok = checks["postgres"]["status"] == "ok"
-    overall_ok = critical_ok and checks["redis"]["status"] == "ok"
+    critical_ok = (
+        checks["postgres"]["status"] == "ok" and checks["redis"]["status"] == "ok"
+    )
 
     if not critical_ok:
         response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
 
-    if overall_ok:
-        health_status = "ok"
-    elif critical_ok:
-        health_status = "degraded"
-    else:
-        health_status = "down"
+    health_status = "ok" if critical_ok else "down"
 
     return {
         "status": health_status,
