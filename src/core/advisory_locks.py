@@ -12,6 +12,8 @@ NAMESPACE_STUDENT_PHONE = 9001
 NAMESPACE_STUDENT_EMAIL = 9002
 NAMESPACE_GROUP_CAPACITY = 9003
 
+ADVISORY_LOCK_SQL = "SELECT pg_advisory_xact_lock(:ns, :key)"
+
 
 def _compute_lock_key(value: str) -> int:
     digest = hashlib.sha256(value.encode("utf-8")).digest()
@@ -21,7 +23,7 @@ def _compute_lock_key(value: str) -> int:
 
 
 async def acquire_student_contact_lock(
-    db: AsyncSession,
+    session: AsyncSession,
     *,
     phone_number: str | None,
     email: str | None,
@@ -37,8 +39,8 @@ async def acquire_student_contact_lock(
             key=key,
         )
 
-        await db.execute(
-            text("SELECT pg_advisory_xact_lock(:ns, :key)"),
+        await session.execute(
+            text(ADVISORY_LOCK_SQL),
             {"ns": NAMESPACE_STUDENT_PHONE, "key": key},
         )
 
@@ -60,8 +62,8 @@ async def acquire_student_contact_lock(
             key=key,
         )
 
-        await db.execute(
-            text("SELECT pg_advisory_xact_lock(:ns, :key)"),
+        await session.execute(
+            text(ADVISORY_LOCK_SQL),
             {"ns": NAMESPACE_STUDENT_EMAIL, "key": key},
         )
 
@@ -73,7 +75,7 @@ async def acquire_student_contact_lock(
         )
 
 
-async def acquire_group_capacity_lock(db: AsyncSession, group_id: int) -> None:
+async def acquire_group_capacity_lock(session: AsyncSession, group_id: int) -> None:
     key = _compute_lock_key(f"group:{group_id}")
 
     logger.debug(
@@ -84,8 +86,8 @@ async def acquire_group_capacity_lock(db: AsyncSession, group_id: int) -> None:
         key=key,
     )
 
-    await db.execute(
-        text("SELECT pg_advisory_xact_lock(:ns, :key)"),
+    await session.execute(
+        text(ADVISORY_LOCK_SQL),
         {"ns": NAMESPACE_GROUP_CAPACITY, "key": key},
     )
 

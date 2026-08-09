@@ -5,20 +5,20 @@ from typing import assert_never
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from core.pagination import PaginatedResponse
 from src.core.advisory_locks import acquire_student_contact_lock
 from src.core.caching import delete_cache, get_cache, set_cache
 from src.core.check_contact_limit import check_contact_limit
 from src.core.config import settings
 from src.core.dependencies import CurrentUser
 from src.core.logging import get_logger
+from src.core.pagination import PaginatedResponse
 from src.core.security import generate_invite_token, generate_reset_password_token
 from src.emails.repository import PendingEmailRepository
 from src.users.exceptions.constants import HTTP404
 from src.users.exceptions.exceptions import (
+    GuardianAlreadyPendingDeletionError,
     UserAlreadyActiveError,
     UserAlreadyInactiveError,
-    UserAlreadyPendingDeletionError,
     UserNotFoundError,
     UserTypeMismatchError,
     handle_non_student_unique_contact_error,
@@ -67,7 +67,7 @@ DELETION_GRACE_PERIOD_DAYS = 30
 class UserServiceAdmin:
     @staticmethod
     async def register_user(
-        db: AsyncSession,
+        session: AsyncSession,
         current_user_id: int,
         create_request: CreateRequest,
     ) -> User:
@@ -94,13 +94,13 @@ class UserServiceAdmin:
 
         if is_student:
             await acquire_student_contact_lock(
-                db,
+                session,
                 phone_number=create_request.phone_number,
                 email=create_request.email,
             )
 
         await check_contact_limit(
-            db,
+            session,
             current_user_id,
             target_username=create_request.username,
             phone_number=create_request.phone_number,
@@ -131,8 +131,8 @@ class UserServiceAdmin:
                 address=create_request.address if is_student else None,
             )
 
-            UserRepositoryBase.add_entity(db, user=new_user)
-            await db.flush()
+            session.add(new_user)
+            await session.flush()
 
             new_user_activation = UserActivation(
                 user_id=new_user.id,
@@ -142,19 +142,16 @@ class UserServiceAdmin:
             new_user_session = UserSession(user_id=new_user.id)
             new_user_login_lockout = UserLoginLockout(user_id=new_user.id)
 
-            UserRepositoryBase.add_entity(
-                db,
-                user_activation=new_user_activation,
-                user_session=new_user_session,
-                user_login_lockout=new_user_login_lockout,
-            )
+            session.add(new_user_activation)
+            session.add(new_user_session)
+            session.add(new_user_login_lockout)
 
             subject, html_body, text_body = email_sender.build_invite_email(
                 raw_invite_token, new_user.username
             )
 
             PendingEmailRepository.add_pending_email(
-                db,
+                session,
                 recipient=new_user.email,
                 subject=subject,
                 html_body=html_body,
@@ -164,8 +161,8 @@ class UserServiceAdmin:
                 recipient_user_id=new_user.id,
             )
 
-            await db.commit()
-            await db.refresh(new_user)
+            await session.commit()
+            await session.refresh(new_user)
 
             logger.info(
                 "user_registered",
@@ -178,7 +175,7 @@ class UserServiceAdmin:
             return new_user
 
         except IntegrityError as e:
-            await db.rollback()
+            await session.rollback()
 
             logger.warning(
                 "user_registration_failed",
@@ -194,13 +191,13 @@ class UserServiceAdmin:
 
     @staticmethod
     async def update_user(
-        db: AsyncSession,
+        session: AsyncSession,
         current_user_id: int,
         target_user_id: int,
         update_request: UpdateUser,
     ) -> User:
         target_user = await UserRepositoryBase.get_user_by_id(
-            db, target_user_id, excluded_roles=SYSTEM_ADMIN_INVISIBLE_ROLES
+            session, target_user_id, excluded_roles=SYSTEM_ADMIN_INVISIBLE_ROLES
         )
         ensure_exists(target_user, UserNotFoundError(HTTP404.USER))
 
@@ -227,10 +224,10 @@ class UserServiceAdmin:
 
         if is_student and phone_number_changing:
             await acquire_student_contact_lock(
-                db, phone_number=update_request.phone_number, email=None
+                session, phone_number=update_request.phone_number, email=None
             )
             await check_contact_limit(
-                db,
+                session,
                 current_user_id,
                 target_username=target_user.username,
                 phone_number=update_request.phone_number,
@@ -244,8 +241,8 @@ class UserServiceAdmin:
         try:
             update_object(target_user, update_request)
 
-            await db.commit()
-            await db.refresh(target_user)
+            await session.commit()
+            await session.refresh(target_user)
 
             asyncio.create_task(
                 email_sender.send_safe(
@@ -266,8 +263,9 @@ class UserServiceAdmin:
                 updated_by=current_user_id,
                 method="admin_update",
             )
+
         except IntegrityError as e:
-            await db.rollback()
+            await session.rollback()
 
             logger.error(
                 "update_user_denied",
@@ -282,13 +280,13 @@ class UserServiceAdmin:
 
     @staticmethod
     async def update_user_credentials(
-        db: AsyncSession,
+        session: AsyncSession,
         current_user_id: int,
         target_user_id: int,
         update_request: UpdateUserCredentials,
     ) -> None:
         target_user = await UserRepositoryBase.get_user_by_id(
-            db,
+            session,
             target_user_id,
             excluded_roles=SYSTEM_ADMIN_INVISIBLE_ROLES,
             load_session=True,
@@ -307,10 +305,10 @@ class UserServiceAdmin:
 
         if is_student and email_changing:
             await acquire_student_contact_lock(
-                db, phone_number=None, email=update_request.email
+                session, phone_number=None, email=update_request.email
             )
             await check_contact_limit(
-                db,
+                session,
                 current_user_id,
                 target_username=target_user.username,
                 phone_number=None,
@@ -340,15 +338,16 @@ class UserServiceAdmin:
                 invite_token_expires_at = datetime.now(UTC) + timedelta(
                     hours=settings.INVITE_TOKEN_EXPIRES_HOURS
                 )
+
                 target_user.activation.invite_token_hash = hashed_invite_token
                 target_user.activation.invite_token_expires_at = invite_token_expires_at
 
                 subject, html_body, text_body = email_sender.build_invite_email(
-                    raw_invite_token, target_user.email
+                    raw_invite_token, target_user.username
                 )
 
                 PendingEmailRepository.add_pending_email(
-                    db,
+                    session,
                     recipient=target_user.email,
                     subject=subject,
                     html_body=html_body,
@@ -377,7 +376,7 @@ class UserServiceAdmin:
                 )
 
                 PendingEmailRepository.add_pending_email(
-                    db,
+                    session,
                     recipient=old_email,
                     subject=subject,
                     html_body=html_body,
@@ -387,13 +386,13 @@ class UserServiceAdmin:
                     recipient_user_id=target_user.id,
                 )
 
-            await db.commit()
+            await session.commit()
 
             await delete_cache(
+                SessionCacheKey.access_token_version_key(target_user_id),
                 UserCacheKey.user_detail_key_admin(target_user_id),
                 UserCacheKey.user_detail_key_staff(target_user_id),
                 UserCacheKey.user_detail_key_self(target_user_id),
-                SessionCacheKey.access_token_version_key(target_user_id),
             )
 
             logger.info(
@@ -403,7 +402,7 @@ class UserServiceAdmin:
             )
 
         except IntegrityError as e:
-            await db.rollback()
+            await session.rollback()
 
             logger.error(
                 "admin_credentials_override_failed",
@@ -419,27 +418,27 @@ class UserServiceAdmin:
 
     @staticmethod
     async def create_guardian_deletion_request(
-        db: AsyncSession,
+        session: AsyncSession,
         current_user_id: int,
-        target_user_id: int,
+        target_guardian_id: int,
     ) -> None:
-        target_user = await UserRepositoryBase.get_user_by_id(
-            db,
-            target_user_id,
+        target_guardian = await UserRepositoryBase.get_user_by_id(
+            session,
+            target_guardian_id,
             load_session=True,
             allowed_roles=frozenset({UserRole.GUARDIAN}),
         )
-        ensure_exists(target_user, UserNotFoundError(HTTP404.USER))
+        ensure_exists(target_guardian, UserNotFoundError(HTTP404.USER))
 
-        if target_user.status == UserStatus.PENDING_DELETION:
+        if target_guardian.status == UserStatus.PENDING_DELETION:
             logger.warning(
                 "guardian_deletion_denied",
                 actor_user_id=current_user_id,
-                target_user_id=target_user_id,
+                target_guardian_id=target_guardian_id,
                 denial_reason="guardian_already_pending_deletion",
             )
 
-            raise UserAlreadyPendingDeletionError(
+            raise GuardianAlreadyPendingDeletionError(
                 "This guardian account is already pending deletion"
             )
 
@@ -447,90 +446,93 @@ class UserServiceAdmin:
             days=DELETION_GRACE_PERIOD_DAYS
         )
 
-        target_user.status = UserStatus.PENDING_DELETION
-        target_user.is_active = False
-        target_user.deletion_scheduled_for = deletion_scheduled_for
+        target_guardian.status = UserStatus.PENDING_DELETION
+        target_guardian.is_active = False
+        target_guardian.deletion_scheduled_for = deletion_scheduled_for
 
-        target_user.session.access_token_version += 1
-        target_user.session.refresh_token_hash = None
-        target_user.session.refresh_token_family = None
-        target_user.session.refresh_token_expires_at = None
+        target_guardian.session.access_token_version += 1
+        target_guardian.session.refresh_token_hash = None
+        target_guardian.session.refresh_token_family = None
+        target_guardian.session.refresh_token_expires_at = None
 
-        target_user_email = target_user.email
+        target_guardian_email = target_guardian.email
 
-        await db.commit()
+        await session.commit()
 
         asyncio.create_task(
             email_sender.send_safe(
-                email_sender.send_account_deletion_email(target_user_email),
+                email_sender.send_account_deletion_email(target_guardian_email),
                 email_type=EmailType.ACCOUNT_DELETION,
             )
         )
 
         await delete_cache(
-            SessionCacheKey.access_token_version_key(target_user_id),
-            UserCacheKey.user_detail_key_admin(target_user_id),
+            SessionCacheKey.access_token_version_key(target_guardian_id),
+            UserCacheKey.user_detail_key_admin(target_guardian_id),
+            UserCacheKey.user_detail_key_self(target_guardian_id),
         )
 
         logger.info(
             "guardian_deletion_scheduled",
             actor_user_id=current_user_id,
-            target_user_id=target_user_id,
+            target_user_id=target_guardian_id,
             deletion_scheduled_for=deletion_scheduled_for.isoformat(),
         )
 
     @staticmethod
     async def cancel_guardian_deletion_request(
-        db: AsyncSession,
+        session: AsyncSession,
         current_user_id: int,
-        target_user_id: int,
+        target_guardian_id: int,
     ) -> None:
-        target_user = await UserRepositoryBase.get_user_by_id_pending_deletion(
-            db, target_user_id
+        target_guardian = await UserRepositoryBase.get_user_by_id_pending_deletion(
+            session, target_guardian_id
         )
-        ensure_exists(target_user, UserNotFoundError(HTTP404.USER))
+        ensure_exists(target_guardian, UserNotFoundError(HTTP404.USER))
 
-        target_user_email = target_user.email
+        target_guardian_email = target_guardian.email
 
         reactivated = await UserRepositoryBase.reactivate_pending_deletion_user(
-            db, target_user_id
+            session, target_guardian_id
         )
 
         if not reactivated:
-            await db.rollback()
+            await session.rollback()
 
             logger.warning(
                 "guardian_deletion_cancel_lost_race",
                 actor_user_id=current_user_id,
-                target_user_id=target_user_id,
+                target_user_id=target_guardian_id,
                 denial_reason="user_hard_deleted_before_cancel_committed",
             )
 
             raise UserNotFoundError(HTTP404.USER)
 
-        await db.commit()
+        await session.commit()
 
         asyncio.create_task(
             email_sender.send_safe(
-                email_sender.send_account_deletion_canceled_email(target_user_email),
+                email_sender.send_account_deletion_canceled_email(
+                    target_guardian_email
+                ),
                 email_type=EmailType.CANCEL_ACCOUNT_DELETION,
             )
         )
 
-        await delete_cache(UserCacheKey.user_detail_key_admin(target_user_id))
+        await delete_cache(UserCacheKey.user_detail_key_admin(target_guardian_id))
 
         logger.info(
             "guardian_deletion_cancelled",
             actor_user_id=current_user_id,
-            target_user_id=target_user_id,
+            target_user_id=target_guardian_id,
         )
 
     @staticmethod
     async def deactivate_user(
-        db: AsyncSession, current_user_id: int, target_user_id: int
+        session: AsyncSession, current_user_id: int, target_user_id: int
     ) -> None:
         target_user = await UserRepositoryBase.get_user_by_id(
-            db,
+            session,
             target_user_id,
             load_session=True,
             excluded_roles=SYSTEM_ADMIN_INVISIBLE_ROLES,
@@ -555,7 +557,7 @@ class UserServiceAdmin:
         target_user.session.refresh_token_family = None
         target_user.session.refresh_token_expires_at = None
 
-        await db.commit()
+        await session.commit()
 
         asyncio.create_task(
             email_sender.send_safe(
@@ -581,10 +583,10 @@ class UserServiceAdmin:
 
     @staticmethod
     async def activate_user(
-        db: AsyncSession, current_user_id: int, target_user_id: int
+        session: AsyncSession, current_user_id: int, target_user_id: int
     ) -> None:
         target_user = await UserRepositoryBase.get_user_by_id(
-            db,
+            session,
             target_user_id,
             excluded_roles=SYSTEM_ADMIN_INVISIBLE_ROLES,
             load_login_lockout=True,
@@ -607,7 +609,7 @@ class UserServiceAdmin:
         target_user.login_lockout.failed_login_attempts = 0
         target_user.login_lockout.locked_until = None
 
-        await db.commit()
+        await session.commit()
 
         asyncio.create_task(
             email_sender.send_safe(
@@ -626,13 +628,12 @@ class UserServiceAdmin:
 
     @staticmethod
     async def create_reset_password_request(
-        db: AsyncSession,
+        session: AsyncSession,
         current_user: CurrentUser,
         target_user_id: int,
     ) -> None:
-
         target_user = await UserRepositoryBase.get_user_by_id(
-            db,
+            session,
             target_user_id,
             excluded_roles=SYSTEM_ADMIN_INVISIBLE_ROLES,
             load_session=True,
@@ -640,6 +641,7 @@ class UserServiceAdmin:
         ensure_exists(target_user, UserNotFoundError(HTTP404.USER))
 
         raw_reset_token, hashed_reset_token = generate_reset_password_token()
+
         target_user.session.reset_password_token_hash = hashed_reset_token
         target_user.session.reset_password_token_expires_at = datetime.now(
             UTC
@@ -650,7 +652,7 @@ class UserServiceAdmin:
         )
 
         PendingEmailRepository.add_pending_email(
-            db,
+            session,
             recipient=target_user.email,
             subject=subject,
             html_body=html_body,
@@ -660,7 +662,7 @@ class UserServiceAdmin:
             recipient_user_id=target_user_id,
         )
 
-        await db.commit()
+        await session.commit()
 
         logger.info(
             "reset_password_request_created",
@@ -669,12 +671,12 @@ class UserServiceAdmin:
 
     @staticmethod
     async def resend_activation_invite(
-        db: AsyncSession,
+        session: AsyncSession,
         current_user_id: int,
         target_user_id: int,
     ) -> None:
         target_user = await UserRepositoryBase.get_user_by_id(
-            db,
+            session,
             target_user_id,
             excluded_roles=SYSTEM_ADMIN_INVISIBLE_ROLES,
             load_activation=True,
@@ -695,15 +697,16 @@ class UserServiceAdmin:
         invite_token_expires_at = datetime.now(UTC) + timedelta(
             hours=settings.INVITE_TOKEN_EXPIRES_HOURS
         )
+
         target_user.activation.invite_token_hash = hashed_invite_token
         target_user.activation.invite_token_expires_at = invite_token_expires_at
 
         subject, html_body, text_body = email_sender.build_invite_email(
-            raw_invite_token, target_user.email
+            raw_invite_token, target_user.username
         )
 
         PendingEmailRepository.add_pending_email(
-            db,
+            session,
             recipient=target_user.email,
             subject=subject,
             html_body=html_body,
@@ -713,7 +716,7 @@ class UserServiceAdmin:
             recipient_user_id=target_user.id,
         )
 
-        await db.commit()
+        await session.commit()
 
         logger.info(
             "activation_invite_resent",
@@ -723,7 +726,7 @@ class UserServiceAdmin:
 
     @staticmethod
     async def get_staff(
-        db: AsyncSession,
+        session: AsyncSession,
         skip: int,
         limit: int,
         filters: SearchUserAdmin,
@@ -731,7 +734,7 @@ class UserServiceAdmin:
         order: str,
     ) -> PaginatedResponse:
         users, total = await UserRepositoryAdmin.get_users_admin(
-            db, skip, limit, filters, sort_by, order, allowed_roles=STAFF_ROLES
+            session, skip, limit, filters, sort_by, order, allowed_roles=STAFF_ROLES
         )
 
         return PaginatedResponse(
@@ -743,8 +746,10 @@ class UserServiceAdmin:
         )
 
     @staticmethod
-    async def get_staff_by_id(db, target_user_id) -> UserResponseAdminDetailed:
-        cache_key = UserCacheKey.user_detail_key_admin(target_user_id)
+    async def get_staff_by_id(
+        session: AsyncSession, target_staff_id: int
+    ) -> UserResponseAdminDetailed:
+        cache_key = UserCacheKey.user_detail_key_admin(target_staff_id)
         cached = await get_cache(cache_key)
 
         if cached is not None:
@@ -753,7 +758,7 @@ class UserServiceAdmin:
             return UserResponseAdminDetailed.model_validate(raw.model_dump())
 
         user = await UserRepositoryBase.get_user_by_id(
-            db, target_user_id, allowed_roles=STAFF_ROLES
+            session, target_staff_id, allowed_roles=STAFF_ROLES
         )
         ensure_exists(user, UserNotFoundError(HTTP404.USER))
 
@@ -764,7 +769,7 @@ class UserServiceAdmin:
 
     @staticmethod
     async def get_guardians(
-        db: AsyncSession,
+        session: AsyncSession,
         skip: int,
         limit: int,
         filters: SearchUserAdmin,
@@ -772,7 +777,7 @@ class UserServiceAdmin:
         order: str,
     ) -> PaginatedResponse:
         users, total = await UserRepositoryAdmin.get_users_admin(
-            db,
+            session,
             skip,
             limit,
             filters,
@@ -790,8 +795,10 @@ class UserServiceAdmin:
         )
 
     @staticmethod
-    async def get_guardian_by_id(db, target_user_id) -> UserResponseAdminDetailed:
-        cache_key = UserCacheKey.user_detail_key_admin(target_user_id)
+    async def get_guardian_by_id(
+        session, target_guardian_id
+    ) -> UserResponseAdminDetailed:
+        cache_key = UserCacheKey.user_detail_key_admin(target_guardian_id)
         cached = await get_cache(cache_key)
 
         if cached is not None:
@@ -800,7 +807,7 @@ class UserServiceAdmin:
             return UserResponseAdminDetailed.model_validate(raw.model_dump())
 
         user = await UserRepositoryBase.get_user_by_id(
-            db, target_user_id, allowed_roles={UserRole.GUARDIAN}
+            session, target_guardian_id, allowed_roles={UserRole.GUARDIAN}
         )
         ensure_exists(user, UserNotFoundError(HTTP404.USER))
 

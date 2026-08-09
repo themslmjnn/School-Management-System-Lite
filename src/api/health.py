@@ -5,7 +5,7 @@ from fastapi import APIRouter, Request, Response, status
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.core.dependencies import async_db_dependency
+from src.core.dependencies import async_session_dependency
 from src.core.logging import get_logger
 
 logger = get_logger(__name__)
@@ -83,7 +83,7 @@ async def check_redis(redis_client: redis.Redis) -> dict:
 async def readiness(
     request: Request,
     response: Response,
-    db: async_db_dependency,
+    db: async_session_dependency,
 ):
     redis_client = request.app.state.redis_client
 

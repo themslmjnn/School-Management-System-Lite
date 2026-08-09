@@ -21,16 +21,18 @@ from src.utils.cache_keys import SessionCacheKey
 from src.utils.enums import UserRole
 
 
-async def get_db() -> AsyncGenerator[AsyncSession, None]:
+async def get_session() -> AsyncGenerator[AsyncSession, None]:
     async with AsyncSessionLocal() as session:
         try:
             yield session
+
         except Exception:
             await session.rollback()
+
             raise
 
 
-async_db_dependency = Annotated[AsyncSession, Depends(get_db)]
+async_session_dependency = Annotated[AsyncSession, Depends(get_session)]
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
@@ -42,7 +44,7 @@ class CurrentUser:
 
 
 async def get_current_user(
-    request: Request, db: async_db_dependency, token: str = Depends(oauth2_scheme)
+    request: Request, db: async_session_dependency, token: str = Depends(oauth2_scheme)
 ) -> CurrentUser:
     try:
         payload = decode_access_token(token)
@@ -56,9 +58,16 @@ async def get_current_user(
     user_access_token_version_key = SessionCacheKey.access_token_version_key(user_id)
 
     cached_version = await get_cache(user_access_token_version_key)
+    current_user = CurrentUser(
+        id=user_id,
+        role=UserRole(payload.get("role")),
+    )
+
     if cached_version is not None:
         if int(cached_version) != token_version:
             raise InvalidAccessTokenError(HTTP401.INVALID_ACCESS_TOKEN)
+
+        request.state.user = current_user
 
         return CurrentUser(
             id=user_id,
@@ -80,11 +89,6 @@ async def get_current_user(
         user_access_token_version_key,
         user.session.access_token_version,
         ttl_seconds=300,
-    )
-
-    current_user = CurrentUser(
-        id=user_id,
-        role=UserRole(payload.get("role")),
     )
 
     request.state.user = current_user

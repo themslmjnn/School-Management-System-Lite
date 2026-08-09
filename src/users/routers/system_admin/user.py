@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, Path, Request, status
 
 from src.core.dependencies import (
     CurrentUser,
-    async_db_dependency,
+    async_session_dependency,
     pagination_dependency,
     require_system_admin,
 )
@@ -35,11 +35,13 @@ router = APIRouter(
 @user_limiter.limit("10/minute")
 async def register_user(
     request: Request,
-    db: async_db_dependency,
+    session: async_session_dependency,
     current_user: Annotated[CurrentUser, Depends(require_system_admin)],
     create_request: CreateRequest,
 ):
-    return await UserServiceAdmin.register_user(db, current_user.id, create_request)
+    return await UserServiceAdmin.register_user(
+        session, current_user.id, create_request
+    )
 
 
 @router.patch(
@@ -49,13 +51,13 @@ async def register_user(
 @user_limiter.limit("10/minute")
 async def update_user(
     request: Request,
-    db: async_db_dependency,
+    session: async_session_dependency,
     current_user: Annotated[CurrentUser, Depends(require_system_admin)],
     target_user_id: Annotated[int, Path(ge=1)],
     update_request: UpdateUser,
 ):
-    return await UserServiceAdmin.update_user(
-        db, current_user.id, target_user_id, update_request
+    await UserServiceAdmin.update_user(
+        session, current_user.id, target_user_id, update_request
     )
 
 
@@ -66,76 +68,80 @@ async def update_user(
 @user_limiter.limit("5/minute")
 async def update_user_credentials(
     request: Request,
-    db: async_db_dependency,
+    session: async_session_dependency,
     current_user: Annotated[CurrentUser, Depends(require_system_admin)],
     target_user_id: Annotated[int, Path(ge=1)],
     update_request: UpdateUserCredentials,
 ):
     await UserServiceAdmin.update_user_credentials(
-        db, current_user.id, target_user_id, update_request
+        session, current_user.id, target_user_id, update_request
     )
 
 
 @router.post(
-    "/{target_user_id}/guardian-deletion",
+    "/{target_guardian_id}/guardian-deletion",
     status_code=status.HTTP_204_NO_CONTENT,
 )
 @user_limiter.limit("3/minute")
 async def create_guardian_deletion_request(
     request: Request,
-    db: async_db_dependency,
+    session: async_session_dependency,
     current_user: Annotated[CurrentUser, Depends(require_system_admin)],
-    target_user_id: int,
+    target_guardian_id: int,
 ):
     await UserServiceAdmin.create_guardian_deletion_request(
-        db, current_user.id, target_user_id
+        session, current_user.id, target_guardian_id
     )
 
 
 @router.post(
-    "/{target_user_id}/cancel-deletion",
+    "/{target_guardian_id}/cancel-deletion",
     status_code=status.HTTP_204_NO_CONTENT,
 )
 @user_limiter.limit("3/minute")
 async def cancel_guardian_deletion_request(
     request: Request,
-    db: async_db_dependency,
+    session: async_session_dependency,
     current_user: Annotated[CurrentUser, Depends(require_system_admin)],
-    target_user_id: int,
+    target_guardian_id: int,
 ):
     await UserServiceAdmin.cancel_guardian_deletion_request(
-        db, current_user.id, target_user_id
+        session, current_user.id, target_guardian_id
     )
 
 
 @router.patch("/{target_user_id}/deactivation", status_code=status.HTTP_204_NO_CONTENT)
+@user_limiter.limit("10/minute")
 async def deactivate_user(
-    db: async_db_dependency,
+    request: Request,
+    session: async_session_dependency,
     current_user: Annotated[CurrentUser, Depends(require_system_admin)],
     target_user_id: Annotated[int, Path(ge=1)],
 ):
-    return await UserServiceAdmin.deactivate_user(db, current_user.id, target_user_id)
+    await UserServiceAdmin.deactivate_user(session, current_user.id, target_user_id)
 
 
 @router.patch("/{target_user_id}/activation", status_code=status.HTTP_204_NO_CONTENT)
+@user_limiter.limit("10/minute")
 async def activate_user(
-    db: async_db_dependency,
+    request: Request,
+    session: async_session_dependency,
     current_user: Annotated[CurrentUser, Depends(require_system_admin)],
     target_user_id: Annotated[int, Path(ge=1)],
 ):
-    return await UserServiceAdmin.activate_user(db, current_user.id, target_user_id)
+    await UserServiceAdmin.activate_user(session, current_user.id, target_user_id)
 
 
 @router.post("/{target_user_id}/password", status_code=status.HTTP_204_NO_CONTENT)
 @user_limiter.limit("5/minute")
 async def create_reset_password_request(
     request: Request,
-    db: async_db_dependency,
+    session: async_session_dependency,
     current_user: Annotated[CurrentUser, Depends(require_system_admin)],
     target_user_id: Annotated[int, Path(ge=1)],
 ):
     await UserServiceAdmin.create_reset_password_request(
-        db, current_user, target_user_id
+        session, current_user, target_user_id
     )
 
 
@@ -146,11 +152,13 @@ async def create_reset_password_request(
 @user_limiter.limit("5/minute")
 async def resend_activation_invite(
     request: Request,
-    db: async_db_dependency,
+    session: async_session_dependency,
     current_user: Annotated[CurrentUser, Depends(require_system_admin)],
     target_user_id: Annotated[int, Path(ge=1)],
 ):
-    await UserServiceAdmin.resend_activation_invite(db, current_user.id, target_user_id)
+    await UserServiceAdmin.resend_activation_invite(
+        session, current_user.id, target_user_id
+    )
 
 
 @router.get(
@@ -161,7 +169,7 @@ async def resend_activation_invite(
 @user_limiter.limit("15/minute")
 async def get_staff(
     request: Request,
-    db: async_db_dependency,
+    session: async_session_dependency,
     _: Annotated[CurrentUser, Depends(require_system_admin)],
     pagination: pagination_dependency,
     filters: Annotated[SearchUserAdmin, Depends()],
@@ -169,7 +177,7 @@ async def get_staff(
     order: str = OrderBy.DESC,
 ):
     return await UserServiceAdmin.get_staff(
-        db,
+        session,
         pagination.skip,
         pagination.limit,
         filters,
@@ -179,16 +187,16 @@ async def get_staff(
 
 
 @router.get(
-    "/staff/{target_user_id}",
+    "/staff/{target_staff_id}",
     response_model=UserResponseAdminDetailed,
     status_code=status.HTTP_200_OK,
 )
 async def get_staff_by_id(
-    db: async_db_dependency,
+    session: async_session_dependency,
     _: Annotated[CurrentUser, Depends(require_system_admin)],
-    target_user_id: Annotated[int, Path(ge=1)],
+    target_staff_id: Annotated[int, Path(ge=1)],
 ):
-    return await UserServiceAdmin.get_staff_by_id(db, target_user_id)
+    return await UserServiceAdmin.get_staff_by_id(session, target_staff_id)
 
 
 @router.get(
@@ -199,7 +207,7 @@ async def get_staff_by_id(
 @user_limiter.limit("15/minute")
 async def get_guardians(
     request: Request,
-    db: async_db_dependency,
+    session: async_session_dependency,
     _: Annotated[CurrentUser, Depends(require_system_admin)],
     pagination: pagination_dependency,
     filters: Annotated[SearchUserAdmin, Depends()],
@@ -207,7 +215,7 @@ async def get_guardians(
     order: str = OrderBy.DESC,
 ):
     return await UserServiceAdmin.get_guardians(
-        db,
+        session,
         pagination.skip,
         pagination.limit,
         filters,
@@ -217,13 +225,13 @@ async def get_guardians(
 
 
 @router.get(
-    "/guardians/{target_user_id}",
+    "/guardians/{target_guardian_id}",
     response_model=UserResponseAdminDetailed,
     status_code=status.HTTP_200_OK,
 )
 async def get_guardian_by_id(
-    db: async_db_dependency,
+    session: async_session_dependency,
     _: Annotated[CurrentUser, Depends(require_system_admin)],
-    target_user_id: Annotated[int, Path(ge=1)],
+    target_guardian_id: Annotated[int, Path(ge=1)],
 ):
-    return await UserServiceAdmin.get_guardian_by_id(db, target_user_id)
+    return await UserServiceAdmin.get_guardian_by_id(session, target_guardian_id)

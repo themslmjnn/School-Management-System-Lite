@@ -17,7 +17,7 @@ from src.utils.enums import (
 class UserRepositoryBase:
     @staticmethod
     async def count_users_with_contact(
-        db: AsyncSession,
+        session: AsyncSession,
         role: UserRole | None,
         *,
         phone_number: str | None,
@@ -41,13 +41,13 @@ class UserRepositoryBase:
 
         query = select(func.count(User.id)).where(*conditions)
 
-        result = await db.execute(query)
+        result = await session.execute(query)
 
         return result.scalar()
 
     @staticmethod
     async def get_user_by_id(
-        db: AsyncSession,
+        session: AsyncSession,
         user_id: int,
         *,
         load_session: bool = False,
@@ -69,7 +69,7 @@ class UserRepositoryBase:
         if load_login_lockout:
             query = query.options(joinedload(User.login_lockout))
 
-        result = await db.execute(query)
+        result = await session.execute(query)
 
         return result.scalar_one_or_none()
 
@@ -114,25 +114,25 @@ class UserRepositoryBase:
 
     @staticmethod
     async def paginate(
-        db: AsyncSession,
+        session: AsyncSession,
         query: Select,
         skip: int,
         limit: int,
     ) -> tuple[list[User], int]:
 
-        count_result = await db.execute(
+        count_result = await session.execute(
             select(func.count()).select_from(query.subquery())
         )
 
         total = count_result.scalar_one()
 
-        result = await db.execute(query.offset(skip).limit(limit))
+        result = await session.execute(query.offset(skip).limit(limit))
 
         return result.scalars().all(), total
 
     @staticmethod
     async def get_users(
-        db: AsyncSession,
+        session: AsyncSession,
         *,
         excluded_roles: frozenset[UserRole] | None = None,
         allowed_roles: frozenset[UserRole] | None = None,
@@ -152,33 +152,35 @@ class UserRepositoryBase:
         query = UserRepositoryBase.apply_base_filters(query, filters)
         query = UserRepositoryBase.apply_sorting(query, sort_by, order)
 
-        return await UserRepositoryBase.paginate(db, query, skip, limit)
+        return await UserRepositoryBase.paginate(session, query, skip, limit)
 
     @staticmethod
-    async def delete_user_if_due(db: AsyncSession, user_id: int) -> bool:
+    async def delete_user_if_due(session: AsyncSession, user_id: int) -> bool:
         query = select(User).where(
             User.id == user_id,
             User.status == UserStatus.PENDING_DELETION,
             User.deletion_scheduled_for <= datetime.now(UTC),
         )
 
-        result = await db.execute(query)
+        result = await session.execute(query)
 
         return result.scalar_one_or_none()
 
     @staticmethod
-    async def get_user_ids_due_for_hard_deletion(db: AsyncSession) -> list[int]:
+    async def get_user_ids_due_for_hard_deletion(session: AsyncSession) -> list[int]:
         query = select(User.id).where(
             User.status == UserStatus.PENDING_DELETION,
             User.deletion_scheduled_for <= datetime.now(UTC),
         )
 
-        result = await db.execute(query)
+        result = await session.execute(query)
 
         return list(result.scalars().all())
 
     @staticmethod
-    async def reactivate_pending_deletion_user(db: AsyncSession, user_id: int) -> bool:
+    async def reactivate_pending_deletion_user(
+        session: AsyncSession, user_id: int
+    ) -> bool:
         query = (
             update(User)
             .where(
@@ -193,13 +195,13 @@ class UserRepositoryBase:
             )
         )
 
-        result = await db.execute(query)
+        result = await session.execute(query)
 
         return result.rowcount > 0
 
     @staticmethod
     async def get_user_by_id_pending_deletion(
-        db: AsyncSession,
+        session: AsyncSession,
         user_id: int,
     ) -> User | None:
         query = select(User).where(
@@ -208,7 +210,7 @@ class UserRepositoryBase:
             User.status == UserStatus.PENDING_DELETION,
         )
 
-        result = await db.execute(query)
+        result = await session.execute(query)
 
         return result.scalar_one_or_none()
 
@@ -237,7 +239,7 @@ class UserRepositoryAdmin:
 
     @staticmethod
     async def get_users_admin(
-        db: AsyncSession,
+        session: AsyncSession,
         skip: int,
         limit: int,
         filters: SearchUserAdmin | None = None,
@@ -255,7 +257,7 @@ class UserRepositoryAdmin:
         query = UserRepositoryBase.apply_sorting(query, sort_by, order)
 
         return await UserRepositoryBase.paginate(
-            db=db,
+            session=session,
             query=query,
             skip=skip,
             limit=limit,

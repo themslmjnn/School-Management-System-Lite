@@ -14,7 +14,7 @@ logger = get_logger(__name__)
 
 
 async def check_contact_limit(
-    db: AsyncSession,
+    session: AsyncSession,
     current_user_id: int,
     *,
     target_username: str,
@@ -29,7 +29,7 @@ async def check_contact_limit(
 
     if phone_number is not None:
         phone_count = await UserRepositoryBase.count_users_with_contact(
-            db,
+            session,
             role,
             phone_number=phone_number,
             email=None,
@@ -56,7 +56,7 @@ async def check_contact_limit(
 
     if email is not None:
         email_count = await UserRepositoryBase.count_users_with_contact(
-            db,
+            session,
             role,
             phone_number=None,
             email=email,

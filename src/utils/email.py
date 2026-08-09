@@ -443,6 +443,9 @@ async def send_account_deletion_canceled_email(email: str) -> None:
 async def send_account_deactivation_email(email: str, role: UserRole) -> None:
     login_link = f"{settings.APP_URL}/auth/login"
 
+    login_button = ""
+    login_text = ""
+
     if role == UserRole.GUARDIAN:
         login_button = f"""
             <div style="margin:40px 0;text-align:center;">
@@ -454,6 +457,8 @@ async def send_account_deactivation_email(email: str, role: UserRole) -> None:
             </div>
         """
 
+        login_text = f"\n\nLog in: {login_link}"
+
     html = f"""
         <!DOCTYPE html>
         <html lang="en">
@@ -461,11 +466,15 @@ async def send_account_deactivation_email(email: str, role: UserRole) -> None:
             <div style="max-width:560px;margin:auto;background:white;
                         padding:40px;border-radius:8px;">
                 <h1 style="color:#1d4ed8;">SGM | LFGS</h1>
+
                 <h2>Your account has been deactivated</h2>
+
                 <p>
                     An administrator has deactivated your account.
                 </p>
+
                 {login_button}
+
                 <p>
                     If you believe this was done in error, please contact
                     your LFGS administrator.
@@ -475,13 +484,12 @@ async def send_account_deactivation_email(email: str, role: UserRole) -> None:
         </html>
     """
 
-    text = "SGM | LFGS.\n\nAn administrator has deactivated your account. "
-
-    if role == UserRole.GUARDIAN:
-        text += f"\n\nLog in: {login_link}"
-
-    text += (
-        "If you believe this was done in error, please contact your LFGS administrator."
+    text = (
+        "SGM | LFGS.\n\n"
+        "An administrator has deactivated your account."
+        f"{login_text}\n\n"
+        "If you believe this was done in error, please contact "
+        "your LFGS administrator."
     )
 
     await send(

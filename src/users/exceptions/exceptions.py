@@ -4,36 +4,7 @@ from src.users.exceptions.constants import HTTP409
 from src.utils.base_exception import AppException
 
 
-# USER
-class UserNotFoundError(AppException):
-    status_code = 404
-
-
 class UsernameAlreadyTakenError(AppException):
-    status_code = 409
-
-
-class DuplicateEmailError(AppException):
-    status_code = 409
-
-
-class DuplicatePhoneNumberError(AppException):
-    status_code = 409
-
-
-class PendingEmailNotFoundError(AppException):
-    status_code = 404
-
-
-class UserAlreadyActiveError(AppException):
-    status_code = 409
-
-
-class UserAlreadyInactiveError(AppException):
-    status_code = 409
-
-
-class UserAlreadyPendingDeletionError(AppException):
     status_code = 409
 
 
@@ -53,8 +24,36 @@ class MaxStaffOrGuardianPerPhoneNumberError(AppException):
     status_code = 409
 
 
+class UserNotFoundError(AppException):
+    status_code = 404
+
+
 class UserTypeMismatchError(AppException):
     status_code = 400
+
+
+class DuplicateEmailError(AppException):
+    status_code = 409
+
+
+class DuplicatePhoneNumberError(AppException):
+    status_code = 409
+
+
+class GuardianAlreadyPendingDeletionError(AppException):
+    status_code = 409
+
+
+class PendingEmailNotFoundError(AppException):
+    status_code = 404
+
+
+class UserAlreadyActiveError(AppException):
+    status_code = 409
+
+
+class UserAlreadyInactiveError(AppException):
+    status_code = 409
 
 
 class UserNotPendingActivationError(AppException):

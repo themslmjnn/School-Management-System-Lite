@@ -157,7 +157,7 @@ class UpdateStaffAndGuardianAdmin(UpdateUserBase):
 class UpdateStudentAdmin(UpdateUserBase):
     type: Literal["student"] = "student"
     date_of_birth: date | None = None
-    address: str | None = None
+    address: str | None = Field(min_length=15, max_length=100, default=None)
 
     @field_validator("date_of_birth", mode="after")
     @classmethod
