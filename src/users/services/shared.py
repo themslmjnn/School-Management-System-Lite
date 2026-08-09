@@ -28,8 +28,8 @@ from src.users.exceptions.exceptions import (
 from src.users.models.user import User
 from src.users.repositories.guardian_link import GuardianLinkRepositoryShared
 from src.users.repositories.user import UserRepositoryBase
-from src.users.schemas.guardian_link import ChildResponse
-from src.users.schemas.user import (
+from users.schemas.system_admin.guardian_link import ChildResponse
+from users.schemas.system_admin.user import (
     ConfirmEmailChange,
     UpdateMeCredentials,
     UpdateMePassword,

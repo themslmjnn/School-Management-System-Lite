@@ -32,7 +32,8 @@ from src.users.repositories.user import (
     UserRepositoryAdmin,
     UserRepositoryBase,
 )
-from src.users.schemas.user import (
+from src.users.schemas.shared import StudentCacheSchema, StudentResponseAdminDetailed
+from src.users.schemas.system_admin.user import (
     CreateGuardianAdmin,
     CreateRequest,
     CreateStaffAdmin,
@@ -733,12 +734,12 @@ class UserServiceAdmin:
         sort_by: str,
         order: str,
     ) -> PaginatedResponse:
-        users, total = await UserRepositoryAdmin.get_users_admin(
+        staff, total = await UserRepositoryAdmin.get_users_admin(
             session, skip, limit, filters, sort_by, order, allowed_roles=STAFF_ROLES
         )
 
         return PaginatedResponse(
-            items=users,
+            items=staff,
             total=total,
             skip=skip,
             limit=limit,
@@ -757,15 +758,15 @@ class UserServiceAdmin:
 
             return UserResponseAdminDetailed.model_validate(raw.model_dump())
 
-        user = await UserRepositoryBase.get_user_by_id(
+        staff = await UserRepositoryBase.get_user_by_id(
             session, target_staff_id, allowed_roles=STAFF_ROLES
         )
-        ensure_exists(user, UserNotFoundError(HTTP404.USER))
+        ensure_exists(staff, UserNotFoundError(HTTP404.USER))
 
-        raw = UserCacheSchema.model_validate(user)
+        raw = UserCacheSchema.model_validate(staff)
         await set_cache(cache_key, raw.model_dump(mode="json"), 900)
 
-        return UserResponseAdminDetailed.model_validate(user)
+        return UserResponseAdminDetailed.model_validate(staff)
 
     @staticmethod
     async def get_guardians(
@@ -776,7 +777,7 @@ class UserServiceAdmin:
         sort_by: str,
         order: str,
     ) -> PaginatedResponse:
-        users, total = await UserRepositoryAdmin.get_users_admin(
+        guardians, total = await UserRepositoryAdmin.get_users_admin(
             session,
             skip,
             limit,
@@ -787,7 +788,7 @@ class UserServiceAdmin:
         )
 
         return PaginatedResponse(
-            items=users,
+            items=guardians,
             total=total,
             skip=skip,
             limit=limit,
@@ -806,12 +807,67 @@ class UserServiceAdmin:
 
             return UserResponseAdminDetailed.model_validate(raw.model_dump())
 
-        user = await UserRepositoryBase.get_user_by_id(
+        guardian = await UserRepositoryBase.get_user_by_id(
             session, target_guardian_id, allowed_roles={UserRole.GUARDIAN}
         )
-        ensure_exists(user, UserNotFoundError(HTTP404.USER))
+        ensure_exists(guardian, UserNotFoundError(HTTP404.USER))
 
-        raw = UserCacheSchema.model_validate(user)
+        raw = UserCacheSchema.model_validate(guardian)
         await set_cache(cache_key, raw.model_dump(mode="json"), 900)
 
-        return UserResponseAdminDetailed.model_validate(user)
+        return UserResponseAdminDetailed.model_validate(guardian)
+
+    @staticmethod
+    async def get_students(
+        db: AsyncSession,
+        skip: int,
+        limit: int,
+        group_id: int | None,
+        filters: SearchUserAdmin,
+        sort_by: str,
+        order: str,
+    ) -> PaginatedResponse:
+        students, total = await UserRepositoryAdmin.get_users_admin(
+            db,
+            skip,
+            limit,
+            filters,
+            sort_by,
+            order,
+            allowed_roles=frozenset({UserRole.STUDENT}),
+            group_id=group_id,
+            load_group=True,
+        )
+
+        return PaginatedResponse(
+            items=students,
+            total=total,
+            skip=skip,
+            limit=limit,
+            has_more=skip + limit < total,
+        )
+
+    @staticmethod
+    async def get_student_by_id(
+        session: AsyncSession, target_student_id: int
+    ) -> StudentResponseAdminDetailed:
+        cache_key = UserCacheKey.user_detail_key_admin(target_student_id)
+        cached = await get_cache(cache_key)
+
+        if cached is not None:
+            raw = StudentCacheSchema.model_validate(cached)
+
+            return StudentResponseAdminDetailed.model_validate(raw.model_dump())
+
+        student = await UserRepositoryBase.get_user_by_id(
+            session,
+            target_student_id,
+            allowed_roles=frozenset({UserRole.STUDENT}),
+            load_group=True,
+        )
+        ensure_exists(student, UserNotFoundError(HTTP404.USER))
+
+        raw = StudentCacheSchema.model_validate(student)
+        await set_cache(cache_key, raw.model_dump(mode="json"), 900)
+
+        return StudentResponseAdminDetailed.model_validate(student)

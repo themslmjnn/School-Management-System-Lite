@@ -1,6 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.users.schemas.user import SearchUserAdmin
+from users.schemas.system_admin.user import SearchUserAdmin
 from src.users.services.system_admin.user import UserServiceAdmin
 from src.utils.enums import OrderBy, UserSortField
 from tests.factories import (

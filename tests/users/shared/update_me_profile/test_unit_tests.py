@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.users.exceptions.exceptions import DuplicatePhoneNumberError, UserNotFoundError
 from src.users.models.user import User
-from src.users.schemas.user import UpdateMeProfile
+from users.schemas.system_admin.user import UpdateMeProfile
 from src.users.services.shared import UserServiceSelf
 from src.utils.base_exception import AccessDeniedError, NoChangesDetectedError
 from src.utils.cache_keys import UserCacheKey

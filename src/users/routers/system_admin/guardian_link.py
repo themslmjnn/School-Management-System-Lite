@@ -7,7 +7,7 @@ from src.core.dependencies import (
     async_db_dependency,
     require_system_admin,
 )
-from src.users.schemas.guardian_link import (
+from users.schemas.system_admin.guardian_link import (
     CreateGuardianLinkAdmin,
     GuardianLinkResponseAdmin,
     UpdateGuardianPriorityAdmin,

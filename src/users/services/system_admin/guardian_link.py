@@ -15,7 +15,7 @@ from src.users.exceptions.exceptions import (
 from src.users.models.guardian_link import StudentGuardianLink
 from src.users.repositories.guardian_link import GuardianLinkRepositoryAdmin
 from src.users.repositories.user import UserRepositoryBase
-from src.users.schemas.guardian_link import (
+from users.schemas.system_admin.guardian_link import (
     CreateGuardianLinkAdmin,
     UpdateGuardianPriorityAdmin,
 )

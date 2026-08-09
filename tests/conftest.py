@@ -18,7 +18,7 @@ from database.connection import Base
 from src.main import app
 from src.users.models import User
 from src.users.repositories.user import UserRepositoryBase
-from src.users.schemas.user import (
+from users.schemas.system_admin.user import (
     CreateGuardianAdmin,
     CreateStaffAdmin,
     CreateStudentAdmin,

@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
 from src.users.models.user import User
-from src.users.schemas.user import SearchUserAdmin, SearchUserBase
+from src.users.schemas.system_admin.user import SearchUserAdmin, SearchUserBase
 from src.utils.enums import (
     OrderBy,
     UserRole,
@@ -53,6 +53,7 @@ class UserRepositoryBase:
         load_session: bool = False,
         load_activation: bool = False,
         load_login_lockout: bool = False,
+        load_group: bool = False,
         allowed_roles: frozenset[UserRole] | None = None,
         excluded_roles: frozenset[UserRole] | None = None,
     ) -> User | None:
@@ -68,6 +69,8 @@ class UserRepositoryBase:
             query = query.options(joinedload(User.activation))
         if load_login_lockout:
             query = query.options(joinedload(User.login_lockout))
+        if load_group:
+            query = query.options(joinedload(User.group))
 
         result = await session.execute(query)
 
@@ -246,10 +249,17 @@ class UserRepositoryAdmin:
         sort_by: str = UserSortField.CREATED_AT,
         order: str = OrderBy.DESC,
         allowed_roles: frozenset[UserRole] | None = None,
+        group_id: int | None = None,
+        load_group: bool = False,
     ) -> tuple[list[User], int]:
         base_query = select(User).filter(
             User.role.not_in({UserRole.SYSTEM_ADMIN, UserRole.DIRECTOR})
         )
+
+        if group_id is not None:
+            base_query = base_query.filter(User.group_id == group_id)
+        if load_group:
+            base_query = base_query.options(joinedload(User.group))
 
         query = UserRepositoryAdmin._apply_admin_filters(
             base_query, filters, allowed_roles
@@ -257,8 +267,5 @@ class UserRepositoryAdmin:
         query = UserRepositoryBase.apply_sorting(query, sort_by, order)
 
         return await UserRepositoryBase.paginate(
-            session=session,
-            query=query,
-            skip=skip,
-            limit=limit,
+            session=session, query=query, skip=skip, limit=limit
         )

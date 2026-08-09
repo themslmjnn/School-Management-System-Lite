@@ -10,7 +10,7 @@ from src.users.exceptions.exceptions import (
     UserTypeMismatchError,
 )
 from src.users.models.user import User
-from src.users.schemas.user import (
+from users.schemas.system_admin.user import (
     UpdateStaffAndGuardianAdmin,
     UpdateStudentAdmin,
 )

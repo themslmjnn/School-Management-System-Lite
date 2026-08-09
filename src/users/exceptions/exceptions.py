@@ -44,10 +44,6 @@ class GuardianAlreadyPendingDeletionError(AppException):
     status_code = 409
 
 
-class PendingEmailNotFoundError(AppException):
-    status_code = 404
-
-
 class UserAlreadyActiveError(AppException):
     status_code = 409
 

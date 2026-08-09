@@ -10,8 +10,8 @@ from src.core.dependencies import (
     require_system_admin_and_guardian,
 )
 from src.core.limiter import user_limiter
-from src.users.schemas.guardian_link import ChildResponse
-from src.users.schemas.user import (
+from users.schemas.system_admin.guardian_link import ChildResponse
+from users.schemas.system_admin.user import (
     ConfirmEmailChange,
     UpdateMeCredentials,
     UpdateMePassword,

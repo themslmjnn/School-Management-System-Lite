@@ -10,7 +10,8 @@ from src.core.dependencies import (
 )
 from src.core.limiter import user_limiter
 from src.core.pagination import PaginatedResponse
-from src.users.schemas.user import (
+from src.users.schemas.shared import StudentResponseAdmin, StudentResponseAdminDetailed
+from src.users.schemas.system_admin.user import (
     CreateRequest,
     SearchUserAdmin,
     UpdateUser,
@@ -235,3 +236,37 @@ async def get_guardian_by_id(
     target_guardian_id: Annotated[int, Path(ge=1)],
 ):
     return await UserServiceAdmin.get_guardian_by_id(session, target_guardian_id)
+
+
+@router.get(
+    "/students",
+    response_model=PaginatedResponse[StudentResponseAdmin],
+    status_code=status.HTTP_200_OK,
+)
+@user_limiter.limit("15/minute")
+async def get_students(
+    request: Request,
+    session: async_session_dependency,
+    _: Annotated[CurrentUser, Depends(require_system_admin)],
+    pagination: pagination_dependency,
+    filters: Annotated[SearchUserAdmin, Depends()],
+    group_id: int | None = None,
+    sort_by: str = UserSortField.CREATED_AT,
+    order: str = OrderBy.DESC,
+):
+    return await UserServiceAdmin.get_students(
+        session, pagination.skip, pagination.limit, group_id, filters, sort_by, order
+    )
+
+
+@router.get(
+    "/students/{target_student_id}",
+    response_model=StudentResponseAdminDetailed,
+    status_code=status.HTTP_200_OK,
+)
+async def get_student_by_id(
+    session: async_session_dependency,
+    _: Annotated[CurrentUser, Depends(require_system_admin)],
+    target_student_id: Annotated[int, Path(ge=1)],
+):
+    return await UserServiceAdmin.get_student_by_id(session, target_student_id)
