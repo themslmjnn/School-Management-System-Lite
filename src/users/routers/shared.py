@@ -7,23 +7,37 @@ from src.core.dependencies import (
     async_session_dependency,
     current_user_dependency,
     require_guardians,
+    require_student,
     require_system_admin_and_guardian,
 )
 from src.core.limiter import user_limiter
 from src.users.schemas.shared import (
     ConfirmEmailChange,
+    StudentResponseSelf,
     UpdateMeCredentials,
     UpdateMePassword,
     UpdateMeProfile,
     UserResponseSelf,
 )
 from src.users.schemas.system_admin.guardian_link import ChildResponse
-from src.users.services.shared import GuardianLinkServiceShared, UserServiceSelf
+from src.users.services.shared import (
+    GuardianLinkServiceShared,
+    StudentService,
+    UserServiceSelf,
+)
 
 router = APIRouter(
     prefix="/users",
     tags=["Users - Shared - User"],
 )
+
+
+@router.get("/me", response_model=UserResponseSelf, status_code=status.HTTP_200_OK)
+async def get_my_profile(
+    session: async_session_dependency,
+    current_user: current_user_dependency,
+):
+    return await UserServiceSelf.get_my_profile(session, current_user)
 
 
 @router.patch(
@@ -94,3 +108,13 @@ async def get_my_children(
     return await GuardianLinkServiceShared.get_children_for_guardian(
         session, current_user.id
     )
+
+
+@router.get(
+    "/students/me", response_model=StudentResponseSelf, status_code=status.HTTP_200_OK
+)
+async def get_my_student_profile(
+    session: async_session_dependency,
+    current_user: Annotated[CurrentUser, Depends(require_student)],
+):
+    return await StudentService.get_my_profile(session, current_user)

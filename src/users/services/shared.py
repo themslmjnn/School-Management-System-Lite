@@ -5,8 +5,9 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.advisory_locks import acquire_student_contact_lock
-from src.core.caching import delete_cache
+from src.core.caching import delete_cache, get_cache, set_cache
 from src.core.config import settings
+from src.core.dependencies import CurrentUser
 from src.core.logging import get_logger
 from src.core.security import (
     generate_email_change_code,
@@ -30,9 +31,13 @@ from src.users.repositories.guardian_link import GuardianLinkRepositoryShared
 from src.users.repositories.user import UserRepositoryBase
 from src.users.schemas.shared import (
     ConfirmEmailChange,
+    StudentResponseSelf,
+    StudentSelfCacheSchema,
     UpdateMeCredentials,
     UpdateMePassword,
     UpdateMeProfile,
+    UserResponseSelf,
+    UserSelfCacheSchema,
 )
 from src.users.schemas.system_admin.guardian_link import ChildResponse
 from src.users.services.system_admin.user import check_contact_limit
@@ -53,6 +58,29 @@ STUDENT_MAX_SHARED_CONTACT = 3
 
 
 class UserServiceSelf:
+    @staticmethod
+    async def get_my_profile(
+        db: AsyncSession, current_user: CurrentUser
+    ) -> UserResponseSelf:
+        cache_key = UserCacheKey.user_detail_key_self(current_user.id)
+        cached = await get_cache(cache_key)
+
+        if cached is not None:
+            raw = UserSelfCacheSchema.model_validate(cached)
+            return UserResponseSelf.model_validate(raw.model_dump())
+
+        user = await UserRepositoryBase.get_user_by_id(
+            db,
+            current_user.id,
+            excluded_roles=frozenset({UserRole.STUDENT}),
+        )
+        ensure_exists(user, UserNotFoundError(HTTP404.USER))
+
+        raw = UserSelfCacheSchema.model_validate(user)
+        await set_cache(cache_key, raw.model_dump(mode="json"), 900)
+
+        return UserResponseSelf.model_validate(user)
+
     @staticmethod
     async def update_me_profile(
         db: AsyncSession,
@@ -351,6 +379,32 @@ class UserServiceSelf:
             "user_password_changed",
             target_user_id=current_user_id,
         )
+
+
+class StudentService:
+    @staticmethod
+    async def get_my_profile(
+        db: AsyncSession, current_user: CurrentUser
+    ) -> StudentResponseSelf:
+        cache_key = UserCacheKey.user_detail_key_self(current_user.id)
+        cached = await get_cache(cache_key)
+
+        if cached is not None:
+            raw = StudentSelfCacheSchema.model_validate(cached)
+            return StudentResponseSelf.model_validate(raw.model_dump())
+
+        student = await UserRepositoryBase.get_user_by_id(
+            db,
+            current_user.id,
+            allowed_roles=frozenset({UserRole.STUDENT}),
+            load_group=True,
+        )
+        ensure_exists(student, UserNotFoundError(HTTP404.USER))
+
+        raw = StudentSelfCacheSchema.model_validate(student)
+        await set_cache(cache_key, raw.model_dump(mode="json"), 900)
+
+        return StudentResponseSelf.model_validate(student)
 
 
 class GuardianLinkServiceShared:

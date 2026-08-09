@@ -124,3 +124,24 @@ class UpdateMePassword(BaseModel):
     @classmethod
     def validate_password_strength(cls, v: str) -> str:
         return validators.validate_password(v)
+
+
+class UserSelfCacheSchema(BaseSchema):
+    id: int
+    username: str
+    firstname: str
+    lastname: str
+    middlename: str | None
+    date_of_birth: date | None
+    phone_number: str
+    email: str
+    address: str | None
+    created_at: datetime
+
+
+class StudentSelfCacheSchema(UserSelfCacheSchema):
+    group: GroupResponseBase | None = None
+
+
+class StudentResponseSelf(UserResponseSelf):
+    group: GroupResponseBase | None = None

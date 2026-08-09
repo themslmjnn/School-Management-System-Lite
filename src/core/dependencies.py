@@ -118,6 +118,7 @@ require_guardian = require_roles(UserRole.GUARDIAN)
 require_guardians = require_roles(
     UserRole.DIRECTOR, UserRole.VICE_DIRECTOR, UserRole.TEACHER, UserRole.GUARDIAN
 )
+require_student = require_roles(UserRole.STUDENT)
 
 
 class PaginationParams(BaseModel):
