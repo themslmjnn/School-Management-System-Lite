@@ -5,8 +5,10 @@ from fastapi import APIRouter, Depends, Path, status
 from src.core.dependencies import (
     CurrentUser,
     async_session_dependency,
+    pagination_dependency,
     require_system_admin,
 )
+from src.core.pagination import PaginatedResponse
 from src.guardian_links.schemas import (
     CreateGuardianLinkAdmin,
     GuardianLinkResponseAdmin,
@@ -54,3 +56,31 @@ async def change_guardian_priority(
     await GuardianLinkServiceAdmin.change_priority(
         session, current_user.id, link_id, update_request
     )
+
+
+@router.get(
+    "",
+    response_model=PaginatedResponse[GuardianLinkResponseAdmin],
+    status_code=status.HTTP_200_OK,
+)
+async def get_links(
+    session: async_session_dependency,
+    _: Annotated[CurrentUser, Depends(require_system_admin)],
+    pagination: pagination_dependency,
+):
+    return await GuardianLinkServiceAdmin.get_links(
+        session, pagination.skip, pagination.limit
+    )
+
+
+@router.get(
+    "/{link_id}",
+    response_model=GuardianLinkResponseAdmin,
+    status_code=status.HTTP_200_OK,
+)
+async def get_link_by_id(
+    session: async_session_dependency,
+    _: Annotated[CurrentUser, Depends(require_system_admin)],
+    link_id: Annotated[int, Path(ge=1)],
+):
+    return await GuardianLinkServiceAdmin.get_link_by_id(session, link_id)

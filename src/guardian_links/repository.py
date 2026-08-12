@@ -1,4 +1,4 @@
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
@@ -53,3 +53,26 @@ class GuardianLinkRepository:
         result = await session.execute(query)
 
         return result.scalar_one_or_none()
+
+    @staticmethod
+    async def get_links(
+        session: AsyncSession,
+        skip: int,
+        limit: int,
+    ) -> tuple[list[StudentGuardianLink], int]:
+        count_query = select(func.count(StudentGuardianLink.id))
+        total = (await session.execute(count_query)).scalar()
+
+        query = (
+            select(StudentGuardianLink)
+            .options(
+                joinedload(StudentGuardianLink.guardian),
+                joinedload(StudentGuardianLink.student).joinedload(User.group),
+            )
+            .offset(skip)
+            .limit(limit)
+        )
+
+        result = await session.execute(query)
+
+        return list(result.scalars().all()), total
