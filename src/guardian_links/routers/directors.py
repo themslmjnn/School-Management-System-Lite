@@ -32,6 +32,7 @@ async def get_links(
         session, pagination.skip, pagination.limit
     )
 
+
 @router.get(
     "/{link_id}",
     response_model=GuardianLinkResponse,
