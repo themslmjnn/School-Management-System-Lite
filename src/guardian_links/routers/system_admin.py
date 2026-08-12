@@ -10,6 +10,7 @@ from src.core.dependencies import (
 from src.guardian_links.schemas import (
     CreateGuardianLinkAdmin,
     GuardianLinkResponseAdmin,
+    UpdateGuardianPriorityAdmin,
 )
 from src.guardian_links.services.system_admin import GuardianLinkServiceAdmin
 
@@ -41,3 +42,15 @@ async def unlink_guardian(
     link_id: Annotated[int, Path(ge=1)],
 ):
     await GuardianLinkServiceAdmin.unlink_guardian(session, current_user.id, link_id)
+
+
+@router.patch("/{link_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def change_guardian_priority(
+    session: async_session_dependency,
+    current_user: Annotated[CurrentUser, Depends(require_system_admin)],
+    link_id: Annotated[int, Path(ge=1)],
+    update_request: UpdateGuardianPriorityAdmin,
+):
+    await GuardianLinkServiceAdmin.change_priority(
+        session, current_user.id, link_id, update_request
+    )

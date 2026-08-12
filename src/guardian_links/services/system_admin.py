@@ -7,6 +7,7 @@ from src.guardian_links.repository import GuardianLinkRepository
 from src.guardian_links.schemas import (
     CreateGuardianLinkAdmin,
     GuardianLinkResponseAdmin,
+    UpdateGuardianPriorityAdmin,
 )
 from src.guardian_links.utils.constants import HTTP404
 from src.guardian_links.utils.exceptions import (
@@ -159,3 +160,60 @@ class GuardianLinkServiceAdmin:
             guardian_id=link.guardian_id,
             student_id=link.student_id,
         )
+
+    @staticmethod
+    async def change_priority(
+        session: AsyncSession,
+        current_user_id: int,
+        link_id: int,
+        update_request: UpdateGuardianPriorityAdmin,
+    ) -> None:
+        link = await GuardianLinkRepository.get_link_by_id(session, link_id)
+        ensure_exists(link, GuardianLinkNotFoundError(HTTP404.GUARDIAN_LINK))
+
+        if link.priority == update_request.priority:
+            return
+
+        existing_at_target = await GuardianLinkRepository.get_guardian_link_by_priority(
+            session, link.student_id, update_request.priority
+        )
+        if existing_at_target is not None:
+            logger.warning(
+                "guardian_priority_change_denied",
+                actor_user_id=current_user_id,
+                target_student_id=link.student_id,
+                denial_reason=f"{update_request.priority.value}_guardian_slot_already_filled",
+            )
+
+            raise GuardianSlotAlreadyFilledError(
+                f"Student already has a {update_request.priority.value} guardian; "
+                "change or remove the existing one first"
+            )
+
+        try:
+            link.priority = update_request.priority
+
+            await session.commit()
+
+            logger.info(
+                "guardian_priority_changed",
+                actor_user_id=current_user_id,
+                link_id=link_id,
+                guardian_id=link.guardian_id,
+                student_id=link.student_id,
+                new_priority=update_request.priority.value,
+            )
+
+        except IntegrityError as e:
+            await session.rollback()
+
+            logger.error(
+                "guardian_priority_change_failed",
+                actor_user_id=current_user_id,
+                link_id=link_id,
+                reason=str(e.orig),
+            )
+
+            raise GuardianSlotAlreadyFilledError(
+                "Could not update priority due to a conflicting guardian slot"
+            ) from e

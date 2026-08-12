@@ -29,3 +29,7 @@ class GuardianLinkResponseAdmin(GuardianLinkResponse):
     @field_serializer("created_at", "updated_at")
     def serialize_updated_at(self, value: datetime) -> str:
         return value.strftime("%d %b %Y, %H:%M")
+
+
+class UpdateGuardianPriorityAdmin(BaseModel):
+    priority: GuardianPriority
