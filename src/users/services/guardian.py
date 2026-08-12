@@ -5,12 +5,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.caching import delete_cache
 from src.core.logging import get_logger
-from src.users.exceptions.constants import HTTP404
-from src.users.exceptions.exceptions import (
+from src.users.repositories.user import UserRepositoryBase
+from src.users.utils.constants import HTTP404
+from src.users.utils.exceptions import (
     GuardianAlreadyPendingDeletionError,
     UserNotFoundError,
 )
-from src.users.repositories.user import UserRepositoryBase
 from src.utils import email as email_sender
 from src.utils.cache_keys import SessionCacheKey, UserCacheKey
 from src.utils.enums import EmailType, UserRole, UserStatus

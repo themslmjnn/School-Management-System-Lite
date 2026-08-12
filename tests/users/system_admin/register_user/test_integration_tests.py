@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.emails.repository import PendingEmailRepository
 from src.users.models.user import User
 from src.users.repositories.user import UserRepositoryBase
-from users.schemas.system_admin.user import (
+from users.schemas.system_admin import (
     CreateGuardianAdmin,
     CreateStaffAdmin,
     CreateStudentAdmin,

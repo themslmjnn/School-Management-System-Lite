@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.emails.models import EmailType
 from src.emails.repository import PendingEmailRepository
-from src.users.exceptions.exceptions import (
+from users.utils.exceptions import (
     DuplicateEmailError,
     DuplicatePhoneNumberError,
     MaxStaffOrGuardianPerEmailError,
@@ -16,12 +16,12 @@ from src.users.exceptions.exceptions import (
 )
 from src.users.models.user import User
 from src.users.repositories.user import UserRepositoryBase
-from users.schemas.system_admin.user import (
+from users.schemas.system_admin import (
     CreateGuardianAdmin,
     CreateStaffAdmin,
     CreateStudentAdmin,
 )
-from src.users.services.system_admin.user import UserServiceAdmin
+from users.services.system_admin import UserServiceAdmin
 from src.utils.enums import UserRole, UserStatus
 from tests.factories import (
     make_guardian,

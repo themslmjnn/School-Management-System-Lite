@@ -25,7 +25,7 @@ from src.groups.schemas import (
     GroupUpdate,
     SearchGroup,
 )
-from src.users.exceptions.exceptions import UserNotFoundError
+from users.utils.exceptions import UserNotFoundError
 from src.users.repositories.user import UserRepositoryBase
 from src.utils.base_exception import raise_unhandled_integrity_error
 from src.utils.cache_keys import GroupCacheKey

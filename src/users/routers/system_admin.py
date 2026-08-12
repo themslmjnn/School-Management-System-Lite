@@ -11,7 +11,7 @@ from src.core.dependencies import (
 from src.core.limiter import user_limiter
 from src.core.pagination import PaginatedResponse
 from src.users.schemas.shared import StudentResponseAdmin, StudentResponseAdminDetailed
-from src.users.schemas.system_admin.user import (
+from src.users.schemas.system_admin import (
     CreateRequest,
     SearchUserAdmin,
     UpdateUser,
@@ -19,7 +19,7 @@ from src.users.schemas.system_admin.user import (
     UserResponseAdmin,
     UserResponseAdminDetailed,
 )
-from src.users.services.system_admin.user import UserServiceAdmin
+from src.users.services.system_admin import UserServiceAdmin
 from src.utils.enums import OrderBy, UserSortField
 
 router = APIRouter(

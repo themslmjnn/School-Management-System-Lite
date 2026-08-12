@@ -3,13 +3,13 @@ from datetime import UTC, datetime, timedelta
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.users.exceptions.exceptions import (
+from users.utils.exceptions import (
     UserAlreadyPendingDeletionError,
     UserNotFoundError,
 )
 from src.users.models.user import User
 from src.users.repositories.user import UserRepositoryBase
-from src.users.services.system_admin.user import UserServiceAdmin
+from users.services.system_admin import UserServiceAdmin
 from src.utils.cache_keys import SessionCacheKey, UserCacheKey
 from src.utils.enums import UserStatus
 from tests.factories import make_guardian

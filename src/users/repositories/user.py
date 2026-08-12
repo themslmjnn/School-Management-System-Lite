@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
 from src.users.models.user import User
-from src.users.schemas.system_admin.user import SearchUserAdmin, SearchUserBase
+from src.users.schemas.system_admin import SearchUserAdmin, SearchUserBase
 from src.utils.enums import (
     OrderBy,
     UserRole,

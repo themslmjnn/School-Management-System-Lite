@@ -1,13 +1,13 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.logging import get_logger
-from src.users.exceptions.exceptions import (
+from src.users.repositories.user import UserRepositoryBase
+from src.users.utils.exceptions import (
     MaxStaffOrGuardianPerEmailError,
     MaxStaffOrGuardianPerPhoneNumberError,
     MaxStudentsPerEmailError,
     MaxStudentsPerPhoneNumberError,
 )
-from src.users.repositories.user import UserRepositoryBase
 from src.utils.enums import UserRole
 
 logger = get_logger(__name__)

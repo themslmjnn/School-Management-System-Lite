@@ -6,7 +6,6 @@ from src.core.dependencies import (
     CurrentUser,
     async_session_dependency,
     current_user_dependency,
-    require_guardians,
     require_student,
     require_system_admin_and_guardian,
 )
@@ -19,9 +18,7 @@ from src.users.schemas.shared import (
     UpdateMeProfile,
     UserResponseSelf,
 )
-from src.users.schemas.system_admin.guardian_link import ChildResponse
 from src.users.services.shared import (
-    GuardianLinkServiceShared,
     StudentService,
     UserServiceSelf,
 )
@@ -98,16 +95,6 @@ async def update_me_password(
     update_request: UpdateMePassword,
 ):
     await UserServiceSelf.update_me_password(session, current_user.id, update_request)
-
-
-@router.get("/me/children", response_model=list[ChildResponse])
-async def get_my_children(
-    session: async_session_dependency,
-    current_user: Annotated[CurrentUser, Depends(require_guardians)],
-):
-    return await GuardianLinkServiceShared.get_children_for_guardian(
-        session, current_user.id
-    )
 
 
 @router.get(

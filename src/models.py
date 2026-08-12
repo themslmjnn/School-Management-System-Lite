@@ -3,9 +3,9 @@ from src.academics.models.student_subject_enrollment import StudentSubjectEnroll
 from src.academics.models.teaching_assignment import TeachingAssignment
 from src.emails.models import PendingEmail
 from src.groups.models import Group
+from src.guardian_links.models import StudentGuardianLink
 from src.subjects.models import Subject
 from src.users.models.activation import UserActivation
-from src.users.models.guardian_link import StudentGuardianLink
 from src.users.models.login_lockout import UserLoginLockout
 from src.users.models.session import UserSession
 from src.users.models.user import User

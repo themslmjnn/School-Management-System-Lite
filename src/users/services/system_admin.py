@@ -7,23 +7,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.advisory_locks import acquire_student_contact_lock
 from src.core.caching import delete_cache, get_cache, set_cache
-from src.core.check_contact_limit import check_contact_limit
 from src.core.config import settings
 from src.core.dependencies import CurrentUser
 from src.core.logging import get_logger
 from src.core.pagination import PaginatedResponse
 from src.core.security import generate_invite_token, generate_reset_password_token
 from src.emails.repository import PendingEmailRepository
-from src.users.exceptions.constants import HTTP404
-from src.users.exceptions.exceptions import (
-    GuardianAlreadyPendingDeletionError,
-    UserAlreadyActiveError,
-    UserAlreadyInactiveError,
-    UserNotFoundError,
-    UserTypeMismatchError,
-    handle_non_student_unique_contact_error,
-    handle_username_integrity_error,
-)
 from src.users.models.activation import UserActivation
 from src.users.models.login_lockout import UserLoginLockout
 from src.users.models.session import UserSession
@@ -33,7 +22,7 @@ from src.users.repositories.user import (
     UserRepositoryBase,
 )
 from src.users.schemas.shared import StudentCacheSchema, StudentResponseAdminDetailed
-from src.users.schemas.system_admin.user import (
+from src.users.schemas.system_admin import (
     CreateGuardianAdmin,
     CreateRequest,
     CreateStaffAdmin,
@@ -44,6 +33,17 @@ from src.users.schemas.system_admin.user import (
     UpdateUserCredentials,
     UserCacheSchema,
     UserResponseAdminDetailed,
+)
+from src.users.utils.check_contact_limit import check_contact_limit
+from src.users.utils.constants import HTTP404
+from src.users.utils.exceptions import (
+    GuardianAlreadyPendingDeletionError,
+    UserAlreadyActiveError,
+    UserAlreadyInactiveError,
+    UserNotFoundError,
+    UserTypeMismatchError,
+    handle_non_student_unique_contact_error,
+    handle_username_integrity_error,
 )
 from src.utils import email as email_sender
 from src.utils.base_exception import raise_unhandled_integrity_error

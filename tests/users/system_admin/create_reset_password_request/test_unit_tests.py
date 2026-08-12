@@ -5,12 +5,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.dependencies import CurrentUser
 from src.emails.repository import PendingEmailRepository
-from src.users.exceptions.exceptions import (
+from users.utils.exceptions import (
     UserNotFoundError,
 )
 from src.users.models.user import User
 from src.users.repositories.user import UserRepositoryBase
-from src.users.services.system_admin.user import UserServiceAdmin
+from users.services.system_admin import UserServiceAdmin
 from src.utils.enums import EmailType, UserRole
 from tests.factories import make_system_admin
 

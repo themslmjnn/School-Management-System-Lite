@@ -10,7 +10,7 @@ from pydantic import (
 )
 
 from src.groups.schemas import GroupResponseBase
-from src.users.schemas.system_admin.user import UserCacheSchema, UserResponseAdmin
+from src.users.schemas.system_admin import UserCacheSchema, UserResponseAdmin
 from src.utils import validators as validators
 from src.utils.base_schema import BaseSchema
 

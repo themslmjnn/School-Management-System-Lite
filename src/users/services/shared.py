@@ -15,19 +15,7 @@ from src.core.security import (
     verify_email_change_code,
     verify_password,
 )
-from src.users.exceptions.constants import HTTP404
-from src.users.exceptions.exceptions import (
-    DuplicateEmailChangeRequestError,
-    EmailChangeCodeExpiredError,
-    IncorrectPasswordError,
-    InvalidEmailChangeCodeError,
-    NoPendingEmailChangeError,
-    UserNotFoundError,
-    handle_non_student_unique_contact_error,
-    handle_username_integrity_error,
-)
 from src.users.models.user import User
-from src.users.repositories.guardian_link import GuardianLinkRepositoryShared
 from src.users.repositories.user import UserRepositoryBase
 from src.users.schemas.shared import (
     ConfirmEmailChange,
@@ -39,8 +27,18 @@ from src.users.schemas.shared import (
     UserResponseSelf,
     UserSelfCacheSchema,
 )
-from src.users.schemas.system_admin.guardian_link import ChildResponse
-from src.users.services.system_admin.user import check_contact_limit
+from src.users.services.system_admin import check_contact_limit
+from src.users.utils.constants import HTTP404
+from src.users.utils.exceptions import (
+    DuplicateEmailChangeRequestError,
+    EmailChangeCodeExpiredError,
+    IncorrectPasswordError,
+    InvalidEmailChangeCodeError,
+    NoPendingEmailChangeError,
+    UserNotFoundError,
+    handle_non_student_unique_contact_error,
+    handle_username_integrity_error,
+)
 from src.utils import email as email_sender
 from src.utils.base_constant import HTTP400
 from src.utils.base_exception import (
@@ -405,24 +403,3 @@ class StudentService:
         await set_cache(cache_key, raw.model_dump(mode="json"), 900)
 
         return StudentResponseSelf.model_validate(student)
-
-
-class GuardianLinkServiceShared:
-    @staticmethod
-    async def get_children_for_guardian(
-        db: AsyncSession, guardian_id: int
-    ) -> list[ChildResponse]:
-        links = await GuardianLinkRepositoryShared.get_children_for_guardian(
-            db, guardian_id
-        )
-
-        return [
-            ChildResponse(
-                id=link.student.id,
-                firstname=link.student.firstname,
-                lastname=link.student.lastname,
-                middlename=link.student.middlename,
-                priority=link.priority,
-            )
-            for link in links
-        ]

@@ -3,18 +3,18 @@ from datetime import date
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.users.exceptions.exceptions import (
+from users.utils.exceptions import (
     DuplicatePhoneNumberError,
     MaxStudentsPerPhoneNumberError,
     UserNotFoundError,
     UserTypeMismatchError,
 )
 from src.users.models.user import User
-from users.schemas.system_admin.user import (
+from users.schemas.system_admin import (
     UpdateStaffAndGuardianAdmin,
     UpdateStudentAdmin,
 )
-from src.users.services.system_admin.user import UserServiceAdmin
+from users.services.system_admin import UserServiceAdmin
 from src.utils.base_exception import NoChangesDetectedError
 from tests.factories import (
     make_student,

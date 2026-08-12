@@ -16,7 +16,7 @@ from src.groups.schemas import (
     SearchGroup,
 )
 from src.groups.service import GroupService
-from users.schemas.system_admin.user import UserResponseAdmin
+from src.users.schemas.system_admin import UserResponseAdmin
 from src.utils.enums import GroupSortField, OrderBy
 
 router = APIRouter(

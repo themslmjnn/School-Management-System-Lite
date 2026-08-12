@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.core.config import settings
 from src.emails.models import EmailType
 from src.emails.repository import PendingEmailRepository
-from src.users.exceptions.exceptions import (
+from users.utils.exceptions import (
     DuplicateEmailError,
     MaxStudentsPerEmailError,
     UsernameAlreadyTakenError,
@@ -14,8 +14,8 @@ from src.users.exceptions.exceptions import (
 )
 from src.users.models.user import User
 from src.users.repositories.user import UserRepositoryBase
-from users.schemas.system_admin.user import UpdateUserCredentials
-from src.users.services.system_admin.user import UserServiceAdmin
+from users.schemas.system_admin import UpdateUserCredentials
+from users.services.system_admin import UserServiceAdmin
 from src.utils.base_exception import NoChangesDetectedError
 from src.utils.cache_keys import SessionCacheKey, UserCacheKey
 from src.utils.enums import UserStatus

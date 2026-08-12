@@ -3,14 +3,14 @@ from datetime import UTC, datetime, timedelta
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.users.exceptions.exceptions import (
+from users.utils.exceptions import (
     DuplicateEmailChangeRequestError,
     UsernameAlreadyTakenError,
     UserNotFoundError,
 )
 from src.users.models.user import User
 from src.users.repositories.user import UserRepositoryBase
-from users.schemas.system_admin.user import UpdateMeCredentials
+from users.schemas.system_admin import UpdateMeCredentials
 from src.users.services.shared import UserServiceSelf
 from src.utils.base_exception import NoChangesDetectedError
 from src.utils.cache_keys import SessionCacheKey
