@@ -15,6 +15,10 @@ class GuardianSlotAlreadyFilledError(AppException):
     status_code = 409
 
 
+class GuardianLinkNotFoundError(AppException):
+    status_code = 404
+
+
 def handle_guardian_student_pair_error(error: IntegrityError) -> None:
     if "uix_guardian_student_pair" in str(error.orig):
         raise GuardianLinkAlreadyExistsError("This guardian link could not be created")

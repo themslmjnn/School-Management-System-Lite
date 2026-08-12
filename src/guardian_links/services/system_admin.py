@@ -8,8 +8,10 @@ from src.guardian_links.schemas import (
     CreateGuardianLinkAdmin,
     GuardianLinkResponseAdmin,
 )
+from src.guardian_links.utils.constants import HTTP404
 from src.guardian_links.utils.exceptions import (
     GuardianLinkAlreadyExistsError,
+    GuardianLinkNotFoundError,
     GuardianSlotAlreadyFilledError,
     InvalidGuardianLinkError,
     handle_guardian_student_pair_error,
@@ -20,6 +22,7 @@ from src.guardian_links.utils.helpers import build_guardian_link_response_admin
 from src.users.repositories.user import UserRepositoryBase
 from src.utils.base_exception import raise_unhandled_integrity_error
 from src.utils.enums import UserRole
+from src.utils.helpers import ensure_exists
 
 logger = get_logger(__name__)
 
@@ -136,3 +139,23 @@ class GuardianLinkServiceAdmin:
             handle_one_primary_guardian_per_student_error(err)
             handle_one_secondary_guardian_per_student_error(err)
             raise_unhandled_integrity_error(err)
+
+    @staticmethod
+    async def unlink_guardian(
+        session: AsyncSession,
+        current_user_id: int,
+        link_id: int,
+    ) -> None:
+        link = await GuardianLinkRepository.get_link_by_id(session, link_id)
+        ensure_exists(link, GuardianLinkNotFoundError(HTTP404.GUARDIAN_LINK))
+
+        await session.delete(link)
+        await session.commit()
+
+        logger.info(
+            "guardian_unlinked",
+            actor_user_id=current_user_id,
+            link_id=link_id,
+            guardian_id=link.guardian_id,
+            student_id=link.student_id,
+        )

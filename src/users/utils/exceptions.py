@@ -72,10 +72,6 @@ class IncorrectPasswordError(AppException):
     status_code = 400
 
 
-class GuardianLinkNotFoundError(AppException):
-    status_code = 404
-
-
 class DuplicateEmailChangeRequestError(AppException):
     status_code = 409
 

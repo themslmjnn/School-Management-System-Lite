@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Path, status
 
 from src.core.dependencies import (
     CurrentUser,
@@ -32,3 +32,12 @@ async def link_guardian(
     return await GuardianLinkServiceAdmin.link_guardian(
         session, current_user.id, create_request
     )
+
+
+@router.delete("/{link_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def unlink_guardian(
+    session: async_session_dependency,
+    current_user: Annotated[CurrentUser, Depends(require_system_admin)],
+    link_id: Annotated[int, Path(ge=1)],
+):
+    await GuardianLinkServiceAdmin.unlink_guardian(session, current_user.id, link_id)
