@@ -136,3 +136,33 @@ class GuardianLinkRepository:
         )
         result = await db.execute(query)
         return result.scalar_one_or_none()
+
+    @staticmethod
+    async def get_links_for_student(
+        db: AsyncSession,
+        student_id: int,
+    ) -> list[StudentGuardianLink]:
+        query = (
+            select(StudentGuardianLink)
+            .options(joinedload(StudentGuardianLink.guardian))
+            .where(StudentGuardianLink.student_id == student_id)
+        )
+        result = await db.execute(query)
+        return list(result.scalars().all())
+
+    @staticmethod
+    async def get_link_for_student_by_id(
+        db: AsyncSession,
+        student_id: int,
+        link_id: int,
+    ) -> StudentGuardianLink | None:
+        query = (
+            select(StudentGuardianLink)
+            .options(joinedload(StudentGuardianLink.guardian))
+            .where(
+                StudentGuardianLink.id == link_id,
+                StudentGuardianLink.student_id == student_id,
+            )
+        )
+        result = await db.execute(query)
+        return result.scalar_one_or_none()
