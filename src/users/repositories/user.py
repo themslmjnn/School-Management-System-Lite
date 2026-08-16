@@ -1,6 +1,4 @@
-from datetime import UTC, datetime
-
-from sqlalchemy import Select, func, select, update
+from sqlalchemy import Select, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
@@ -10,7 +8,6 @@ from src.utils.enums import (
     OrderBy,
     UserRole,
     UserSortField,
-    UserStatus,
 )
 
 
@@ -156,66 +153,6 @@ class UserRepositoryBase:
         query = UserRepositoryBase.apply_sorting(query, sort_by, order)
 
         return await UserRepositoryBase.paginate(session, query, skip, limit)
-
-    @staticmethod
-    async def delete_user_if_due(session: AsyncSession, user_id: int) -> bool:
-        query = select(User).where(
-            User.id == user_id,
-            User.status == UserStatus.PENDING_DELETION,
-            User.deletion_scheduled_for <= datetime.now(UTC),
-        )
-
-        result = await session.execute(query)
-
-        return result.scalar_one_or_none()
-
-    @staticmethod
-    async def get_user_ids_due_for_hard_deletion(session: AsyncSession) -> list[int]:
-        query = select(User.id).where(
-            User.status == UserStatus.PENDING_DELETION,
-            User.deletion_scheduled_for <= datetime.now(UTC),
-        )
-
-        result = await session.execute(query)
-
-        return list(result.scalars().all())
-
-    @staticmethod
-    async def reactivate_pending_deletion_user(
-        session: AsyncSession, user_id: int
-    ) -> bool:
-        query = (
-            update(User)
-            .where(
-                User.id == user_id,
-                User.role == UserRole.GUARDIAN,
-                User.status == UserStatus.PENDING_DELETION,
-            )
-            .values(
-                status=UserStatus.ACTIVE,
-                is_active=True,
-                deletion_scheduled_for=None,
-            )
-        )
-
-        result = await session.execute(query)
-
-        return result.rowcount > 0
-
-    @staticmethod
-    async def get_user_by_id_pending_deletion(
-        session: AsyncSession,
-        user_id: int,
-    ) -> User | None:
-        query = select(User).where(
-            User.id == user_id,
-            User.role == UserRole.GUARDIAN,
-            User.status == UserStatus.PENDING_DELETION,
-        )
-
-        result = await session.execute(query)
-
-        return result.scalar_one_or_none()
 
 
 class UserRepositoryAdmin:

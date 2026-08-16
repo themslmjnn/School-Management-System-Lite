@@ -16,6 +16,7 @@ down_revision: str | Sequence[str] | None = "0cde98387259"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
+
 def upgrade() -> None:
     op.execute("DROP INDEX uix_non_student_unique_phone")
     op.execute("DROP INDEX uix_non_student_unique_email")

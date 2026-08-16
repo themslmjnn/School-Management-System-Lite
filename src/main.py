@@ -19,7 +19,6 @@ from src.core.middleware import RequestIDMiddleware
 from src.users.routers import shared as user_shared_router
 from src.users.routers import system_admin as user_system_admin_router
 from src.utils import base_exception as base_exc
-from src.workers.deletion_worker import start_deletion_worker
 from src.workers.email_worker import run_email_worker
 
 configure_mappers()
@@ -56,17 +55,14 @@ async def lifespan(app: FastAPI):
         )
 
     email_task = asyncio.create_task(run_email_worker())
-    deletion_task = asyncio.create_task(start_deletion_worker())
 
     logger.info("email_task_started")
-    logger.info("deletion_task_started")
 
     yield
 
     email_task.cancel()
-    deletion_task.cancel()
 
-    results = await asyncio.gather(email_task, deletion_task, return_exceptions=True)
+    results = await asyncio.gather(email_task, return_exceptions=True)
 
     for result in results:
         if isinstance(result, BaseException) and not isinstance(

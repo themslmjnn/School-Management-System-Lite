@@ -45,7 +45,7 @@ from src.utils.base_exception import (
     InvalidRefreshTokenError,
     InvalidResetPasswordTokenError,
 )
-from src.utils.cache_keys import SessionCacheKey, UserCacheKey
+from src.utils.cache_keys import SessionCacheKey
 from src.utils.enums import EmailType, UserStatus
 from src.utils.response_messages import PublicMessages
 from src.utils.response_schema import MessageResponse
@@ -202,50 +202,7 @@ class AuthService:
 
             raise InvalidCredentialsError(HTTP401.INVALID_CREDENTIALS)
 
-        if user.status == UserStatus.PENDING_DELETION:
-            grace_period_active = (
-                user.deletion_scheduled_for is not None
-                and datetime.now(UTC) < user.deletion_scheduled_for
-            )
-
-            if not grace_period_active:
-                logger.warning(
-                    "login_failed",
-                    reason="deletion_grace_period_expired",
-                    user_id=user.id,
-                )
-
-                raise AccountInactiveError(HTTP403.ACCOUNT_DEACTIVATED)
-
-            reactivated = await UserRepositoryBase.reactivate_pending_deletion_user(
-                db, user.id
-            )
-
-            if not reactivated:
-                await db.rollback()
-
-                logger.warning(
-                    "login_reactivation_lost_race",
-                    user_id=user.id,
-                    denial_reason="user_hard_deleted_before_reactivation_committed",
-                )
-
-                raise AccountInactiveError(HTTP403.ACCOUNT_DEACTIVATED)
-
-            logger.info("account_reactivated_on_login", user_id=user.id)
-
-            user_email = user.email
-
-            asyncio.create_task(
-                email_sender.send_safe(
-                    email_sender.send_account_deletion_canceled_email(user_email),
-                    email_type=EmailType.CANCEL_ACCOUNT_DELETION,
-                )
-            )
-
-            await delete_cache(UserCacheKey.user_detail_key_admin(user.id))
-
-        elif user.status != UserStatus.ACTIVE:
+        if user.status != UserStatus.ACTIVE:
             logger.warning(
                 "login_failed",
                 reason="account_inactive",
