@@ -1,5 +1,3 @@
-from src.academics.models.head_of_class_assignment import HeadOfClassAssignment
-from src.academics.models.student_subject_enrollment import StudentSubjectEnrollment
 from src.emails.models import PendingEmail
 from src.groups.models import Group
 from src.subjects.models import Subject

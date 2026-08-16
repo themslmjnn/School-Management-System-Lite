@@ -23,16 +23,4 @@ class Group(Base):
         UniqueConstraint("name", "academic_year", name="uix_group_name_academic_year"),
     )
 
-    teaching_assignments: Mapped[list["TeachingAssignment"]] = relationship(  # noqa: F821
-        "TeachingAssignment", back_populates="group"
-    )
-
-    enrollments: Mapped[list["StudentSubjectEnrollment"]] = relationship(  # noqa: F821
-        "StudentSubjectEnrollment", back_populates="group"
-    )
-
-    head_of_class_assignments: Mapped[list["HeadOfClassAssignment"]] = relationship(  # noqa: F821
-        "HeadOfClassAssignment", back_populates="group"
-    )
-
     students: Mapped[list["User"]] = relationship("User", back_populates="group")  # noqa: F821

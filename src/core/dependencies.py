@@ -44,7 +44,7 @@ class CurrentUser:
 
 
 async def get_current_user(
-    request: Request, db: async_session_dependency, token: str = Depends(oauth2_scheme)
+    request: Request, session: async_session_dependency, token: str = Depends(oauth2_scheme)
 ) -> CurrentUser:
     try:
         payload = decode_access_token(token)
@@ -74,7 +74,7 @@ async def get_current_user(
             role=UserRole(payload.get("role")),
         )
 
-    user = await UserRepositoryBase.get_user_by_id(db, user_id, load_session=True)
+    user = await UserRepositoryBase.get_user_by_id(session, user_id, load_session=True)
 
     if user is None:
         raise InvalidAccessTokenError(HTTP401.INVALID_ACCESS_TOKEN)

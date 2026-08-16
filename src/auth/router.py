@@ -26,29 +26,29 @@ router = APIRouter(
 async def login(
     request: Request,
     response: Response,
-    db: async_session_dependency,
+    session: async_session_dependency,
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
 ):
-    return await AuthService.login(db, response, form_data)
+    return await AuthService.login(session, response, form_data)
 
 
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
 async def logout(
     response: Response,
-    db: async_session_dependency,
+    session: async_session_dependency,
     current_user: current_user_dependency,
 ):
-    await AuthService.logout(response, db, current_user.id)
+    await AuthService.logout(response, session, current_user.id)
 
 
 @router.post("/activate_with_token", status_code=status.HTTP_204_NO_CONTENT)
 @ip_limiter.limit("3/minute")
 async def activate_with_token(
     request: Request,
-    db: async_session_dependency,
+    session: async_session_dependency,
     activation_request: ActivateAccountWithToken,
 ):
-    await AuthService.activate_account_with_token(db, activation_request)
+    await AuthService.activate_account_with_token(session, activation_request)
 
 
 @router.post(
@@ -58,7 +58,7 @@ async def activate_with_token(
 async def refresh_token(
     request: Request,
     response: Response,
-    db: async_session_dependency,
+    session: async_session_dependency,
     refresh_token: str | None = Cookie(default=None),
     refresh_token_family: str | None = Cookie(default=None),
 ):
@@ -69,7 +69,7 @@ async def refresh_token(
         )
 
     return await AuthService.refresh_token(
-        db, response, refresh_token, refresh_token_family
+        session, response, refresh_token, refresh_token_family
     )
 
 
@@ -77,10 +77,10 @@ async def refresh_token(
 @ip_limiter.limit("5/minute")
 async def reset_password(
     request: Request,
-    db: async_session_dependency,
+    session: async_session_dependency,
     update_request: ResetPassword,
 ):
-    return await AuthService.reset_password(db, update_request)
+    return await AuthService.reset_password(session, update_request)
 
 
 @router.post(
@@ -89,7 +89,7 @@ async def reset_password(
 @ip_limiter.limit("5/minute")
 async def create_forgot_password_request(
     request: Request,
-    db: async_session_dependency,
+    session: async_session_dependency,
     forgot_password_request: ForgotPasswordPublicRequest,
 ):
-    return await AuthService.create_forgot_password_request(db, forgot_password_request)
+    return await AuthService.create_forgot_password_request(session, forgot_password_request)

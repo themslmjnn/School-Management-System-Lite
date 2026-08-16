@@ -34,6 +34,7 @@ nodeenv==1.10.0
 packaging==26.2
 passlib==1.7.4
 pathspec==1.1.1
+phonenumbers==9.0.37
 platformdirs==4.10.0
 pluggy==1.6.0
 pre_commit==4.6.0
@@ -54,6 +55,7 @@ PyYAML==6.0.3
 redis==8.0.0
 rsa==4.9.1
 ruff==0.15.17
+setuptools==80.9.0
 six==1.17.0
 slowapi==0.1.10
 SQLAlchemy==2.0.48

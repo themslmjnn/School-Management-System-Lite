@@ -1,7 +1,7 @@
 from sqlalchemy import Select, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.academics.models.teaching_assignment import TeachingAssignment
+# from src.academics.models.teaching_assignment import TeachingAssignment
 from src.groups.models import Group
 from src.groups.schemas import SearchGroup
 from src.users.models.user import User
@@ -10,39 +10,39 @@ from src.utils.enums import GroupSortField, OrderBy, UserRole
 
 class GroupRepository:
     @staticmethod
-    def add_group(db: AsyncSession, new_group: Group) -> None:
-        db.add(new_group)
+    def add_group(session: AsyncSession, new_group: Group) -> None:
+        session.add(new_group)
 
     @staticmethod
-    async def get_group_by_id(db: AsyncSession, group_id: int) -> Group | None:
+    async def get_group_by_id(session: AsyncSession, group_id: int) -> Group | None:
         query = select(Group).filter(Group.id == group_id)
 
-        result = await db.execute(query)
+        result = await session.execute(query)
 
         return result.scalar_one_or_none()
 
     @staticmethod
     async def get_group_by_name_and_year(
-        db: AsyncSession, name: str, academic_year: int
+        session: AsyncSession, name: str, academic_year: int
     ) -> Group | None:
         query = select(Group).filter(
             Group.name == name, Group.academic_year == academic_year
         )
 
-        result = await db.execute(query)
+        result = await session.execute(query)
 
         return result.scalar_one_or_none()
 
     @staticmethod
     async def paginate(
-        db: AsyncSession, query: Select, skip: int, limit: int
+        session: AsyncSession, query: Select, skip: int, limit: int
     ) -> tuple[list, int]:
-        count_result = await db.execute(
+        count_result = await session.execute(
             select(func.count()).select_from(query.subquery())
         )
         total = count_result.scalar_one()
 
-        result = await db.execute(query.offset(skip).limit(limit))
+        result = await session.execute(query.offset(skip).limit(limit))
 
         return result.scalars().all(), total
 
@@ -74,7 +74,7 @@ class GroupRepository:
 
     @staticmethod
     async def get_groups(
-        db: AsyncSession,
+        session: AsyncSession,
         *,
         filters: SearchGroup | None = None,
         sort_by: str = GroupSortField.CREATED_AT,
@@ -88,38 +88,38 @@ class GroupRepository:
         query = GroupRepository.apply_filters(query, filters)
         query = GroupRepository.apply_sorting(query, sort_by, order)
 
-        return await GroupRepository.paginate(db, query, skip, limit)
+        return await GroupRepository.paginate(session, query, skip, limit)
 
     @staticmethod
-    async def count_active_students(db: AsyncSession, group_id: int) -> int:
+    async def count_active_students(session: AsyncSession, group_id: int) -> int:
         query = select(func.count(User.id)).filter(
             User.group_id == group_id, User.role == UserRole.STUDENT
         )
 
-        result = await db.execute(query)
+        result = await session.execute(query)
 
         return result.scalar()
 
     @staticmethod
-    async def has_active_students(db: AsyncSession, group_id: int) -> bool:
-        return await GroupRepository.count_active_students(db, group_id) > 0
+    async def has_active_students(session: AsyncSession, group_id: int) -> bool:
+        return await GroupRepository.count_active_students(session, group_id) > 0
 
-    @staticmethod
-    async def has_active_teaching_assignments(db: AsyncSession, group_id: int) -> bool:
-        query = select(func.count(TeachingAssignment.id)).filter(
-            TeachingAssignment.group_id == group_id
-        )
+    # @staticmethod
+    # async def has_active_teaching_assignments(session: AsyncSession, group_id: int) -> bool:
+    #     query = select(func.count(TeachingAssignment.id)).filter(
+    #         TeachingAssignment.group_id == group_id
+    #     )
 
-        result = await db.execute(query)
+    #     result = await session.execute(query)
 
-        return result.scalar() > 0
+    #     return result.scalar() > 0
 
     @staticmethod
     async def get_students(
-        db: AsyncSession, group_id: int, skip: int, limit: int
+        session: AsyncSession, group_id: int, skip: int, limit: int
     ) -> tuple[list[User], int]:
         query = select(User).filter(
             User.group_id == group_id, User.role == UserRole.STUDENT
         )
 
-        return await GroupRepository.paginate(db, query, skip, limit)
+        return await GroupRepository.paginate(session, query, skip, limit)

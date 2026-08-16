@@ -4,14 +4,15 @@ from fastapi import APIRouter, Depends, Path, status
 
 from src.core.dependencies import (
     CurrentUser,
-    async_db_dependency,
+    async_session_dependency,
     pagination_dependency,
     require_system_admin,
 )
 from src.core.pagination import PaginatedResponse
 from src.groups.schemas import (
     GroupCreate,
-    GroupResponse,
+    GroupResponseAdminDetailed,
+    GroupResponseBase,
     GroupUpdate,
     SearchGroup,
 )
@@ -25,48 +26,48 @@ router = APIRouter(
 )
 
 
-@router.post("", response_model=GroupResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=GroupResponseAdminDetailed, status_code=status.HTTP_201_CREATED)
 async def create_group(
-    db: async_db_dependency,
+    session: async_session_dependency,
     current_user: Annotated[CurrentUser, Depends(require_system_admin)],
     create_request: GroupCreate,
 ):
-    return await GroupService.create_group(db, current_user.id, create_request)
+    return await GroupService.create_group(session, current_user.id, create_request)
 
 
-@router.patch("/{group_id}", response_model=GroupResponse)
+@router.patch("/{group_id}")
 async def update_group(
-    db: async_db_dependency,
+    session: async_session_dependency,
     current_user: Annotated[CurrentUser, Depends(require_system_admin)],
     group_id: Annotated[int, Path(ge=1)],
     update_request: GroupUpdate,
 ):
-    return await GroupService.update_group(
-        db, current_user.id, group_id, update_request
+    await GroupService.update_group(
+        session, current_user.id, group_id, update_request
     )
 
 
 @router.patch("/{group_id}/archive", status_code=status.HTTP_204_NO_CONTENT)
 async def archive_group(
-    db: async_db_dependency,
+    session: async_session_dependency,
     current_user: Annotated[CurrentUser, Depends(require_system_admin)],
     group_id: Annotated[int, Path(ge=1)],
 ):
-    await GroupService.archive_group(db, current_user.id, group_id)
+    await GroupService.archive_group(session, current_user.id, group_id)
 
 
 @router.patch("/{group_id}/restoration", status_code=status.HTTP_204_NO_CONTENT)
 async def restore_group(
-    db: async_db_dependency,
+    session: async_session_dependency,
     current_user: Annotated[CurrentUser, Depends(require_system_admin)],
     group_id: Annotated[int, Path(ge=1)],
 ):
-    await GroupService.restore_group(db, current_user.id, group_id)
+    await GroupService.restore_group(session, current_user.id, group_id)
 
 
-@router.get("", response_model=PaginatedResponse[GroupResponse])
+@router.get("", response_model=PaginatedResponse[GroupResponseBase])
 async def get_groups(
-    db: async_db_dependency,
+    session: async_session_dependency,
     _: Annotated[CurrentUser, Depends(require_system_admin)],
     pagination: pagination_dependency,
     filters: Annotated[SearchGroup, Depends()],
@@ -74,7 +75,7 @@ async def get_groups(
     order: str = OrderBy.DESC,
 ):
     return await GroupService.get_groups(
-        db,
+        session,
         pagination.skip,
         pagination.limit,
         filters,
@@ -83,24 +84,24 @@ async def get_groups(
     )
 
 
-@router.get("/{group_id}", response_model=GroupResponse)
+@router.get("/{group_id}", response_model=GroupResponseAdminDetailed)
 async def get_group_by_id(
-    db: async_db_dependency,
+    session: async_session_dependency,
     _: Annotated[CurrentUser, Depends(require_system_admin)],
     group_id: Annotated[int, Path(ge=1)],
 ):
-    return await GroupService.get_group_by_id(db, group_id)
+    return await GroupService.get_group_by_id(session, group_id)
 
 
 @router.get("/{group_id}/students", response_model=PaginatedResponse[UserResponseAdmin])
 async def get_group_students(
-    db: async_db_dependency,
+    session: async_session_dependency,
     _: Annotated[CurrentUser, Depends(require_system_admin)],
     pagination: pagination_dependency,
     group_id: Annotated[int, Path(ge=1)],
 ):
     return await GroupService.get_students(
-        db, group_id, pagination.skip, pagination.limit
+        session, group_id, pagination.skip, pagination.limit
     )
 
 
@@ -108,23 +109,23 @@ async def get_group_students(
     "/{group_id}/students/{student_id}", status_code=status.HTTP_204_NO_CONTENT
 )
 async def add_student_to_group(
-    db: async_db_dependency,
+    session: async_session_dependency,
     current_user: Annotated[CurrentUser, Depends(require_system_admin)],
     group_id: Annotated[int, Path(ge=1)],
     student_id: Annotated[int, Path(ge=1)],
 ):
-    await GroupService.add_student_to_group(db, current_user.id, group_id, student_id)
+    await GroupService.add_student_to_group(session, current_user.id, group_id, student_id)
 
 
 @router.delete(
     "/{group_id}/students/{student_id}", status_code=status.HTTP_204_NO_CONTENT
 )
 async def remove_student_from_group(
-    db: async_db_dependency,
+    session: async_session_dependency,
     current_user: Annotated[CurrentUser, Depends(require_system_admin)],
     group_id: Annotated[int, Path(ge=1)],
     student_id: Annotated[int, Path(ge=1)],
 ):
     await GroupService.remove_student_from_group(
-        db, current_user.id, group_id, student_id
+        session, current_user.id, group_id, student_id
     )

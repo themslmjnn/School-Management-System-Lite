@@ -7,7 +7,7 @@ from src.core.dependencies import (
     async_session_dependency,
     current_user_dependency,
     require_student,
-    require_system_admin_and_guardian,
+    require_system_admin,
 )
 from src.core.limiter import user_limiter
 from src.users.schemas.shared import (
@@ -45,7 +45,7 @@ async def get_my_profile(
 async def update_me_profile(
     request: Request,
     session: async_session_dependency,
-    current_user: Annotated[CurrentUser, Depends(require_system_admin_and_guardian)],
+    current_user: Annotated[CurrentUser, Depends(require_system_admin)],
     update_request: UpdateMeProfile,
 ):
     await UserServiceSelf.update_me_profile(session, current_user.id, update_request)

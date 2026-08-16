@@ -1,8 +1,14 @@
+import os
+
 from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 ALGORITHM = "HS256"
 
+_env_file = {
+    "production": ".env.prod",
+    "test": ".env.test",
+}.get(os.getenv("ENVIRONMENT", "development"), ".env")
 
 class Settings(BaseSettings):
     ENVIRONMENT: str = "development"
@@ -134,7 +140,10 @@ class Settings(BaseSettings):
             return "https://sms-lite.com"
         return "http://localhost:8000"
 
-    model_config = SettingsConfigDict(env_file=".env")
+    model_config = SettingsConfigDict(
+        env_file=_env_file if os.path.exists(_env_file) else None,
+        env_file_encoding="utf-8",
+    )
 
 
 settings = Settings()

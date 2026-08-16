@@ -99,9 +99,9 @@ class AuthService:
         )
 
     @staticmethod
-    async def _invalidate_all_tokens(db: AsyncSession, current_user_id: int) -> None:
+    async def _invalidate_all_tokens(session: AsyncSession, current_user_id: int) -> None:
         user = await UserRepositoryBase.get_user_by_id(
-            db, current_user_id, load_session=True
+            session, current_user_id, load_session=True
         )
         if user is None:
             return
@@ -111,7 +111,7 @@ class AuthService:
         user.session.refresh_token_family = None
         user.session.refresh_token_expires_at = None
 
-        await db.commit()
+        await session.commit()
 
         await delete_cache(SessionCacheKey.access_token_version_key(current_user_id))
 
@@ -123,13 +123,13 @@ class AuthService:
 
     @staticmethod
     async def login(
-        db: AsyncSession, response: Response, form_data: OAuth2PasswordRequestForm
+        session: AsyncSession, response: Response, form_data: OAuth2PasswordRequestForm
     ) -> LoginResponse:
         if form_data.username is None or form_data.password is None:
             raise EmptyCredentialsError("Username and password is required")
 
         user = await AuthRepository.get_user_by_username(
-            db,
+            session,
             form_data.username,
             load_session=True,
             load_login_lockout=True,
@@ -198,7 +198,7 @@ class AuthService:
                     failed_attempts=user.login_lockout.failed_login_attempts,
                 )
 
-            await db.commit()
+            await session.commit()
 
             raise InvalidCredentialsError(HTTP401.INVALID_CREDENTIALS)
 
@@ -233,8 +233,8 @@ class AuthService:
             days=settings.REFRESH_TOKEN_EXPIRES_DAYS
         )
 
-        await db.commit()
-        await db.refresh(user)
+        await session.commit()
+        await session.refresh(user)
 
         logger.info(
             "login_success",
@@ -252,9 +252,9 @@ class AuthService:
 
     @staticmethod
     async def logout(
-        response: Response, db: AsyncSession, current_user_id: int
+        response: Response, session: AsyncSession, current_user_id: int
     ) -> None:
-        await AuthService._invalidate_all_tokens(db, current_user_id)
+        await AuthService._invalidate_all_tokens(session, current_user_id)
 
         AuthService._clear_refresh_token_cookie(response)
         AuthService._clear_refresh_family_cookie(response)
@@ -266,10 +266,10 @@ class AuthService:
 
     @staticmethod
     async def activate_account_with_token(
-        db: AsyncSession, activation_request: ActivateAccountWithToken
+        session: AsyncSession, activation_request: ActivateAccountWithToken
     ) -> None:
         user = await AuthRepository.get_user_by_username(
-            db, activation_request.username, load_activation=True
+            session, activation_request.username, load_activation=True
         )
 
         if user is None or user.activation.invite_token_hash is None:
@@ -310,8 +310,8 @@ class AuthService:
         user.activation.invite_token_hash = None
         user.activation.invite_token_expires_at = None
 
-        await db.commit()
-        await db.refresh(user)
+        await session.commit()
+        await session.refresh(user)
 
         logger.info(
             "account_activated",
@@ -321,7 +321,7 @@ class AuthService:
 
     @staticmethod
     async def refresh_token(
-        db: AsyncSession,
+        session: AsyncSession,
         response: Response,
         raw_refresh_token: str,
         refresh_token_family: str,
@@ -347,7 +347,7 @@ class AuthService:
 
             raise InvalidRefreshTokenError(HTTP401.INVALID_REFRESH_TOKEN) from exc
 
-        user = await UserRepositoryBase.get_user_by_id(db, user_id, load_session=True)
+        user = await UserRepositoryBase.get_user_by_id(session, user_id, load_session=True)
 
         if (
             user is None
@@ -380,7 +380,7 @@ class AuthService:
         )
 
         if not refresh_token_family_valid or not refresh_token_hash_valid:
-            await AuthService._invalidate_all_tokens(db, user.id)
+            await AuthService._invalidate_all_tokens(session, user.id)
 
             logger.warning(
                 "refresh_token_security_violation",
@@ -411,8 +411,8 @@ class AuthService:
             days=settings.REFRESH_TOKEN_EXPIRES_DAYS
         )
 
-        await db.commit()
-        await db.refresh(user)
+        await session.commit()
+        await session.refresh(user)
 
         logger.info(
             "refresh_token_rotated",
@@ -429,9 +429,9 @@ class AuthService:
         )
 
     @staticmethod
-    async def reset_password(db: AsyncSession, update_request: ResetPassword):
+    async def reset_password(session: AsyncSession, update_request: ResetPassword):
         user = await AuthRepository.get_user_by_username(
-            db,
+            session,
             update_request.username,
             load_session=True,
             load_login_lockout=True,
@@ -480,8 +480,8 @@ class AuthService:
         user.login_lockout.failed_login_attempts = 0
         user.login_lockout.locked_until = None
 
-        await db.commit()
-        await db.refresh(user)
+        await session.commit()
+        await session.refresh(user)
 
         await delete_cache(SessionCacheKey.access_token_version_key(user.id))
 
@@ -492,11 +492,11 @@ class AuthService:
 
     @staticmethod
     async def create_forgot_password_request(
-        db: AsyncSession,
+        session: AsyncSession,
         forgot_password_request: ForgotPasswordPublicRequest,
     ) -> MessageResponse:
         user = await AuthRepository.get_user_by_username(
-            db, forgot_password_request.username, load_session=True
+            session, forgot_password_request.username, load_session=True
         )
 
         raw_reset_password_token, hashed_reset_password_token = (
@@ -509,7 +509,7 @@ class AuthService:
                 UTC
             ) + timedelta(minutes=settings.RESET_PASSWORD_EXPIRES_MINUTES)
 
-            await db.commit()
+            await session.commit()
 
             asyncio.create_task(
                 email_sender.send_safe(

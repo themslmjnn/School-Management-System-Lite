@@ -8,7 +8,7 @@ from src.users.models.user import User
 class AuthRepository:
     @staticmethod
     async def get_user_by_username(
-        db: AsyncSession,
+        session: AsyncSession,
         username: str,
         *,
         load_session: bool = False,
@@ -24,6 +24,6 @@ class AuthRepository:
         if load_login_lockout:
             query = query.options(joinedload(User.login_lockout))
 
-        result = await db.execute(query)
+        result = await session.execute(query)
 
         return result.scalar_one_or_none()

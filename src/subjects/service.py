@@ -33,15 +33,15 @@ logger = get_logger(__name__)
 class SubjectService:
     @staticmethod
     async def create_subject(
-        db: AsyncSession, current_user_id: int, create_request: SubjectCreate
+        session: AsyncSession, current_user_id: int, create_request: SubjectCreate
     ) -> Subject:
         try:
             new_subject = Subject(**create_request.model_dump())
 
-            SubjectRepository.add_subject(db, new_subject)
+            SubjectRepository.add_subject(session, new_subject)
 
-            await db.commit()
-            await db.refresh(new_subject)
+            await session.commit()
+            await session.refresh(new_subject)
 
             logger.info(
                 "subject_created",
@@ -52,7 +52,7 @@ class SubjectService:
             return new_subject
 
         except IntegrityError as e:
-            await db.rollback()
+            await session.rollback()
 
             logger.warning(
                 "subject_creation_failed",
@@ -66,16 +66,16 @@ class SubjectService:
 
     @staticmethod
     async def update_subject(
-        db: AsyncSession, current_user_id: int, subject_id: int, request: SubjectUpdate
+        session: AsyncSession, current_user_id: int, subject_id: int, request: SubjectUpdate
     ) -> Subject:
-        target_subject = await SubjectRepository.get_subject_by_id(db, subject_id)
+        target_subject = await SubjectRepository.get_subject_by_id(session, subject_id)
         ensure_exists(target_subject, SubjectNotFoundError(HTTP404.SUBJECT))
 
         try:
             update_object(target_subject, request)
 
-            await db.commit()
-            await db.refresh(target_subject)
+            await session.commit()
+            await session.refresh(target_subject)
 
             logger.info(
                 "subject_updated",
@@ -91,7 +91,7 @@ class SubjectService:
             return target_subject
 
         except IntegrityError as e:
-            await db.rollback()
+            await session.rollback()
 
             logger.warning(
                 "subject_update_failed",
@@ -106,9 +106,9 @@ class SubjectService:
 
     @staticmethod
     async def archive_subject(
-        db: AsyncSession, current_user_id: int, subject_id: int
+        session: AsyncSession, current_user_id: int, subject_id: int
     ) -> None:
-        target_subject = await SubjectRepository.get_subject_by_id(db, subject_id)
+        target_subject = await SubjectRepository.get_subject_by_id(session, subject_id)
         ensure_exists(target_subject, SubjectNotFoundError(HTTP404.SUBJECT))
 
         if target_subject.is_archived or target_subject.archived_at is not None:
@@ -121,7 +121,7 @@ class SubjectService:
 
             raise SubjectAlreadyArchivedError("Subject is already archived")
 
-        if await SubjectRepository.has_active_teaching_assignments(db, subject_id):
+        if await SubjectRepository.has_active_teaching_assignments(session, subject_id):
             logger.warning(
                 "subject_archive_denied",
                 subject_id=subject_id,
@@ -139,7 +139,7 @@ class SubjectService:
 
         await delete_cache(SubjectCacheKey.subject_detail_key_admin(subject_id))
 
-        await db.commit()
+        await session.commit()
 
         logger.info(
             "subject_archived",
@@ -149,9 +149,9 @@ class SubjectService:
 
     @staticmethod
     async def restore_subject(
-        db: AsyncSession, current_user_id: int, subject_id: int
+        session: AsyncSession, current_user_id: int, subject_id: int
     ) -> None:
-        target_subject = await SubjectRepository.get_subject_by_id(db, subject_id)
+        target_subject = await SubjectRepository.get_subject_by_id(session, subject_id)
         ensure_exists(target_subject, SubjectNotFoundError(HTTP404.SUBJECT))
 
         if not target_subject.is_archived or target_subject.archived_at is None:
@@ -171,7 +171,7 @@ class SubjectService:
 
         await delete_cache(SubjectCacheKey.subject_detail_key_admin(subject_id))
 
-        await db.commit()
+        await session.commit()
 
         logger.info(
             "subject_restored",
@@ -181,7 +181,7 @@ class SubjectService:
 
     @staticmethod
     async def get_subjects(
-        db: AsyncSession,
+        session: AsyncSession,
         skip: int,
         limit: int,
         filters: SearchSubject,
@@ -189,7 +189,7 @@ class SubjectService:
         order: str,
     ) -> PaginatedResponse:
         subjects, total = await SubjectRepository.get_subjects(
-            db,
+            session,
             skip=skip,
             limit=limit,
             filters=filters,
@@ -206,7 +206,7 @@ class SubjectService:
         )
 
     @staticmethod
-    async def get_subject_by_id(db: AsyncSession, subject_id: int) -> SubjectResponse:
+    async def get_subject_by_id(session: AsyncSession, subject_id: int) -> SubjectResponse:
         cache_key = SubjectCacheKey.subject_detail_key_admin(subject_id)
         cached = await get_cache(cache_key)
 
@@ -215,7 +215,7 @@ class SubjectService:
 
             return SubjectResponse.model_validate(raw.model_dump())
 
-        subject = await SubjectRepository.get_subject_by_id(db, subject_id)
+        subject = await SubjectRepository.get_subject_by_id(session, subject_id)
         ensure_exists(subject, SubjectNotFoundError(HTTP404.SUBJECT))
 
         raw = SubjectCacheSchema.model_validate(subject)
