@@ -29,7 +29,7 @@ class Settings(BaseSettings):
 
     RESEND_API_KEY: str
     MAIL_FROM: str = "onboarding@resend.dev"
-    MAIL_FROM_NAME: str = "LFGS | SGM"
+    MAIL_FROM_NAME: str = "LFGS | SMS Lite"
 
     MAILTRAP_HOST: str = "sandbox.smtp.mailtrap.io"
     MAILTRAP_PORT: int = 587
@@ -131,7 +131,7 @@ class Settings(BaseSettings):
     @property
     def APP_URL(self) -> str:
         if self.ENVIRONMENT == "production":
-            return "https://sgm.com"
+            return "https://sms-lite.com"
         return "http://localhost:8000"
 
     model_config = SettingsConfigDict(env_file=".env")

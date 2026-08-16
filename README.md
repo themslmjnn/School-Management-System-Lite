@@ -1,1 +1,1 @@
-# Student-Grade-Manager
+# School-Management-System-Lite
