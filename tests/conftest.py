@@ -9,20 +9,15 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.pool import NullPool
 
 import src.core.caching as cache_module
+from database.connection import Base
 from src.auth.schemas import CreateAccessToken
 from src.core.config import settings
 from src.core.dependencies import get_db
 from src.core.limiter import ip_limiter
 from src.core.security import create_access_token
-from database.connection import Base
 from src.main import app
 from src.users.models import User
 from src.users.repositories.user import UserRepositoryBase
-from users.schemas.system_admin import (
-    CreateGuardianAdmin,
-    CreateStaffAdmin,
-    CreateStudentAdmin,
-)
 from src.utils.enums import UserRole
 from tests.factories import (
     make_director,
@@ -31,6 +26,11 @@ from tests.factories import (
     make_system_admin,
     make_teacher,
     make_vice_director,
+)
+from users.schemas.system_admin import (
+    CreateGuardianAdmin,
+    CreateStaffAdmin,
+    CreateStudentAdmin,
 )
 
 ASYNC_DB_URL = (
