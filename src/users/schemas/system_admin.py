@@ -102,15 +102,11 @@ class CreateStudentAdmin(CreateUserBase):
 
 class CreateStaffAdmin(CreateUserBase):
     type: Literal["staff"] = "staff"
-    role: Literal[UserRole.VICE_DIRECTOR, UserRole.TEACHER]
-
-
-class CreateGuardianAdmin(CreateUserBase):
-    type: Literal["guardian"] = "guardian"
+    role: Literal[UserRole.TEACHER]
 
 
 CreateRequest = Annotated[
-    CreateStudentAdmin | CreateStaffAdmin | CreateGuardianAdmin,
+    CreateStudentAdmin | CreateStaffAdmin,
     Field(discriminator="type"),
 ]
 

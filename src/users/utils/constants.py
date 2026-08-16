@@ -1,6 +1,5 @@
 class HTTP404:
     USER = "User not found"
-    GUARDIAN_LINK = "Guardian link not found"
 
 
 class HTTP409:

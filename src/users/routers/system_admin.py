@@ -79,38 +79,6 @@ async def update_user_credentials(
     )
 
 
-@router.post(
-    "/{target_guardian_id}/guardian-deletion",
-    status_code=status.HTTP_204_NO_CONTENT,
-)
-@user_limiter.limit("3/minute")
-async def create_guardian_deletion_request(
-    request: Request,
-    session: async_session_dependency,
-    current_user: Annotated[CurrentUser, Depends(require_system_admin)],
-    target_guardian_id: int,
-):
-    await UserServiceAdmin.create_guardian_deletion_request(
-        session, current_user.id, target_guardian_id
-    )
-
-
-@router.post(
-    "/{target_guardian_id}/cancel-deletion",
-    status_code=status.HTTP_204_NO_CONTENT,
-)
-@user_limiter.limit("3/minute")
-async def cancel_guardian_deletion_request(
-    request: Request,
-    session: async_session_dependency,
-    current_user: Annotated[CurrentUser, Depends(require_system_admin)],
-    target_guardian_id: int,
-):
-    await UserServiceAdmin.cancel_guardian_deletion_request(
-        session, current_user.id, target_guardian_id
-    )
-
-
 @router.patch("/{target_user_id}/deactivation", status_code=status.HTTP_204_NO_CONTENT)
 @user_limiter.limit("10/minute")
 async def deactivate_user(
@@ -198,44 +166,6 @@ async def get_staff_by_id(
     target_staff_id: Annotated[int, Path(ge=1)],
 ):
     return await UserServiceAdmin.get_staff_by_id(session, target_staff_id)
-
-
-@router.get(
-    "/guardians",
-    response_model=PaginatedResponse[UserResponseAdmin],
-    status_code=status.HTTP_200_OK,
-)
-@user_limiter.limit("15/minute")
-async def get_guardians(
-    request: Request,
-    session: async_session_dependency,
-    _: Annotated[CurrentUser, Depends(require_system_admin)],
-    pagination: pagination_dependency,
-    filters: Annotated[SearchUserAdmin, Depends()],
-    sort_by: str = UserSortField.CREATED_AT,
-    order: str = OrderBy.DESC,
-):
-    return await UserServiceAdmin.get_guardians(
-        session,
-        pagination.skip,
-        pagination.limit,
-        filters,
-        sort_by,
-        order,
-    )
-
-
-@router.get(
-    "/guardians/{target_guardian_id}",
-    response_model=UserResponseAdminDetailed,
-    status_code=status.HTTP_200_OK,
-)
-async def get_guardian_by_id(
-    session: async_session_dependency,
-    _: Annotated[CurrentUser, Depends(require_system_admin)],
-    target_guardian_id: Annotated[int, Path(ge=1)],
-):
-    return await UserServiceAdmin.get_guardian_by_id(session, target_guardian_id)
 
 
 @router.get(

@@ -23,7 +23,6 @@ from src.users.repositories.user import (
 )
 from src.users.schemas.shared import StudentCacheSchema, StudentResponseAdminDetailed
 from src.users.schemas.system_admin import (
-    CreateGuardianAdmin,
     CreateRequest,
     CreateStaffAdmin,
     CreateStudentAdmin,
@@ -37,7 +36,6 @@ from src.users.schemas.system_admin import (
 from src.users.utils.check_contact_limit import check_contact_limit
 from src.users.utils.constants import HTTP404
 from src.users.utils.exceptions import (
-    GuardianAlreadyPendingDeletionError,
     UserAlreadyActiveError,
     UserAlreadyInactiveError,
     UserNotFoundError,
@@ -54,15 +52,9 @@ from src.utils.helpers import ensure_exists, update_object
 logger = get_logger(__name__)
 
 STUDENT_MAX_SHARED_CONTACT = 3
-STAFF_AND_GUARDIAN_MAX_SHARED_CONTACT = 1
-STAFF_ROLES = frozenset(
-    {
-        UserRole.VICE_DIRECTOR,
-        UserRole.TEACHER,
-    }
-)
+STAFF_MAX_SHARED_CONTACT = 1
+STAFF_ROLES = frozenset({UserRole.TEACHER})
 SYSTEM_ADMIN_INVISIBLE_ROLES = frozenset({UserRole.SYSTEM_ADMIN})
-DELETION_GRACE_PERIOD_DAYS = 30
 
 
 class UserServiceAdmin:
@@ -76,12 +68,7 @@ class UserServiceAdmin:
             case CreateStaffAdmin():
                 resolved_role = create_request.role
                 contact_limit_role = None
-                max_allowed = STAFF_AND_GUARDIAN_MAX_SHARED_CONTACT
-
-            case CreateGuardianAdmin():
-                resolved_role = UserRole.GUARDIAN
-                contact_limit_role = None
-                max_allowed = STAFF_AND_GUARDIAN_MAX_SHARED_CONTACT
+                max_allowed = STAFF_MAX_SHARED_CONTACT
 
             case CreateStudentAdmin():
                 resolved_role = UserRole.STUDENT
@@ -418,117 +405,6 @@ class UserServiceAdmin:
             raise_unhandled_integrity_error(e)
 
     @staticmethod
-    async def create_guardian_deletion_request(
-        session: AsyncSession,
-        current_user_id: int,
-        target_guardian_id: int,
-    ) -> None:
-        target_guardian = await UserRepositoryBase.get_user_by_id(
-            session,
-            target_guardian_id,
-            load_session=True,
-            allowed_roles=frozenset({UserRole.GUARDIAN}),
-        )
-        ensure_exists(target_guardian, UserNotFoundError(HTTP404.USER))
-
-        if target_guardian.status == UserStatus.PENDING_DELETION:
-            logger.warning(
-                "guardian_deletion_denied",
-                actor_user_id=current_user_id,
-                target_guardian_id=target_guardian_id,
-                denial_reason="guardian_already_pending_deletion",
-            )
-
-            raise GuardianAlreadyPendingDeletionError(
-                "This guardian account is already pending deletion"
-            )
-
-        deletion_scheduled_for = datetime.now(UTC) + timedelta(
-            days=DELETION_GRACE_PERIOD_DAYS
-        )
-
-        target_guardian.status = UserStatus.PENDING_DELETION
-        target_guardian.is_active = False
-        target_guardian.deletion_scheduled_for = deletion_scheduled_for
-
-        target_guardian.session.access_token_version += 1
-        target_guardian.session.refresh_token_hash = None
-        target_guardian.session.refresh_token_family = None
-        target_guardian.session.refresh_token_expires_at = None
-
-        target_guardian_email = target_guardian.email
-
-        await session.commit()
-
-        asyncio.create_task(
-            email_sender.send_safe(
-                email_sender.send_account_deletion_email(target_guardian_email),
-                email_type=EmailType.ACCOUNT_DELETION,
-            )
-        )
-
-        await delete_cache(
-            SessionCacheKey.access_token_version_key(target_guardian_id),
-            UserCacheKey.user_detail_key_admin(target_guardian_id),
-            UserCacheKey.user_detail_key_self(target_guardian_id),
-        )
-
-        logger.info(
-            "guardian_deletion_scheduled",
-            actor_user_id=current_user_id,
-            target_user_id=target_guardian_id,
-            deletion_scheduled_for=deletion_scheduled_for.isoformat(),
-        )
-
-    @staticmethod
-    async def cancel_guardian_deletion_request(
-        session: AsyncSession,
-        current_user_id: int,
-        target_guardian_id: int,
-    ) -> None:
-        target_guardian = await UserRepositoryBase.get_user_by_id_pending_deletion(
-            session, target_guardian_id
-        )
-        ensure_exists(target_guardian, UserNotFoundError(HTTP404.USER))
-
-        target_guardian_email = target_guardian.email
-
-        reactivated = await UserRepositoryBase.reactivate_pending_deletion_user(
-            session, target_guardian_id
-        )
-
-        if not reactivated:
-            await session.rollback()
-
-            logger.warning(
-                "guardian_deletion_cancel_lost_race",
-                actor_user_id=current_user_id,
-                target_user_id=target_guardian_id,
-                denial_reason="user_hard_deleted_before_cancel_committed",
-            )
-
-            raise UserNotFoundError(HTTP404.USER)
-
-        await session.commit()
-
-        asyncio.create_task(
-            email_sender.send_safe(
-                email_sender.send_account_deletion_canceled_email(
-                    target_guardian_email
-                ),
-                email_type=EmailType.CANCEL_ACCOUNT_DELETION,
-            )
-        )
-
-        await delete_cache(UserCacheKey.user_detail_key_admin(target_guardian_id))
-
-        logger.info(
-            "guardian_deletion_cancelled",
-            actor_user_id=current_user_id,
-            target_user_id=target_guardian_id,
-        )
-
-    @staticmethod
     async def deactivate_user(
         session: AsyncSession, current_user_id: int, target_user_id: int
     ) -> None:
@@ -767,55 +643,6 @@ class UserServiceAdmin:
         await set_cache(cache_key, raw.model_dump(mode="json"), 900)
 
         return UserResponseAdminDetailed.model_validate(staff)
-
-    @staticmethod
-    async def get_guardians(
-        session: AsyncSession,
-        skip: int,
-        limit: int,
-        filters: SearchUserAdmin,
-        sort_by: str,
-        order: str,
-    ) -> PaginatedResponse:
-        guardians, total = await UserRepositoryAdmin.get_users_admin(
-            session,
-            skip,
-            limit,
-            filters,
-            sort_by,
-            order,
-            allowed_roles=frozenset({UserRole.GUARDIAN}),
-        )
-
-        return PaginatedResponse(
-            items=guardians,
-            total=total,
-            skip=skip,
-            limit=limit,
-            has_more=skip + limit < total,
-        )
-
-    @staticmethod
-    async def get_guardian_by_id(
-        session, target_guardian_id
-    ) -> UserResponseAdminDetailed:
-        cache_key = UserCacheKey.user_detail_key_admin(target_guardian_id)
-        cached = await get_cache(cache_key)
-
-        if cached is not None:
-            raw = UserCacheSchema.model_validate(cached)
-
-            return UserResponseAdminDetailed.model_validate(raw.model_dump())
-
-        guardian = await UserRepositoryBase.get_user_by_id(
-            session, target_guardian_id, allowed_roles={UserRole.GUARDIAN}
-        )
-        ensure_exists(guardian, UserNotFoundError(HTTP404.USER))
-
-        raw = UserCacheSchema.model_validate(guardian)
-        await set_cache(cache_key, raw.model_dump(mode="json"), 900)
-
-        return UserResponseAdminDetailed.model_validate(guardian)
 
     @staticmethod
     async def get_students(

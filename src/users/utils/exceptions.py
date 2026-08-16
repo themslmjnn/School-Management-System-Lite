@@ -40,10 +40,6 @@ class DuplicatePhoneNumberError(AppException):
     status_code = 409
 
 
-class GuardianAlreadyPendingDeletionError(AppException):
-    status_code = 409
-
-
 class UserAlreadyActiveError(AppException):
     status_code = 409
 
