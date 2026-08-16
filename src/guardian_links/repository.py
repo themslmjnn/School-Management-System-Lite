@@ -1,9 +1,9 @@
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
+from src.guardian_links.models import StudentGuardianLink
 
 from academics.models.head_of_class_assignment import HeadOfClassAssignment
-from src.guardian_links.models import StudentGuardianLink
 from src.users.models.user import User
 from src.utils.enums import GuardianPriority
 
