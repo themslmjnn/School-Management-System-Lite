@@ -13,9 +13,7 @@ class UserRole(StrEnum):
 class UserStatus(StrEnum):
     ACTIVE = "active"
     DEACTIVATED = "deactivated"
-    DELETED = "deleted"
     PENDING_ACTIVATION = "pending_activation"
-    PENDING_DELETION = "pending_deletion"
     GRADUATED = "graduated"
     EXPELLED = "expelled"
     WITHDRAWN = "withdrawn"

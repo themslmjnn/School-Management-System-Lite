@@ -16,7 +16,6 @@ from src.core.config import settings
 from src.core.limiter import ip_limiter
 from src.core.logging import get_logger, setup_logging
 from src.core.middleware import RequestIDMiddleware
-from src.guardian_links.routers import system_admin as guardian_link_system_admin_router
 from src.users.routers import guardian as user_guardian_router
 from src.users.routers import shared as user_shared_router
 from src.users.routers import system_admin as user_system_admin_router
@@ -86,7 +85,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="School Management System - Lite",
+    title="School Management System — Lite",
     lifespan=lifespan,
     docs_url=None if settings.ENVIRONMENT == "production" else "/docs",
     redoc_url=None if settings.ENVIRONMENT == "production" else "/redoc",
@@ -103,7 +102,6 @@ app.include_router(auth_router)
 app.include_router(user_shared_router.router)
 app.include_router(user_system_admin_router.router)
 app.include_router(user_guardian_router.router)
-app.include_router(guardian_link_system_admin_router.router)
 
 
 @app.exception_handler(base_exc.AppException)
