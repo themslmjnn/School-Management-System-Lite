@@ -51,7 +51,6 @@ from src.utils.helpers import ensure_exists, update_object
 
 logger = get_logger(__name__)
 
-PROFILE_EDITABLE_ROLES = frozenset({UserRole.SYSTEM_ADMIN, UserRole.GUARDIAN})
 STUDENT_MAX_SHARED_CONTACT = 3
 
 

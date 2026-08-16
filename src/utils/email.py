@@ -440,24 +440,8 @@ async def send_account_deletion_canceled_email(email: str) -> None:
     )
 
 
-async def send_account_deactivation_email(email: str, role: UserRole) -> None:
+async def send_account_deactivation_email(email: str) -> None:
     login_link = f"{settings.APP_URL}/auth/login"
-
-    login_button = ""
-    login_text = ""
-
-    if role == UserRole.GUARDIAN:
-        login_button = f"""
-            <div style="margin:40px 0;text-align:center;">
-                <a href="{login_link}"
-                    style="background:#1d4ed8;color:white;padding:14px 28px;
-                        border-radius:6px;text-decoration:none;font-weight:bold;">
-                    Log In
-                </a>
-            </div>
-        """
-
-        login_text = f"\n\nLog in: {login_link}"
 
     html = f"""
         <!DOCTYPE html>
@@ -473,7 +457,7 @@ async def send_account_deactivation_email(email: str, role: UserRole) -> None:
                     An administrator has deactivated your account.
                 </p>
 
-                {login_button}
+                {login_link}
 
                 <p>
                     If you believe this was done in error, please contact
@@ -487,7 +471,7 @@ async def send_account_deactivation_email(email: str, role: UserRole) -> None:
     text = (
         "LFGS | SMS Lite.\n\n"
         "An administrator has deactivated your account."
-        f"{login_text}\n\n"
+        f"{login_link}\n\n"
         "If you believe this was done in error, please contact "
         "your LFGS administrator."
     )
