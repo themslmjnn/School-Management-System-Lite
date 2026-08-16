@@ -4,10 +4,8 @@ from enum import StrEnum
 class UserRole(StrEnum):
     SYSTEM_ADMIN = "system_admin"
     DIRECTOR = "director"
-    VICE_DIRECTOR = "vice_director"
     TEACHER = "teacher"
     STUDENT = "student"
-    GUARDIAN = "guardian"
 
 
 class UserStatus(StrEnum):
