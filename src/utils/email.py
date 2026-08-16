@@ -112,7 +112,7 @@ def build_invite_email(invite_token: str, username: str) -> tuple[str, str, str]
         <html lang="en">
         <body style="font-family: Arial, sans-serif; background:#f4f4f5; padding:40px;">
             <div style="max-width:560px;margin:auto;background:white;padding:40px;border-radius:8px;">
-                <h1 style="color:#1d4ed8;">SGM | LFGS</h1>
+                <h1 style="color:#1d4ed8;">LFGS | SMS Lite</h1>
 
                 <h2>You have been invited</h2>
 
@@ -148,7 +148,7 @@ def build_invite_email(invite_token: str, username: str) -> tuple[str, str, str]
     """
 
     text = (
-        f"You have been invited to SGM | LFGS.\n\n"
+        f"You have been invited to LFGS | SMS Lite.\n\n"
         f"Username: {username}\n\n"
         f"Activate your account using the link below:\n\n"
         f"{activation_link}\n\n"
@@ -176,7 +176,7 @@ async def send_account_info_updated_email(email: str) -> None:
         <body style="font-family: Arial, sans-serif; background:#f4f4f5; padding:40px;">
             <div style="max-width:560px;margin:auto;background:white;
                         padding:40px;border-radius:8px;">
-                <h1 style="color:#1d4ed8;">SGM | LFGS</h1>
+                <h1 style="color:#1d4ed8;">LFGS | SMS Lite</h1>
                 <h2>Your account information has been updated</h2>
                 <p>
                     A school administrator has updated some information
@@ -199,7 +199,7 @@ async def send_account_info_updated_email(email: str) -> None:
     """
 
     text = (
-        "SGM | LFGS.\n\n"
+        "LFGS | SMS Lite.\n\n"
         "A school administrator has updated some information associated "
         "with your account.\n\n"
         f"Log in at: {login_link}\n\n"
@@ -269,7 +269,7 @@ def build_admin_credentials_override_notification_email(
         <body style="font-family: Arial, sans-serif; background:#f4f4f5; padding:40px;">
             <div style="max-width:560px;margin:auto;background:white;
                         padding:40px;border-radius:8px;">
-                <h1 style="color:#1d4ed8;">SGM | LFGS</h1>
+                <h1 style="color:#1d4ed8;">LFGS | SMS Lite</h1>
                 <h2>Your account credentials were changed</h2>
                 <p>
                     An administrator has updated the credentials on your account.
@@ -298,7 +298,7 @@ def build_admin_credentials_override_notification_email(
     """
 
     text = (
-        "SGM | LFGS.\n\n"
+        "LFGS | SMS Lite.\n\n"
         "An administrator has updated the credentials on your account.\n\n"
         f"{changes_text}"
         "If you were expecting this change, no action is needed. "
@@ -339,7 +339,7 @@ async def send_account_deletion_email(email: str) -> None:
         <body style="font-family: Arial, sans-serif; background:#f4f4f5; padding:40px;">
             <div style="max-width:560px;margin:auto;background:white;
                         padding:40px;border-radius:8px;">
-                <h1 style="color:#1d4ed8;">SGM | LFGS</h1>
+                <h1 style="color:#1d4ed8;">LFGS | SMS Lite</h1>
                 <h2>Your account is scheduled for deletion</h2>
                 <p>
                     A school administrator has scheduled your account for deletion.
@@ -368,7 +368,7 @@ async def send_account_deletion_email(email: str) -> None:
     """
 
     text = (
-        "SGM | LFGS\n\n"
+        "LFGS | SMS Lite\n\n"
         "A school administrator has scheduled your account for deletion. "
         "Your account will be permanently deleted in 30 days.\n\n"
         "You can still log in and use your account normally during this "
@@ -395,7 +395,7 @@ async def send_account_deletion_canceled_email(email: str) -> None:
         <body style="font-family: Arial, sans-serif; background:#f4f4f5; padding:40px;">
             <div style="max-width:560px;margin:auto;background:white;
                         padding:40px;border-radius:8px;">
-                <h1 style="color:#1d4ed8;">SGM | LFGS</h1>
+                <h1 style="color:#1d4ed8;">LFGS | SMS Lite</h1>
                 <h2>Your account deletion has been canceled</h2>
                 <p>
                     The scheduled deletion of your account has been
@@ -422,7 +422,7 @@ async def send_account_deletion_canceled_email(email: str) -> None:
     """
 
     text = (
-        "SGM | LFGS.\n\n"
+        "LFGS | SMS Lite.\n\n"
         "The scheduled deletion of your account has been canceled by a "
         "school administrator.\n\n"
         "Your account remains active and you can continue logging in "
@@ -465,7 +465,7 @@ async def send_account_deactivation_email(email: str, role: UserRole) -> None:
         <body style="font-family: Arial, sans-serif; background:#f4f4f5; padding:40px;">
             <div style="max-width:560px;margin:auto;background:white;
                         padding:40px;border-radius:8px;">
-                <h1 style="color:#1d4ed8;">SGM | LFGS</h1>
+                <h1 style="color:#1d4ed8;">LFGS | SMS Lite</h1>
 
                 <h2>Your account has been deactivated</h2>
 
@@ -485,7 +485,7 @@ async def send_account_deactivation_email(email: str, role: UserRole) -> None:
     """
 
     text = (
-        "SGM | LFGS.\n\n"
+        "LFGS | SMS Lite.\n\n"
         "An administrator has deactivated your account."
         f"{login_text}\n\n"
         "If you believe this was done in error, please contact "
@@ -509,7 +509,7 @@ async def send_account_activation_email(email: str) -> None:
         <body style="font-family: Arial, sans-serif; background:#f4f4f5; padding:40px;">
             <div style="max-width:560px;margin:auto;background:white;
                         padding:40px;border-radius:8px;">
-                <h1 style="color:#1d4ed8;">SGM | LFGS</h1>
+                <h1 style="color:#1d4ed8;">LFGS | SMS Lite</h1>
                 <h2>Your account has been activated</h2>
                 <p>
                     An administrator has activated your account.
@@ -531,7 +531,7 @@ async def send_account_activation_email(email: str) -> None:
     """
 
     text = (
-        "SGM | LFGS.\n\n"
+        "LFGS | SMS Lite.\n\n"
         "An administrator has activated your account. "
         "You can now log in and access the system.\n\n"
         f"Log in at: {login_link}\n\n"
@@ -557,7 +557,7 @@ def build_reset_password_email(reset_password_token: str) -> tuple[str, str, str
         <body style="font-family: Arial, sans-serif; background:#f4f4f5; padding:40px;">
             <div style="max-width:560px;margin:auto;background:white;
                         padding:40px;border-radius:8px;">
-                <h1 style="color:#1d4ed8;">SGM | LFGS</h1>
+                <h1 style="color:#1d4ed8;">LFGS | SMS Lite</h1>
                 <p>
                     An administrator has requested a password reset for your account.
                     Click the button below to set a new password.
@@ -580,7 +580,7 @@ def build_reset_password_email(reset_password_token: str) -> tuple[str, str, str
     """
 
     text = (
-        f"SGM | LFGS\n\n"
+        f"LFGS | SMS Lite\n\n"
         f"An administrator has requested a password reset for your account.\n\n"
         f"Reset your password using the link below:\n\n"
         f"{reset_link}\n\n"
@@ -604,7 +604,7 @@ async def send_email_change_verification(new_email: str, code: str) -> None:
         <body style="font-family: Arial, sans-serif; background:#f4f4f5; padding:40px;">
             <div style="max-width:560px;margin:auto;background:white;
                         padding:40px;border-radius:8px;">
-                <h1 style="color:#1d4ed8;">SGM | LFGS</h1>
+                <h1 style="color:#1d4ed8;">LFGS | SMS Lite</h1>
                 <h2>Confirm your new email address</h2>
                 <p>
                     You requested to change your email address.
@@ -632,7 +632,7 @@ async def send_email_change_verification(new_email: str, code: str) -> None:
     """
 
     text = (
-        f"SGM | LFGS\n\n"
+        f"LFGS | SMS Lite\n\n"
         f"You requested to change your email address.\n\n"
         f"Your confirmation code is: {code}\n\n"
         f"It expires in {settings.EMAIL_CHANGE_CODE_EXPIRES_MINUTES} minutes.\n\n"
@@ -657,7 +657,7 @@ async def send_email_changed_notification(
         <body style="font-family: Arial, sans-serif; background:#f4f4f5; padding:40px;">
             <div style="max-width:560px;margin:auto;background:white;
                         padding:40px;border-radius:8px;">
-                <h1 style="color:#1d4ed8;">SGM | LFGS</h1>
+                <h1 style="color:#1d4ed8;">LFGS | SMS Lite</h1>
                 <h2>Your email address was changed</h2>
                 <p>
                     The email address associated with your account was
@@ -686,7 +686,7 @@ async def send_email_changed_notification(
     """
 
     text = (
-        "SGM | LFGS.\n\n"
+        "LFGS | SMS Lite.\n\n"
         "The email address associated with your account was recently changed.\n\n"
         f"Old email: {old_email}\n"
         f"New email: {new_email}\n\n"
@@ -710,7 +710,7 @@ async def send_password_changed_notification(email: str) -> None:
         <body style="font-family: Arial, sans-serif; background:#f4f4f5; padding:40px;">
             <div style="max-width:560px;margin:auto;background:white;
                         padding:40px;border-radius:8px;">
-                <h1 style="color:#1d4ed8;">SGM | LFGS</h1>
+                <h1 style="color:#1d4ed8;">LFGS | SMS Lite</h1>
                 <h2>Your password was changed</h2>
                 <p>
                     Your account password was successfully changed.
@@ -726,7 +726,7 @@ async def send_password_changed_notification(email: str) -> None:
     """
 
     text = (
-        "SGM | LFGS.\n\n"
+        "LFGS | SMS Lite.\n\n"
         "Your account password was successfully changed.\n\n"
         "If you made this change, no action is needed.\n\n"
         "If you did not change your password, contact your administrator "
@@ -750,7 +750,7 @@ async def send_forgot_password_email(email: str, raw_reset_token: str) -> None:
         <body style="font-family: Arial, sans-serif; background:#f4f4f5; padding:40px;">
             <div style="max-width:560px;margin:auto;background:white;
                         padding:40px;border-radius:8px;">
-                <h1 style="color:#1d4ed8;">SGM | LFGS</h1>
+                <h1 style="color:#1d4ed8;">LFGS | SMS Lite</h1>
                 <p>
                     You requested a password reset for your account.
                     Click the button below to set a new password.
