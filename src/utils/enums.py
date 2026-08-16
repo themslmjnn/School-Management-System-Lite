@@ -21,11 +21,6 @@ class UserStatus(StrEnum):
     WITHDRAWN = "withdrawn"
 
 
-class GuardianPriority(StrEnum):
-    PRIMARY = "primary"
-    SECONDARY = "secondary"
-
-
 class EmailType(StrEnum):
     INVITE = "invite"
     UPDATING_ACCOUNT = "updating_account"

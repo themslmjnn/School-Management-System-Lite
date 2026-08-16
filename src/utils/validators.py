@@ -47,7 +47,7 @@ def validate_firstname(firstname: str) -> str:
 def validate_lastname(lastname: str) -> str:
     if not lastname.isalpha():
         raise PydanticCustomError(
-            "invalid_firstname_characters",
+            "invalid_lastname_characters",
             "Last name can only contain letters",
         )
 
