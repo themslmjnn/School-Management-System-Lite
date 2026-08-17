@@ -18,7 +18,7 @@ def _next() -> int:
 
 
 async def make_user(
-    test_db: AsyncSession,
+    test_session: AsyncSession,
     *,
     role: UserRole = UserRole.STUDENT,
     status: UserStatus = UserStatus.ACTIVE,
@@ -56,8 +56,8 @@ async def make_user(
         created_by=created_by,
     )
 
-    test_db.add(new_user)
-    await test_db.flush()
+    test_session.add(new_user)
+    await test_session.flush()
 
     is_pending = status == UserStatus.PENDING_ACTIVATION
     _, hashed_invite_token = generate_invite_token()
@@ -76,36 +76,36 @@ async def make_user(
         locked_until=locked_until,
     )
 
-    test_db.add(new_activation)
-    test_db.add(new_session)
-    test_db.add(new_login_lockout)
+    test_session.add(new_activation)
+    test_session.add(new_session)
+    test_session.add(new_login_lockout)
 
-    await test_db.commit()
-    await test_db.refresh(new_user)
+    await test_session.commit()
+    await test_session.refresh(new_user)
 
     return new_user
 
 
-async def make_system_admin(test_db: AsyncSession, **kwargs) -> User:
-    return await make_user(test_db, role=UserRole.SYSTEM_ADMIN, **kwargs)
+async def make_system_admin(test_session: AsyncSession, **kwargs) -> User:
+    return await make_user(test_session, role=UserRole.SYSTEM_ADMIN, **kwargs)
 
 
-async def make_director(test_db: AsyncSession, **kwargs) -> User:
-    return await make_user(test_db, role=UserRole.DIRECTOR, **kwargs)
+async def make_director(test_session: AsyncSession, **kwargs) -> User:
+    return await make_user(test_session, role=UserRole.DIRECTOR, **kwargs)
 
 
-async def make_teacher(test_db: AsyncSession, **kwargs) -> User:
-    return await make_user(test_db, role=UserRole.TEACHER, **kwargs)
+async def make_teacher(test_session: AsyncSession, **kwargs) -> User:
+    return await make_user(test_session, role=UserRole.TEACHER, **kwargs)
 
 
-async def make_student(test_db: AsyncSession, **kwargs) -> User:
+async def make_student(test_session: AsyncSession, **kwargs) -> User:
     kwargs.setdefault("date_of_birth", date(2008, 1, 1))
 
-    return await make_user(test_db, role=UserRole.STUDENT, **kwargs)
+    return await make_user(test_session, role=UserRole.STUDENT, **kwargs)
 
 
-async def make_deactivated_user(test_db: AsyncSession, **kwargs) -> User:
+async def make_deactivated_user(test_session: AsyncSession, **kwargs) -> User:
     kwargs.setdefault("status", UserStatus.DEACTIVATED)
     kwargs.setdefault("is_active", False)
-    
-    return await make_user(test_db, **kwargs)
+
+    return await make_user(test_session, **kwargs)

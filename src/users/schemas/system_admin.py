@@ -100,13 +100,12 @@ class CreateStudentAdmin(CreateUserBase):
         return validators.validate_date_of_birth(v)
 
 
-class CreateStaffAdmin(CreateUserBase):
-    type: Literal["staff"] = "staff"
-    role: Literal[UserRole.TEACHER]
+class CreateTeacherAdmin(CreateUserBase):
+    type: Literal["teacher"] = "teacher"
 
 
-CreateRequest = Annotated[
-    CreateStudentAdmin | CreateStaffAdmin,
+CreateUserRequest = Annotated[
+    CreateStudentAdmin | CreateTeacherAdmin,
     Field(discriminator="type"),
 ]
 

@@ -11,14 +11,16 @@ from sqlalchemy.pool import NullPool
 import src.core.caching as cache_module
 from src.auth.schemas import CreateAccessToken
 from src.core.config import settings
-from src.core.dependencies import get_db
+from src.core.dependencies import get_session
 from src.core.security import create_access_token
 from src.database.connection import Base
 from src.main import app
 from src.users.models.user import User
 from src.users.repositories.user import UserRepositoryBase
-from src.users.schemas.system_admin import CreateStaffAdmin, CreateStudentAdmin
-from src.utils.enums import UserRole
+from src.users.schemas.system_admin import (
+    CreateStudentAdmin,
+    CreateTeacherAdmin,
+)
 from tests.factories import (
     make_director,
     make_student,
@@ -62,16 +64,16 @@ def create_tables(_guard_test_environment):
 
 
 @pytest_asyncio.fixture(scope="function")
-async def test_db():
+async def test_session():
     async with test_engine.connect() as conn:
         await conn.begin()
 
         session = AsyncSession(bind=conn, expire_on_commit=False)
 
-        async def override_get_db():
+        async def override_get_session():
             yield session
 
-        app.dependency_overrides[get_db] = override_get_db
+        app.dependency_overrides[get_session] = override_get_session
 
         try:
             yield session
@@ -89,7 +91,7 @@ async def test_db():
 
 
 @pytest_asyncio.fixture(scope="function")
-async def client(test_db):
+async def client(test_session):
     async with AsyncClient(
         transport=ASGITransport(app=app),
         base_url="http://test",
@@ -122,9 +124,9 @@ def mock_response():
     return MagicMock()
 
 
-async def make_auth_header(test_db: AsyncSession, user: User) -> dict:
+async def make_auth_header(test_session: AsyncSession, user: User) -> dict:
     user_with_session = await UserRepositoryBase.get_user_by_id(
-        test_db, user.id, load_session=True
+        test_session, user.id, load_session=True
     )
 
     token = create_access_token(
@@ -139,23 +141,23 @@ async def make_auth_header(test_db: AsyncSession, user: User) -> dict:
 
 
 @pytest_asyncio.fixture
-async def system_admin(test_db):
-    return await make_system_admin(test_db)
+async def system_admin(test_session):
+    return await make_system_admin(test_session)
 
 
 @pytest_asyncio.fixture
-async def director(test_db):
-    return await make_director(test_db)
+async def director(test_session):
+    return await make_director(test_session)
 
 
 @pytest_asyncio.fixture
-async def teacher(test_db):
-    return await make_teacher(test_db)
+async def teacher(test_session):
+    return await make_teacher(test_session)
 
 
 @pytest_asyncio.fixture
-async def student(test_db):
-    return await make_student(test_db)
+async def student(test_session):
+    return await make_student(test_session)
 
 
 create_user_request = {
@@ -168,11 +170,10 @@ create_user_request = {
 
 
 @pytest.fixture
-def valid_create_staff_request():
-    return CreateStaffAdmin(
+def valid_create_teacher_request():
+    return CreateTeacherAdmin(
         **create_user_request,
-        type="staff",
-        role=UserRole.TEACHER,
+        type="teacher",
     )
 
 
@@ -182,4 +183,12 @@ def valid_create_student_request():
         **create_user_request,
         type="student",
         date_of_birth="2008-05-01",
+    )
+
+
+@pytest.fixture
+def mock_advisory_lock(mocker):
+    return mocker.patch(
+        "src.users.services.system_admin.acquire_student_contact_lock",
+        return_value=None,
     )

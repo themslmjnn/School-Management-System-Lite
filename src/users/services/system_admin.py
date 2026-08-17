@@ -23,9 +23,9 @@ from src.users.repositories.user import (
 )
 from src.users.schemas.shared import StudentCacheSchema, StudentResponseAdminDetailed
 from src.users.schemas.system_admin import (
-    CreateRequest,
-    CreateStaffAdmin,
     CreateStudentAdmin,
+    CreateTeacherAdmin,
+    CreateUserRequest,
     SearchUserAdmin,
     UpdateStudentAdmin,
     UpdateUser,
@@ -52,7 +52,7 @@ from src.utils.helpers import ensure_exists, update_object
 logger = get_logger(__name__)
 
 STUDENT_MAX_SHARED_CONTACT = 3
-STAFF_MAX_SHARED_CONTACT = 1
+TEACHER_MAX_SHARED_CONTACT = 1
 STAFF_ROLES = frozenset({UserRole.TEACHER})
 SYSTEM_ADMIN_INVISIBLE_ROLES = frozenset({UserRole.SYSTEM_ADMIN})
 
@@ -62,13 +62,13 @@ class UserServiceAdmin:
     async def register_user(
         session: AsyncSession,
         current_user_id: int,
-        create_request: CreateRequest,
+        create_request: CreateUserRequest,
     ) -> User:
         match create_request:
-            case CreateStaffAdmin():
-                resolved_role = create_request.role
+            case CreateTeacherAdmin():
+                resolved_role = UserRole.TEACHER
                 contact_limit_role = None
-                max_allowed = STAFF_MAX_SHARED_CONTACT
+                max_allowed = TEACHER_MAX_SHARED_CONTACT
 
             case CreateStudentAdmin():
                 resolved_role = UserRole.STUDENT

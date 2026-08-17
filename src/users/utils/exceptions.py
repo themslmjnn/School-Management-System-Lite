@@ -16,11 +16,11 @@ class MaxStudentsPerPhoneNumberError(AppException):
     status_code = 409
 
 
-class MaxStaffOrGuardianPerEmailError(AppException):
+class MaxTeachersPerEmailError(AppException):
     status_code = 409
 
 
-class MaxStaffOrGuardianPerPhoneNumberError(AppException):
+class MaxTeachersPerPhoneNumberError(AppException):
     status_code = 409
 
 

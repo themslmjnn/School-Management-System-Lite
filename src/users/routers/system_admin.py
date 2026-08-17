@@ -12,7 +12,7 @@ from src.core.limiter import user_limiter
 from src.core.pagination import PaginatedResponse
 from src.users.schemas.shared import StudentResponseAdmin, StudentResponseAdminDetailed
 from src.users.schemas.system_admin import (
-    CreateRequest,
+    CreateUserRequest,
     SearchUserAdmin,
     UpdateUser,
     UpdateUserCredentials,
@@ -24,7 +24,7 @@ from src.utils.enums import OrderBy, UserSortField
 
 router = APIRouter(
     prefix="/users",
-    tags=["Users - System Admin - User"],
+    tags=["Users - System Admin"],
 )
 
 
@@ -38,7 +38,7 @@ async def register_user(
     request: Request,
     session: async_session_dependency,
     current_user: Annotated[CurrentUser, Depends(require_system_admin)],
-    create_request: CreateRequest,
+    create_request: CreateUserRequest,
 ):
     return await UserServiceAdmin.register_user(
         session, current_user.id, create_request

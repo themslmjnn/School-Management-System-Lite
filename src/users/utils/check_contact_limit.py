@@ -3,10 +3,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.core.logging import get_logger
 from src.users.repositories.user import UserRepositoryBase
 from src.users.utils.exceptions import (
-    MaxStaffOrGuardianPerEmailError,
-    MaxStaffOrGuardianPerPhoneNumberError,
     MaxStudentsPerEmailError,
     MaxStudentsPerPhoneNumberError,
+    MaxTeachersPerEmailError,
+    MaxTeachersPerPhoneNumberError,
 )
 from src.utils.enums import UserRole
 
@@ -50,8 +50,8 @@ async def check_contact_limit(
                     "Maximum number of students with this phone number reached"
                 )
 
-            raise MaxStaffOrGuardianPerPhoneNumberError(
-                "Maximum number of staff or guardians with this phone number reached"
+            raise MaxTeachersPerPhoneNumberError(
+                "Maximum number of teachers with this phone number reached"
             )
 
     if email is not None:
@@ -77,6 +77,6 @@ async def check_contact_limit(
                     "Maximum number of students with this email reached"
                 )
 
-            raise MaxStaffOrGuardianPerEmailError(
-                "Maximum number of staff or guardians with this email reached"
+            raise MaxTeachersPerEmailError(
+                "Maximum number of teachers with this email reached"
             )
