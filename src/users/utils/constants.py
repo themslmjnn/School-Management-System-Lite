@@ -1,3 +1,6 @@
+STUDENT_MAX_SHARED_CONTACT = 3
+
+
 class HTTP404:
     USER = "User not found"
 

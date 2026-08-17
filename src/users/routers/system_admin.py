@@ -10,16 +10,17 @@ from src.core.dependencies import (
 )
 from src.core.limiter import user_limiter
 from src.core.pagination import PaginatedResponse
-from src.users.schemas.shared import StudentResponseAdmin, StudentResponseAdminDetailed
 from src.users.schemas.system_admin import (
     CreateUserRequest,
     SearchUserAdmin,
-    UpdateUserCredentials,
+    StudentResponseAdmin,
+    StudentResponseAdminDetailed,
     UpdateUserRequest,
     UserResponseAdmin,
     UserResponseAdminDetailed,
 )
 from src.users.services.system_admin import UserServiceAdmin
+from src.users.utils.user_credentials_schema import UpdateUserCredentials
 from src.utils.enums import OrderBy, UserSortField
 
 router = APIRouter(
@@ -110,7 +111,7 @@ async def create_reset_password_request(
     target_user_id: Annotated[int, Path(ge=1)],
 ):
     await UserServiceAdmin.create_reset_password_request(
-        session, current_user, target_user_id
+        session, current_user.id, target_user_id
     )
 
 
@@ -131,12 +132,12 @@ async def resend_activation_invite(
 
 
 @router.get(
-    "/staff",
+    "/teachers",
     response_model=PaginatedResponse[UserResponseAdmin],
     status_code=status.HTTP_200_OK,
 )
 @user_limiter.limit("15/minute")
-async def get_staff(
+async def get_teachers(
     request: Request,
     session: async_session_dependency,
     _: Annotated[CurrentUser, Depends(require_system_admin)],
@@ -145,7 +146,7 @@ async def get_staff(
     sort_by: str = UserSortField.CREATED_AT,
     order: str = OrderBy.DESC,
 ):
-    return await UserServiceAdmin.get_staff(
+    return await UserServiceAdmin.get_teachers(
         session,
         pagination.skip,
         pagination.limit,
@@ -156,7 +157,7 @@ async def get_staff(
 
 
 @router.get(
-    "/staff/{target_staff_id}",
+    "/teachers/{target_teacher_id}",
     response_model=UserResponseAdminDetailed,
     status_code=status.HTTP_200_OK,
 )
@@ -165,7 +166,7 @@ async def get_staff_by_id(
     _: Annotated[CurrentUser, Depends(require_system_admin)],
     target_staff_id: Annotated[int, Path(ge=1)],
 ):
-    return await UserServiceAdmin.get_staff_by_id(session, target_staff_id)
+    return await UserServiceAdmin.get_teacher_by_id(session, target_staff_id)
 
 
 @router.get(

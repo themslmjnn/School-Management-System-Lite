@@ -8,7 +8,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.core.advisory_locks import acquire_student_contact_lock
 from src.core.caching import delete_cache, get_cache, set_cache
 from src.core.config import settings
-from src.core.dependencies import CurrentUser
 from src.core.logging import get_logger
 from src.core.pagination import PaginatedResponse
 from src.core.security import generate_invite_token, generate_reset_password_token
@@ -21,16 +20,16 @@ from src.users.repositories.user import (
     UserRepositoryAdmin,
     UserRepositoryBase,
 )
-from src.users.schemas.shared import StudentCacheSchema, StudentResponseAdminDetailed
 from src.users.schemas.system_admin import (
     CreateStudentAdmin,
     CreateTeacherAdmin,
     CreateUserRequest,
     SearchUserAdmin,
+    StudentResponseAdminCache,
+    StudentResponseAdminDetailed,
     UpdateStudentAdmin,
-    UpdateUserCredentials,
     UpdateUserRequest,
-    UserCacheSchema,
+    UserResponseAdminCache,
     UserResponseAdminDetailed,
 )
 from src.users.utils.check_contact_limit import check_contact_limit
@@ -43,6 +42,7 @@ from src.users.utils.exceptions import (
     handle_non_student_unique_contact_error,
     handle_username_integrity_error,
 )
+from src.users.utils.user_credentials_schema import UpdateUserCredentials
 from src.utils import email as email_sender
 from src.utils.base_exception import raise_unhandled_integrity_error
 from src.utils.cache_keys import SessionCacheKey, UserCacheKey
@@ -53,7 +53,6 @@ logger = get_logger(__name__)
 
 STUDENT_MAX_SHARED_CONTACT = 3
 TEACHER_MAX_SHARED_CONTACT = 1
-STAFF_ROLES = frozenset({UserRole.TEACHER})
 SYSTEM_ADMIN_INVISIBLE_ROLES = frozenset({UserRole.SYSTEM_ADMIN})
 
 
@@ -99,6 +98,7 @@ class UserServiceAdmin:
         )
 
         raw_invite_token, hashed_invite_token = generate_invite_token()
+
         invite_token_expires_at = datetime.now(UTC) + timedelta(
             hours=settings.INVITE_TOKEN_EXPIRES_HOURS
         )
@@ -256,10 +256,11 @@ class UserServiceAdmin:
             await session.rollback()
 
             logger.error(
-                "update_user_denied",
+                "update_user_failed",
                 target_user_id=target_user_id,
                 requested_by=current_user_id,
                 reason=str(e.orig),
+                method="admin_update",
             )
 
             if not is_student:
@@ -384,19 +385,21 @@ class UserServiceAdmin:
             )
 
             logger.info(
-                "admin_credentials_override",
+                "user_credentials_updated",
                 target_user_id=target_user_id,
                 updated_by=current_user_id,
+                method="admin_credentials_override",
             )
 
         except IntegrityError as e:
             await session.rollback()
 
             logger.error(
-                "admin_credentials_override_failed",
+                "user_credentials_update_failed",
                 target_user_id=target_user_id,
                 requested_by=current_user_id,
                 reason=str(e.orig),
+                method="admin_credentials_override",
             )
 
             handle_username_integrity_error(e)
@@ -411,14 +414,14 @@ class UserServiceAdmin:
         target_user = await UserRepositoryBase.get_user_by_id(
             session,
             target_user_id,
-            load_session=True,
             excluded_roles=SYSTEM_ADMIN_INVISIBLE_ROLES,
+            load_session=True,
         )
         ensure_exists(target_user, UserNotFoundError(HTTP404.USER))
 
         if not target_user.is_active:
             logger.warning(
-                "deactivate_user_failed",
+                "user_deactivation_failed",
                 target_user_id=target_user_id,
                 requested_by=current_user_id,
                 reason="user_is_already_deactivated",
@@ -472,7 +475,7 @@ class UserServiceAdmin:
 
         if target_user.is_active:
             logger.warning(
-                "activate_user_failed",
+                "user_activation_failed",
                 target_user_id=target_user_id,
                 requested_by=current_user_id,
                 reason="user_is_already_activated",
@@ -506,7 +509,7 @@ class UserServiceAdmin:
     @staticmethod
     async def create_reset_password_request(
         session: AsyncSession,
-        current_user: CurrentUser,
+        current_user_id: int,
         target_user_id: int,
     ) -> None:
         target_user = await UserRepositoryBase.get_user_by_id(
@@ -535,7 +538,7 @@ class UserServiceAdmin:
             html_body=html_body,
             text_body=text_body,
             email_type=EmailType.PASSWORD_RESET_ADMIN,
-            triggered_by=current_user.id,
+            triggered_by=current_user_id,
             recipient_user_id=target_user_id,
         )
 
@@ -544,6 +547,7 @@ class UserServiceAdmin:
         logger.info(
             "reset_password_request_created",
             target_user_id=target_user_id,
+            created_by=current_user_id,
         )
 
     @staticmethod
@@ -571,6 +575,7 @@ class UserServiceAdmin:
             raise UserAlreadyActiveError("User is already activated")
 
         raw_invite_token, hashed_invite_token = generate_invite_token()
+
         invite_token_expires_at = datetime.now(UTC) + timedelta(
             hours=settings.INVITE_TOKEN_EXPIRES_HOURS
         )
@@ -602,7 +607,7 @@ class UserServiceAdmin:
         )
 
     @staticmethod
-    async def get_staff(
+    async def get_teachers(
         session: AsyncSession,
         skip: int,
         limit: int,
@@ -611,7 +616,13 @@ class UserServiceAdmin:
         order: str,
     ) -> PaginatedResponse:
         staff, total = await UserRepositoryAdmin.get_users_admin(
-            session, skip, limit, filters, sort_by, order, allowed_roles=STAFF_ROLES
+            session,
+            skip,
+            limit,
+            filters,
+            sort_by,
+            order,
+            allowed_roles=frozenset({UserRole.TEACHER}),
         )
 
         return PaginatedResponse(
@@ -623,23 +634,23 @@ class UserServiceAdmin:
         )
 
     @staticmethod
-    async def get_staff_by_id(
-        session: AsyncSession, target_staff_id: int
+    async def get_teacher_by_id(
+        session: AsyncSession, target_teacher_id: int
     ) -> UserResponseAdminDetailed:
-        cache_key = UserCacheKey.user_detail_key_admin(target_staff_id)
+        cache_key = UserCacheKey.user_detail_key_admin(target_teacher_id)
         cached = await get_cache(cache_key)
 
         if cached is not None:
-            raw = UserCacheSchema.model_validate(cached)
+            raw = UserResponseAdminCache.model_validate(cached)
 
             return UserResponseAdminDetailed.model_validate(raw.model_dump())
 
         staff = await UserRepositoryBase.get_user_by_id(
-            session, target_staff_id, allowed_roles=STAFF_ROLES
+            session, target_teacher_id, allowed_roles=UserRole.TEACHER
         )
         ensure_exists(staff, UserNotFoundError(HTTP404.USER))
 
-        raw = UserCacheSchema.model_validate(staff)
+        raw = UserResponseAdminCache.model_validate(staff)
         await set_cache(cache_key, raw.model_dump(mode="json"), 900)
 
         return UserResponseAdminDetailed.model_validate(staff)
@@ -682,7 +693,7 @@ class UserServiceAdmin:
         cached = await get_cache(cache_key)
 
         if cached is not None:
-            raw = StudentCacheSchema.model_validate(cached)
+            raw = StudentResponseAdminCache.model_validate(cached)
 
             return StudentResponseAdminDetailed.model_validate(raw.model_dump())
 
@@ -694,7 +705,7 @@ class UserServiceAdmin:
         )
         ensure_exists(student, UserNotFoundError(HTTP404.USER))
 
-        raw = StudentCacheSchema.model_validate(student)
+        raw = StudentResponseAdminCache.model_validate(student)
         await set_cache(cache_key, raw.model_dump(mode="json"), 900)
 
         return StudentResponseAdminDetailed.model_validate(student)

@@ -15,20 +15,17 @@ from src.core.security import (
     verify_email_change_code,
     verify_password,
 )
-from src.users.models.user import User
 from src.users.repositories.user import UserRepositoryBase
 from src.users.schemas.shared import (
     ConfirmEmailChange,
     StudentResponseSelf,
-    StudentSelfCacheSchema,
-    UpdateMeCredentials,
+    StudentResponseSelfCache,
     UpdateMePassword,
-    UpdateMeProfile,
     UserResponseSelf,
-    UserSelfCacheSchema,
+    UserResponseSelfCache,
 )
 from src.users.services.system_admin import check_contact_limit
-from src.users.utils.constants import HTTP404
+from src.users.utils.constants import HTTP404, STUDENT_MAX_SHARED_CONTACT
 from src.users.utils.exceptions import (
     DuplicateEmailChangeRequestError,
     EmailChangeCodeExpiredError,
@@ -39,6 +36,7 @@ from src.users.utils.exceptions import (
     handle_non_student_unique_contact_error,
     handle_username_integrity_error,
 )
+from src.users.utils.user_credentials_schema import UpdateUserCredentials
 from src.utils import email as email_sender
 from src.utils.base_constant import HTTP400
 from src.utils.base_exception import (
@@ -47,91 +45,43 @@ from src.utils.base_exception import (
 )
 from src.utils.cache_keys import SessionCacheKey, UserCacheKey
 from src.utils.enums import EmailType, UserRole
-from src.utils.helpers import ensure_exists, update_object
+from src.utils.helpers import ensure_exists
 
 logger = get_logger(__name__)
-
-STUDENT_MAX_SHARED_CONTACT = 3
 
 
 class UserServiceSelf:
     @staticmethod
     async def get_my_profile(
-        db: AsyncSession, current_user: CurrentUser
+        session: AsyncSession, current_user: CurrentUser
     ) -> UserResponseSelf:
         cache_key = UserCacheKey.user_detail_key_self(current_user.id)
         cached = await get_cache(cache_key)
 
         if cached is not None:
-            raw = UserSelfCacheSchema.model_validate(cached)
+            raw = UserResponseSelfCache.model_validate(cached)
             return UserResponseSelf.model_validate(raw.model_dump())
 
         user = await UserRepositoryBase.get_user_by_id(
-            db,
+            session,
             current_user.id,
             excluded_roles=frozenset({UserRole.STUDENT}),
         )
         ensure_exists(user, UserNotFoundError(HTTP404.USER))
 
-        raw = UserSelfCacheSchema.model_validate(user)
+        raw = UserResponseSelfCache.model_validate(user)
         await set_cache(cache_key, raw.model_dump(mode="json"), 900)
 
         return UserResponseSelf.model_validate(user)
 
     @staticmethod
-    async def update_me_profile(
-        db: AsyncSession,
-        current_user_id: int,
-        update_request: UpdateMeProfile,
-    ) -> User:
-        current_user = await UserRepositoryBase.get_user_by_id(db, current_user_id)
-        ensure_exists(current_user, UserNotFoundError(HTTP404.USER))
-
-        try:
-            update_object(current_user, update_request)
-
-            await db.commit()
-            await db.refresh(current_user)
-
-            asyncio.create_task(
-                email_sender.send_safe(
-                    email_sender.send_account_info_updated_email(current_user.email),
-                    email_type=EmailType.UPDATING_ACCOUNT,
-                )
-            )
-
-            await delete_cache(
-                UserCacheKey.user_detail_key_admin(current_user_id),
-                UserCacheKey.user_detail_key_staff(current_user_id),
-                UserCacheKey.user_detail_key_self(current_user_id),
-            )
-
-            logger.info(
-                "user_profile_updated",
-                target_user_id=current_user_id,
-                method="self_update",
-            )
-
-        except IntegrityError as e:
-            await db.rollback()
-
-            logger.error(
-                "profile_update_failed",
-                target_user_id=current_user_id,
-                reason=str(e.orig),
-            )
-
-            handle_non_student_unique_contact_error(e)
-            raise_unhandled_integrity_error(e)
-
-    @staticmethod
     async def update_me_credentials(
-        db: AsyncSession,
+        session: AsyncSession,
         current_user_id: int,
-        update_request: UpdateMeCredentials,
+        update_request: UpdateUserCredentials,
     ) -> None:
         target_user = await UserRepositoryBase.get_user_by_id(
-            db, current_user_id, load_session=True
+            session, current_user_id, load_session=True
         )
         ensure_exists(target_user, UserNotFoundError(HTTP404.USER))
 
@@ -184,8 +134,8 @@ class UserServiceSelf:
                 session.email_change_code_hash = hashed_code
                 session.email_change_code_expires_at = code_expires_at
 
-            await db.commit()
-            await db.refresh(target_user)
+            await session.commit()
+            await session.refresh(target_user)
 
             if email_requested:
                 asyncio.create_task(
@@ -209,9 +159,10 @@ class UserServiceSelf:
                 )
 
                 logger.info(
-                    "user_username_updated",
+                    "username_updated",
                     target_user_id=current_user_id,
                     new_username=target_user.username,
+                    method="self_service",
                 )
 
             if email_requested:
@@ -219,15 +170,17 @@ class UserServiceSelf:
                     "user_email_update_requested",
                     target_user_id=current_user_id,
                     email_change_requested=target_user.email,
+                    method="self_service",
                 )
 
         except IntegrityError as e:
-            await db.rollback()
+            await session.rollback()
 
             logger.error(
                 "user_credentials_update_failed",
                 target_user_id=current_user_id,
                 reason=str(e.orig),
+                method="self_service",
             )
 
             handle_username_integrity_error(e)
@@ -235,12 +188,12 @@ class UserServiceSelf:
 
     @staticmethod
     async def confirm_email_change(
-        db: AsyncSession,
+        session: AsyncSession,
         current_user_id: int,
         confirm_request: ConfirmEmailChange,
     ) -> None:
         target_user = await UserRepositoryBase.get_user_by_id(
-            db, current_user_id, load_session=True
+            session, current_user_id, load_session=True
         )
         ensure_exists(target_user, UserNotFoundError(HTTP404.USER))
 
@@ -266,9 +219,11 @@ class UserServiceSelf:
         is_student = target_user.role == UserRole.STUDENT
 
         if is_student:
-            await acquire_student_contact_lock(db, phone_number=None, email=new_email)
+            await acquire_student_contact_lock(
+                session, phone_number=None, email=new_email
+            )
             await check_contact_limit(
-                db,
+                session,
                 current_user_id,
                 target_username=target_user.username,
                 phone_number=None,
@@ -292,8 +247,8 @@ class UserServiceSelf:
             session.refresh_token_family = None
             session.refresh_token_expires_at = None
 
-            await db.commit()
-            await db.refresh(target_user)
+            await session.commit()
+            await session.refresh(target_user)
 
             asyncio.create_task(
                 email_sender.send_safe(
@@ -312,17 +267,19 @@ class UserServiceSelf:
             )
 
             logger.info(
-                "user_email_changed",
+                "email_changed",
                 target_user_id=current_user_id,
+                method="self_service",
             )
 
         except IntegrityError as e:
-            await db.rollback()
+            await session.rollback()
 
             logger.error(
                 "email_change_confirmation_failed",
                 target_user_id=current_user_id,
                 reason=str(e.orig),
+                method="self_service",
             )
 
             if not is_student:
@@ -331,12 +288,12 @@ class UserServiceSelf:
 
     @staticmethod
     async def update_me_password(
-        db: AsyncSession,
+        session: AsyncSession,
         current_user_id: int,
         update_request: UpdateMePassword,
     ) -> None:
         target_user = await UserRepositoryBase.get_user_by_id(
-            db, current_user_id, load_session=True
+            session, current_user_id, load_session=True
         )
         ensure_exists(target_user, UserNotFoundError(HTTP404.USER))
 
@@ -348,6 +305,7 @@ class UserServiceSelf:
                 "password_change_denied",
                 target_user_id=current_user_id,
                 denial_reason="incorrect_current_password",
+                method="self_service",
             )
 
             raise IncorrectPasswordError("Current password is incorrect")
@@ -361,7 +319,7 @@ class UserServiceSelf:
         target_user.session.refresh_token_family = None
         target_user.session.refresh_token_expires_at = None
 
-        await db.commit()
+        await session.commit()
 
         asyncio.create_task(
             email_sender.send_safe(
@@ -373,32 +331,31 @@ class UserServiceSelf:
         await delete_cache(SessionCacheKey.access_token_version_key(current_user_id))
 
         logger.info(
-            "user_password_changed",
+            "password_changed",
             target_user_id=current_user_id,
+            method="self_service",
         )
 
-
-class StudentService:
     @staticmethod
-    async def get_my_profile(
-        db: AsyncSession, current_user: CurrentUser
+    async def get_my_student_profile(
+        session: AsyncSession, current_user: CurrentUser
     ) -> StudentResponseSelf:
         cache_key = UserCacheKey.user_detail_key_self(current_user.id)
         cached = await get_cache(cache_key)
 
         if cached is not None:
-            raw = StudentSelfCacheSchema.model_validate(cached)
+            raw = StudentResponseSelfCache.model_validate(cached)
             return StudentResponseSelf.model_validate(raw.model_dump())
 
         student = await UserRepositoryBase.get_user_by_id(
-            db,
+            session,
             current_user.id,
             allowed_roles=frozenset({UserRole.STUDENT}),
             load_group=True,
         )
         ensure_exists(student, UserNotFoundError(HTTP404.USER))
 
-        raw = StudentSelfCacheSchema.model_validate(student)
+        raw = StudentResponseSelfCache.model_validate(student)
         await set_cache(cache_key, raw.model_dump(mode="json"), 900)
 
         return StudentResponseSelf.model_validate(student)

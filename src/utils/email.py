@@ -6,7 +6,6 @@ import httpx
 
 from src.core.config import settings
 from src.core.logging import get_logger
-from src.utils.enums import UserRole
 
 logger = get_logger(__name__)
 
@@ -330,120 +329,8 @@ async def send_admin_credentials_override_notification(
     )
 
 
-async def send_account_deletion_email(email: str) -> None:
-    login_link = f"{settings.APP_URL}/auth/login"
-
-    html = f"""
-        <!DOCTYPE html>
-        <html lang="en">
-        <body style="font-family: Arial, sans-serif; background:#f4f4f5; padding:40px;">
-            <div style="max-width:560px;margin:auto;background:white;
-                        padding:40px;border-radius:8px;">
-                <h1 style="color:#1d4ed8;">LFGS | SMS Lite</h1>
-                <h2>Your account is scheduled for deletion</h2>
-                <p>
-                    A school administrator has scheduled your account for deletion.
-                    Your account will be <strong>
-                        permanently deleted in 30 days
-                    </strong>.
-                </p>
-                <p>
-                    You can still log in and use your account normally during this
-                    30-day period.
-                </p>
-                <div style="margin:40px 0;text-align:center;">
-                    <a href="{login_link}"
-                        style="background:#1d4ed8;color:white;padding:14px 28px;
-                            border-radius:6px;text-decoration:none;font-weight:bold;">
-                        Log In
-                    </a>
-                </div>
-                <p>
-                    If you believe this was done in error, please contact
-                    your school administrator before the deletion date.
-                </p>
-            </div>
-        </body>
-        </html>
-    """
-
-    text = (
-        "LFGS | SMS Lite\n\n"
-        "A school administrator has scheduled your account for deletion. "
-        "Your account will be permanently deleted in 30 days.\n\n"
-        "You can still log in and use your account normally during this "
-        "30-day period.\n\n"
-        f"Log in at: {login_link}\n\n"
-        "If you believe this was done in error, please contact "
-        "your school administrator before the deletion date."
-    )
-
-    await send(
-        subject="Your LFGS account is scheduled for deletion",
-        to_email=email,
-        html_body=html,
-        text_body=text,
-    )
-
-
-async def send_account_deletion_canceled_email(email: str) -> None:
-    login_link = f"{settings.APP_URL}/auth/login"
-
-    html = f"""
-        <!DOCTYPE html>
-        <html lang="en">
-        <body style="font-family: Arial, sans-serif; background:#f4f4f5; padding:40px;">
-            <div style="max-width:560px;margin:auto;background:white;
-                        padding:40px;border-radius:8px;">
-                <h1 style="color:#1d4ed8;">LFGS | SMS Lite</h1>
-                <h2>Your account deletion has been canceled</h2>
-                <p>
-                    The scheduled deletion of your account has been
-                    <strong>canceled</strong> by a school administrator.
-                </p>
-                <p>
-                    Your account remains active and you can continue logging in
-                    and using it as normal.
-                </p>
-                <div style="margin:40px 0;text-align:center;">
-                    <a href="{login_link}"
-                        style="background:#1d4ed8;color:white;padding:14px 28px;
-                            border-radius:6px;text-decoration:none;font-weight:bold;">
-                        Log In
-                    </a>
-                </div>
-                <p>
-                    If you have any questions, please contact
-                    your school administrator.
-                </p>
-            </div>
-        </body>
-        </html>
-    """
-
-    text = (
-        "LFGS | SMS Lite.\n\n"
-        "The scheduled deletion of your account has been canceled by a "
-        "school administrator.\n\n"
-        "Your account remains active and you can continue logging in "
-        "and using it as normal.\n\n"
-        f"Log in at: {login_link}\n\n"
-        "If you have any questions, please contact "
-        "your school administrator."
-    )
-
-    await send(
-        subject="Your LFGS account deletion has been canceled",
-        to_email=email,
-        html_body=html,
-        text_body=text,
-    )
-
-
 async def send_account_deactivation_email(email: str) -> None:
-    login_link = f"{settings.APP_URL}/auth/login"
-
-    html = f"""
+    html = """
         <!DOCTYPE html>
         <html lang="en">
         <body style="font-family: Arial, sans-serif; background:#f4f4f5; padding:40px;">
@@ -457,8 +344,6 @@ async def send_account_deactivation_email(email: str) -> None:
                     An administrator has deactivated your account.
                 </p>
 
-                {login_link}
-
                 <p>
                     If you believe this was done in error, please contact
                     your LFGS administrator.
@@ -471,7 +356,6 @@ async def send_account_deactivation_email(email: str) -> None:
     text = (
         "LFGS | SMS Lite.\n\n"
         "An administrator has deactivated your account."
-        f"{login_link}\n\n"
         "If you believe this was done in error, please contact "
         "your LFGS administrator."
     )

@@ -10,6 +10,7 @@ from pydantic import (
     field_validator,
 )
 
+from src.groups.schemas import GroupResponseBase
 from src.utils import validators
 from src.utils.base_schema import BaseSchema
 from src.utils.enums import UserRole, UserStatus
@@ -20,10 +21,8 @@ class UserResponseAdmin(BaseModel):
     lastname: str
     middlename: str | None
 
-    role: UserRole
 
-
-class UserCacheSchema(UserResponseAdmin, BaseSchema):
+class UserResponseAdminCache(UserResponseAdmin, BaseSchema):
     id: int
 
     phone_number: str
@@ -40,7 +39,28 @@ class UserCacheSchema(UserResponseAdmin, BaseSchema):
     updated_at: datetime
 
 
-class UserResponseAdminDetailed(UserCacheSchema):
+class UserResponseAdminDetailed(UserResponseAdminCache):
+    phone_number: str = Field(exclude=True)
+
+    @field_serializer("created_at", "updated_at")
+    def serialize_datetimes(self, value: datetime) -> str:
+        return value.strftime("%d %b %Y, %H:%M")
+
+    @computed_field
+    @property
+    def format_phone_number(self) -> str:
+        return validators.format_phone_for_display(self.phone_number)
+
+
+class StudentResponseAdmin(UserResponseAdmin):
+    group: GroupResponseBase | None = None
+
+
+class StudentResponseAdminCache(UserResponseAdminCache):
+    group: GroupResponseBase | None = None
+
+
+class StudentResponseAdminDetailed(StudentResponseAdminCache):
     phone_number: str = Field(exclude=True)
 
     @field_serializer("created_at", "updated_at")
@@ -83,6 +103,7 @@ class CreateUserBase(BaseModel):
     def validate_middlename(cls, v: str | None) -> str | None:
         if v is None:
             return None
+
         return validators.validate_middlename(v)
 
     @field_validator("phone_number")
@@ -130,6 +151,7 @@ class UpdateUserBase(BaseModel):
     def validate_firstname(cls, v: str | None) -> str | None:
         if v is None:
             return None
+
         return validators.validate_firstname(v)
 
     @field_validator("lastname")
@@ -137,6 +159,7 @@ class UpdateUserBase(BaseModel):
     def validate_lastname(cls, v: str | None) -> str | None:
         if v is None:
             return None
+
         return validators.validate_lastname(v)
 
     @field_validator("middlename")
@@ -144,6 +167,7 @@ class UpdateUserBase(BaseModel):
     def validate_middlename(cls, v: str | None) -> str | None:
         if v is None:
             return None
+
         return validators.validate_middlename(v)
 
     @field_validator("phone_number", mode="after")
@@ -151,6 +175,7 @@ class UpdateUserBase(BaseModel):
     def validate_phone_number(cls, field: str | None) -> str | None:
         if field is None:
             return None
+
         return validators.parse_and_validate_mobile_number(field)
 
 
@@ -179,33 +204,14 @@ UpdateUserRequest = Annotated[
 ]
 
 
-class UpdateUserCredentials(BaseModel):
-    username: str | None = Field(min_length=6, max_length=20, default=None)
-    email: EmailStr | None = None
-
-    @field_validator("username")
-    @classmethod
-    def validate_username(cls, v: str | None) -> str | None:
-        if v is None:
-            return None
-        return validators.validate_username(v)
-
-    @field_validator("email", mode="after")
-    @classmethod
-    def normalize_email(cls, v: EmailStr | None) -> str | None:
-        if v is None:
-            return None
-        return v.strip().lower()
-
-
 class SearchUserBase(BaseModel):
-    firstname: str | None = Field(default=None, max_length=50)
-    lastname: str | None = Field(default=None, max_length=50)
-    middlename: str | None = Field(default=None, max_length=50)
+    firstname: str | None = Field(default=None, min_length=3, max_length=50)
+    lastname: str | None = Field(default=None, min_length=3, max_length=50)
+    middlename: str | None = Field(default=None, min_length=3, max_length=50)
     status: UserStatus | None = None
 
 
 class SearchUserAdmin(SearchUserBase):
-    username: str | None = Field(default=None, max_length=15)
-    email: str | None = Field(default=None, max_length=20)
-    phone_number: str | None = Field(default=None, max_length=16)
+    username: str | None = Field(default=None, min_length=3, max_length=15)
+    email: str | None = Field(default=None, min_length=5, max_length=20)
+    phone_number: str | None = Field(default=None, min_length=5, max_length=16)

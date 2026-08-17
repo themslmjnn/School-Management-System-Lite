@@ -7,25 +7,20 @@ from src.core.dependencies import (
     async_session_dependency,
     current_user_dependency,
     require_student,
-    require_system_admin,
 )
 from src.core.limiter import user_limiter
 from src.users.schemas.shared import (
     ConfirmEmailChange,
     StudentResponseSelf,
-    UpdateMeCredentials,
     UpdateMePassword,
-    UpdateMeProfile,
     UserResponseSelf,
 )
-from src.users.services.shared import (
-    StudentService,
-    UserServiceSelf,
-)
+from src.users.services.shared import UserServiceSelf
+from src.users.utils.user_credentials_schema import UpdateUserCredentials
 
 router = APIRouter(
     prefix="/users",
-    tags=["Users - Shared - User"],
+    tags=["Users - Shared"],
 )
 
 
@@ -38,20 +33,6 @@ async def get_my_profile(
 
 
 @router.patch(
-    "/me/profile",
-    status_code=status.HTTP_204_NO_CONTENT,
-)
-@user_limiter.limit("5/minute")
-async def update_me_profile(
-    request: Request,
-    session: async_session_dependency,
-    current_user: Annotated[CurrentUser, Depends(require_system_admin)],
-    update_request: UpdateMeProfile,
-):
-    await UserServiceSelf.update_me_profile(session, current_user.id, update_request)
-
-
-@router.patch(
     "/me/credentials",
     status_code=status.HTTP_204_NO_CONTENT,
 )
@@ -60,7 +41,7 @@ async def update_me_credentials(
     request: Request,
     session: async_session_dependency,
     current_user: current_user_dependency,
-    update_request: UpdateMeCredentials,
+    update_request: UpdateUserCredentials,
 ):
     await UserServiceSelf.update_me_credentials(
         session, current_user.id, update_request
@@ -104,4 +85,4 @@ async def get_my_student_profile(
     session: async_session_dependency,
     current_user: Annotated[CurrentUser, Depends(require_student)],
 ):
-    return await StudentService.get_my_profile(session, current_user)
+    return await UserServiceSelf.get_my_student_profile(session, current_user)
