@@ -64,23 +64,23 @@ def create_tables(_guard_test_environment):
 
 
 @pytest_asyncio.fixture(scope="function")
-async def test_session():
+async def session():
     async with test_engine.connect() as conn:
         await conn.begin()
 
-        session = AsyncSession(bind=conn, expire_on_commit=False)
+        test_session = AsyncSession(bind=conn, expire_on_commit=False)
 
         async def override_get_session():
-            yield session
+            yield test_session
 
         app.dependency_overrides[get_session] = override_get_session
 
         try:
-            yield session
+            yield test_session
 
         finally:
             try:
-                await session.close()
+                await test_session.close()
                 await conn.rollback()
 
             except Exception as e:
@@ -91,7 +91,7 @@ async def test_session():
 
 
 @pytest_asyncio.fixture(scope="function")
-async def client(test_session):
+async def client(session):
     async with AsyncClient(
         transport=ASGITransport(app=app),
         base_url="http://test",
@@ -124,9 +124,9 @@ def mock_response():
     return MagicMock()
 
 
-async def make_auth_header(test_session: AsyncSession, user: User) -> dict:
+async def make_auth_header(session: AsyncSession, user: User) -> dict:
     user_with_session = await UserRepositoryBase.get_user_by_id(
-        test_session, user.id, load_session=True
+        session, user.id, load_session=True
     )
 
     token = create_access_token(
@@ -141,23 +141,23 @@ async def make_auth_header(test_session: AsyncSession, user: User) -> dict:
 
 
 @pytest_asyncio.fixture
-async def system_admin(test_session):
-    return await make_system_admin(test_session)
+async def system_admin(session):
+    return await make_system_admin(session)
 
 
 @pytest_asyncio.fixture
-async def director(test_session):
-    return await make_director(test_session)
+async def director(session):
+    return await make_director(session)
 
 
 @pytest_asyncio.fixture
-async def teacher(test_session):
-    return await make_teacher(test_session)
+async def teacher(session):
+    return await make_teacher(session)
 
 
 @pytest_asyncio.fixture
-async def student(test_session):
-    return await make_student(test_session)
+async def student(session):
+    return await make_student(session)
 
 
 create_user_request = {

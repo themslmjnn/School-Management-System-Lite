@@ -51,35 +51,35 @@ class TestRegisterTeacher:
     )
     async def test_reject_duplicate_fields(
         self,
-        test_session: AsyncSession,
+        session: AsyncSession,
         system_admin: User,
         valid_create_teacher_request: CreateTeacherAdmin,
         existing_user_data,
         request_override,
         expected_exception,
     ):
-        await make_teacher(test_session, **existing_user_data)
+        await make_teacher(session, **existing_user_data)
 
         for field, value in request_override.items():
             setattr(valid_create_teacher_request, field, value)
 
         with pytest.raises(expected_exception):
             await UserServiceAdmin.register_user(
-                test_session, system_admin.id, valid_create_teacher_request
+                session, system_admin.id, valid_create_teacher_request
             )
 
     async def test_create_user_session_table_successfully(
         self,
-        test_session: AsyncSession,
+        session: AsyncSession,
         system_admin: User,
         valid_create_teacher_request: CreateTeacherAdmin,
     ):
         user = await UserServiceAdmin.register_user(
-            test_session, system_admin.id, valid_create_teacher_request
+            session, system_admin.id, valid_create_teacher_request
         )
 
         user_with_session = await UserRepositoryBase.get_user_by_id(
-            test_session, user.id, load_session=True
+            session, user.id, load_session=True
         )
         session = user_with_session.session
 
@@ -97,16 +97,16 @@ class TestRegisterTeacher:
 
     async def test_create_user_login_lockout_table_successfully(
         self,
-        test_session: AsyncSession,
+        session: AsyncSession,
         system_admin: User,
         valid_create_teacher_request: CreateTeacherAdmin,
     ):
         user = await UserServiceAdmin.register_user(
-            test_session, system_admin.id, valid_create_teacher_request
+            session, system_admin.id, valid_create_teacher_request
         )
 
         user_with_lockout = await UserRepositoryBase.get_user_by_id(
-            test_session, user.id, load_login_lockout=True
+            session, user.id, load_login_lockout=True
         )
         lockout = user_with_lockout.login_lockout
 
@@ -117,16 +117,16 @@ class TestRegisterTeacher:
 
     async def test_create_user_activation_table_successfully(
         self,
-        test_session: AsyncSession,
+        session: AsyncSession,
         system_admin: User,
         valid_create_teacher_request: CreateTeacherAdmin,
     ):
         user = await UserServiceAdmin.register_user(
-            test_session, system_admin.id, valid_create_teacher_request
+            session, system_admin.id, valid_create_teacher_request
         )
 
         user_with_activation = await UserRepositoryBase.get_user_by_id(
-            test_session, user.id, load_activation=True
+            session, user.id, load_activation=True
         )
         activation = user_with_activation.activation
 
@@ -138,16 +138,16 @@ class TestRegisterTeacher:
 
     async def test_create_pending_email_successfully(
         self,
-        test_session: AsyncSession,
+        session: AsyncSession,
         system_admin: User,
         valid_create_teacher_request: CreateTeacherAdmin,
     ):
         user = await UserServiceAdmin.register_user(
-            test_session, system_admin.id, valid_create_teacher_request
+            session, system_admin.id, valid_create_teacher_request
         )
 
         pending_emails = await PendingEmailRepository.get_pending_email_by_triggered_by(
-            test_session, system_admin.id
+            session, system_admin.id
         )
         email = pending_emails[0]
 
@@ -162,12 +162,12 @@ class TestRegisterTeacher:
 
     async def test_create_user_successfully(
         self,
-        test_session: AsyncSession,
+        session: AsyncSession,
         system_admin: User,
         valid_create_teacher_request: CreateTeacherAdmin,
     ):
         user = await UserServiceAdmin.register_user(
-            test_session, system_admin.id, valid_create_teacher_request
+            session, system_admin.id, valid_create_teacher_request
         )
 
         assert user.id is not None
@@ -210,12 +210,12 @@ class TestRegisterTeacher:
         existing_kwargs,
         duplicate_value,
         expected_exception,
-        test_session: AsyncSession,
+        session: AsyncSession,
         system_admin: User,
         valid_create_teacher_request: CreateTeacherAdmin,
         mocker,
     ):
-        await make_teacher(test_session, **existing_kwargs)
+        await make_teacher(session, **existing_kwargs)
 
         mocker.patch(
             "src.users.services.system_admin.UserRepositoryBase.count_users_with_contact",
@@ -226,7 +226,7 @@ class TestRegisterTeacher:
 
         with pytest.raises(expected_exception):
             await UserServiceAdmin.register_user(
-                test_session,
+                session,
                 system_admin.id,
                 valid_create_teacher_request,
             )
@@ -245,21 +245,21 @@ class TestRegisterStudent:
     )
     async def test_reject_duplicate_username(
         self,
-        test_session: AsyncSession,
+        session: AsyncSession,
         system_admin: User,
         valid_create_student_request: CreateStudentAdmin,
         existing_user_data,
         request_override,
         expected_exception,
     ):
-        await make_teacher(test_session, **existing_user_data)
+        await make_teacher(session, **existing_user_data)
 
         for field, value in request_override.items():
             setattr(valid_create_student_request, field, value)
 
         with pytest.raises(expected_exception):
             await UserServiceAdmin.register_user(
-                test_session, system_admin.id, valid_create_student_request
+                session, system_admin.id, valid_create_student_request
             )
 
     @pytest.mark.parametrize(
@@ -271,7 +271,7 @@ class TestRegisterStudent:
     )
     async def test_reject_when_student_contact_limit_reached(
         self,
-        test_session: AsyncSession,
+        session: AsyncSession,
         system_admin: User,
         valid_create_student_request: CreateStudentAdmin,
         field,
@@ -280,7 +280,7 @@ class TestRegisterStudent:
     ):
         for i in range(3):
             await make_student(
-                test_session,
+                session,
                 username=f"existing_student_{i}",
                 **{field: value},
             )
@@ -289,23 +289,23 @@ class TestRegisterStudent:
 
         with pytest.raises(expected_exception):
             await UserServiceAdmin.register_user(
-                test_session,
+                session,
                 system_admin.id,
                 valid_create_student_request,
             )
 
     async def test_create_user_session_table_successfully(
         self,
-        test_session: AsyncSession,
+        session: AsyncSession,
         system_admin: User,
         valid_create_student_request: CreateStudentAdmin,
     ):
         user = await UserServiceAdmin.register_user(
-            test_session, system_admin.id, valid_create_student_request
+            session, system_admin.id, valid_create_student_request
         )
 
         user_with_session = await UserRepositoryBase.get_user_by_id(
-            test_session, user.id, load_session=True
+            session, user.id, load_session=True
         )
         session = user_with_session.session
 
@@ -318,16 +318,16 @@ class TestRegisterStudent:
 
     async def test_create_user_login_lockout_table_successfully(
         self,
-        test_session: AsyncSession,
+        session: AsyncSession,
         system_admin: User,
         valid_create_student_request: CreateStudentAdmin,
     ):
         user = await UserServiceAdmin.register_user(
-            test_session, system_admin.id, valid_create_student_request
+            session, system_admin.id, valid_create_student_request
         )
 
         user_with_lockout = await UserRepositoryBase.get_user_by_id(
-            test_session, user.id, load_login_lockout=True
+            session, user.id, load_login_lockout=True
         )
         lockout = user_with_lockout.login_lockout
 
@@ -338,16 +338,16 @@ class TestRegisterStudent:
 
     async def test_create_user_activation_table_successfully(
         self,
-        test_session: AsyncSession,
+        session: AsyncSession,
         system_admin: User,
         valid_create_student_request: CreateStudentAdmin,
     ):
         user = await UserServiceAdmin.register_user(
-            test_session, system_admin.id, valid_create_student_request
+            session, system_admin.id, valid_create_student_request
         )
 
         user_with_activation = await UserRepositoryBase.get_user_by_id(
-            test_session, user.id, load_activation=True
+            session, user.id, load_activation=True
         )
         activation = user_with_activation.activation
 
@@ -359,16 +359,16 @@ class TestRegisterStudent:
 
     async def test_create_pending_email_successfully(
         self,
-        test_session: AsyncSession,
+        session: AsyncSession,
         system_admin: User,
         valid_create_student_request: CreateStudentAdmin,
     ):
         user = await UserServiceAdmin.register_user(
-            test_session, system_admin.id, valid_create_student_request
+            session, system_admin.id, valid_create_student_request
         )
 
         pending_emails = await PendingEmailRepository.get_pending_email_by_triggered_by(
-            test_session, system_admin.id
+            session, system_admin.id
         )
         email = pending_emails[0]
 
@@ -379,12 +379,12 @@ class TestRegisterStudent:
 
     async def test_create_user_successfully(
         self,
-        test_session: AsyncSession,
+        session: AsyncSession,
         system_admin: User,
         valid_create_student_request: CreateStudentAdmin,
     ):
         user = await UserServiceAdmin.register_user(
-            test_session, system_admin.id, valid_create_student_request
+            session, system_admin.id, valid_create_student_request
         )
 
         assert user.id is not None
@@ -399,30 +399,30 @@ class TestRegisterStudent:
 class TestAdvisoryLock:
     async def test_advisory_lock_acquired_for_student(
         self,
-        test_session: AsyncSession,
+        session: AsyncSession,
         system_admin: User,
         valid_create_student_request: CreateStudentAdmin,
         mock_advisory_lock,
     ):
         await UserServiceAdmin.register_user(
-            test_session, system_admin.id, valid_create_student_request
+            session, system_admin.id, valid_create_student_request
         )
 
         mock_advisory_lock.assert_called_once_with(
-            test_session,
+            session,
             phone_number=valid_create_student_request.phone_number,
             email=valid_create_student_request.email,
         )
 
     async def test_advisory_lock_not_acquired_for_staff(
         self,
-        test_session: AsyncSession,
+        session: AsyncSession,
         system_admin: User,
         valid_create_teacher_request: CreateTeacherAdmin,
         mock_advisory_lock,
     ):
         await UserServiceAdmin.register_user(
-            test_session, system_admin.id, valid_create_teacher_request
+            session, system_admin.id, valid_create_teacher_request
         )
 
         mock_advisory_lock.assert_not_called()
