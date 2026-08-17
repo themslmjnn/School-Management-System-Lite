@@ -19,18 +19,23 @@ class UserResponseAdmin(BaseModel):
     firstname: str
     lastname: str
     middlename: str | None
+
     role: UserRole
 
 
 class UserCacheSchema(UserResponseAdmin, BaseSchema):
     id: int
-    date_of_birth: date | None
+
     phone_number: str
     email: str
+
+    date_of_birth: date | None
     address: str | None
+
     status: UserStatus
     is_active: bool
     created_by: int | None
+
     created_at: datetime
     updated_at: datetime
 
@@ -50,9 +55,11 @@ class UserResponseAdminDetailed(UserCacheSchema):
 
 class CreateUserBase(BaseModel):
     username: str = Field(min_length=6, max_length=20)
+
     firstname: str = Field(min_length=3, max_length=50)
     lastname: str = Field(min_length=3, max_length=50)
     middlename: str | None = Field(min_length=3, max_length=50, default=None)
+
     phone_number: str
     email: EmailStr
 
@@ -91,6 +98,7 @@ class CreateUserBase(BaseModel):
 
 class CreateStudentAdmin(CreateUserBase):
     type: Literal["student"] = "student"
+
     date_of_birth: date
     address: str | None = Field(min_length=15, max_length=100, default=None)
 
@@ -114,6 +122,7 @@ class UpdateUserBase(BaseModel):
     firstname: str | None = Field(min_length=3, max_length=50, default=None)
     lastname: str | None = Field(min_length=3, max_length=50, default=None)
     middlename: str | None = Field(min_length=3, max_length=50, default=None)
+
     phone_number: str | None = None
 
     @field_validator("firstname")
@@ -145,12 +154,13 @@ class UpdateUserBase(BaseModel):
         return validators.parse_and_validate_mobile_number(field)
 
 
-class UpdateStaffAndGuardianAdmin(UpdateUserBase):
-    type: Literal["staff_or_guardian"] = "staff_or_guardian"
+class UpdateTeacherAdmin(UpdateUserBase):
+    type: Literal["teacher"] = "teacher"
 
 
 class UpdateStudentAdmin(UpdateUserBase):
     type: Literal["student"] = "student"
+
     date_of_birth: date | None = None
     address: str | None = Field(min_length=15, max_length=100, default=None)
 
@@ -159,11 +169,12 @@ class UpdateStudentAdmin(UpdateUserBase):
     def validate_date_of_birth(cls, field: date | None) -> date | None:
         if field is None:
             return None
+
         return validators.validate_date_of_birth(field)
 
 
-UpdateUser = Annotated[
-    UpdateStaffAndGuardianAdmin | UpdateStudentAdmin,
+UpdateUserRequest = Annotated[
+    UpdateTeacherAdmin | UpdateStudentAdmin,
     Field(discriminator="type"),
 ]
 

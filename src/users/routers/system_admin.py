@@ -14,8 +14,8 @@ from src.users.schemas.shared import StudentResponseAdmin, StudentResponseAdminD
 from src.users.schemas.system_admin import (
     CreateUserRequest,
     SearchUserAdmin,
-    UpdateUser,
     UpdateUserCredentials,
+    UpdateUserRequest,
     UserResponseAdmin,
     UserResponseAdminDetailed,
 )
@@ -55,7 +55,7 @@ async def update_user(
     session: async_session_dependency,
     current_user: Annotated[CurrentUser, Depends(require_system_admin)],
     target_user_id: Annotated[int, Path(ge=1)],
-    update_request: UpdateUser,
+    update_request: UpdateUserRequest,
 ):
     await UserServiceAdmin.update_user(
         session, current_user.id, target_user_id, update_request

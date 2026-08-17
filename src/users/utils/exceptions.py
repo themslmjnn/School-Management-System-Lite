@@ -24,20 +24,20 @@ class MaxTeachersPerPhoneNumberError(AppException):
     status_code = 409
 
 
-class UserNotFoundError(AppException):
-    status_code = 404
-
-
-class UserTypeMismatchError(AppException):
-    status_code = 400
-
-
 class DuplicateEmailError(AppException):
     status_code = 409
 
 
 class DuplicatePhoneNumberError(AppException):
     status_code = 409
+
+
+class UserNotFoundError(AppException):
+    status_code = 404
+
+
+class UserTypeMismatchError(AppException):
+    status_code = 400
 
 
 class UserAlreadyActiveError(AppException):

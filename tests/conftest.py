@@ -1,4 +1,4 @@
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 import pytest_asyncio
@@ -191,4 +191,20 @@ def mock_advisory_lock(mocker):
     return mocker.patch(
         "src.users.services.system_admin.acquire_student_contact_lock",
         return_value=None,
+    )
+
+
+@pytest.fixture
+def mock_check_contact_limit(mocker):
+    return mocker.patch(
+        "src.users.services.system_admin.check_contact_limit",
+        return_value=None,
+    )
+
+
+@pytest.fixture
+def mock_send_account_info_updated_email(mocker):
+    return mocker.patch(
+        "src.users.services.system_admin.email_sender.send_account_info_updated_email",
+        new_callable=AsyncMock,
     )

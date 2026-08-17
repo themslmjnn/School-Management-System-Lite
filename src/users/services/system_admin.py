@@ -28,8 +28,8 @@ from src.users.schemas.system_admin import (
     CreateUserRequest,
     SearchUserAdmin,
     UpdateStudentAdmin,
-    UpdateUser,
     UpdateUserCredentials,
+    UpdateUserRequest,
     UserCacheSchema,
     UserResponseAdminDetailed,
 )
@@ -182,7 +182,7 @@ class UserServiceAdmin:
         session: AsyncSession,
         current_user_id: int,
         target_user_id: int,
-        update_request: UpdateUser,
+        update_request: UpdateUserRequest,
     ) -> User:
         target_user = await UserRepositoryBase.get_user_by_id(
             session, target_user_id, excluded_roles=SYSTEM_ADMIN_INVISIBLE_ROLES
