@@ -13,7 +13,9 @@ class SubjectRepository:
         session.add(new_subject)
 
     @staticmethod
-    async def get_subject_by_id(session: AsyncSession, subject_id: int) -> Subject | None:
+    async def get_subject_by_id(
+        session: AsyncSession, subject_id: int
+    ) -> Subject | None:
         query = select(Subject).filter(Subject.id == subject_id)
 
         result = await session.execute(query)

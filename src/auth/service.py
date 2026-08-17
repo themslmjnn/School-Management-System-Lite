@@ -99,7 +99,9 @@ class AuthService:
         )
 
     @staticmethod
-    async def _invalidate_all_tokens(session: AsyncSession, current_user_id: int) -> None:
+    async def _invalidate_all_tokens(
+        session: AsyncSession, current_user_id: int
+    ) -> None:
         user = await UserRepositoryBase.get_user_by_id(
             session, current_user_id, load_session=True
         )
@@ -347,7 +349,9 @@ class AuthService:
 
             raise InvalidRefreshTokenError(HTTP401.INVALID_REFRESH_TOKEN) from exc
 
-        user = await UserRepositoryBase.get_user_by_id(session, user_id, load_session=True)
+        user = await UserRepositoryBase.get_user_by_id(
+            session, user_id, load_session=True
+        )
 
         if (
             user is None

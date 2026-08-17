@@ -44,7 +44,9 @@ class CurrentUser:
 
 
 async def get_current_user(
-    request: Request, session: async_session_dependency, token: str = Depends(oauth2_scheme)
+    request: Request,
+    session: async_session_dependency,
+    token: str = Depends(oauth2_scheme),
 ) -> CurrentUser:
     try:
         payload = decode_access_token(token)

@@ -66,4 +66,6 @@ async def retry_my_failed_email(
     current_user: Annotated[CurrentUser, Depends(current_user_dependency)],
     email_id: Annotated[int, Path(ge=1)],
 ):
-    return await PendingEmailService.retry_my_failed_email(session, current_user, email_id)
+    return await PendingEmailService.retry_my_failed_email(
+        session, current_user, email_id
+    )

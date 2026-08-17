@@ -217,7 +217,9 @@ class GroupService:
         )
 
     @staticmethod
-    async def get_group_by_id(session: AsyncSession, group_id: int) -> GroupResponseBase:
+    async def get_group_by_id(
+        session: AsyncSession, group_id: int
+    ) -> GroupResponseBase:
         cache_key = GroupCacheKey.group_detail_key_admin(group_id)
         cached = await get_cache(cache_key)
 
@@ -240,7 +242,9 @@ class GroupService:
     ) -> PaginatedResponse:
         await GroupService.get_group_by_id(session, group_id)
 
-        students, total = await GroupRepository.get_students(session, group_id, skip, limit)
+        students, total = await GroupRepository.get_students(
+            session, group_id, skip, limit
+        )
 
         return PaginatedResponse(
             items=students,
@@ -266,7 +270,9 @@ class GroupService:
 
         if group.capacity is not None:
             await acquire_group_capacity_lock(session, group_id)
-            current_count = await GroupRepository.count_active_students(session, group_id)
+            current_count = await GroupRepository.count_active_students(
+                session, group_id
+            )
 
             if current_count >= group.capacity:
                 logger.warning(

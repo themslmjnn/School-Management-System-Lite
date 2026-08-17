@@ -10,6 +10,7 @@ _env_file = {
     "test": ".env.test",
 }.get(os.getenv("ENVIRONMENT", "development"), ".env")
 
+
 class Settings(BaseSettings):
     ENVIRONMENT: str = "development"
 

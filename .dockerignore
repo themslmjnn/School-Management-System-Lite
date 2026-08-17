@@ -1,5 +1,4 @@
 .env
-.env.prod
 .env.test
 .DS_Store
 __pycache__/

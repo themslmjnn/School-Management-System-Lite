@@ -92,4 +92,6 @@ async def create_forgot_password_request(
     session: async_session_dependency,
     forgot_password_request: ForgotPasswordPublicRequest,
 ):
-    return await AuthService.create_forgot_password_request(session, forgot_password_request)
+    return await AuthService.create_forgot_password_request(
+        session, forgot_password_request
+    )

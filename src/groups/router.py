@@ -26,7 +26,9 @@ router = APIRouter(
 )
 
 
-@router.post("", response_model=GroupResponseAdminDetailed, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "", response_model=GroupResponseAdminDetailed, status_code=status.HTTP_201_CREATED
+)
 async def create_group(
     session: async_session_dependency,
     current_user: Annotated[CurrentUser, Depends(require_system_admin)],
@@ -42,9 +44,7 @@ async def update_group(
     group_id: Annotated[int, Path(ge=1)],
     update_request: GroupUpdate,
 ):
-    await GroupService.update_group(
-        session, current_user.id, group_id, update_request
-    )
+    await GroupService.update_group(session, current_user.id, group_id, update_request)
 
 
 @router.patch("/{group_id}/archive", status_code=status.HTTP_204_NO_CONTENT)
@@ -114,7 +114,9 @@ async def add_student_to_group(
     group_id: Annotated[int, Path(ge=1)],
     student_id: Annotated[int, Path(ge=1)],
 ):
-    await GroupService.add_student_to_group(session, current_user.id, group_id, student_id)
+    await GroupService.add_student_to_group(
+        session, current_user.id, group_id, student_id
+    )
 
 
 @router.delete(

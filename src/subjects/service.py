@@ -66,7 +66,10 @@ class SubjectService:
 
     @staticmethod
     async def update_subject(
-        session: AsyncSession, current_user_id: int, subject_id: int, request: SubjectUpdate
+        session: AsyncSession,
+        current_user_id: int,
+        subject_id: int,
+        request: SubjectUpdate,
     ) -> Subject:
         target_subject = await SubjectRepository.get_subject_by_id(session, subject_id)
         ensure_exists(target_subject, SubjectNotFoundError(HTTP404.SUBJECT))
@@ -206,7 +209,9 @@ class SubjectService:
         )
 
     @staticmethod
-    async def get_subject_by_id(session: AsyncSession, subject_id: int) -> SubjectResponse:
+    async def get_subject_by_id(
+        session: AsyncSession, subject_id: int
+    ) -> SubjectResponse:
         cache_key = SubjectCacheKey.subject_detail_key_admin(subject_id)
         cached = await get_cache(cache_key)
 
