@@ -53,7 +53,7 @@ class ExpiredInviteTokenError(AppException):
 
 
 class NoChangesDetectedError(AppException):
-    status_code = 409
+    status_code = 400
 
 
 class ExpiredResetPasswordTokenError(AppException):

@@ -4,6 +4,11 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.users.models.user import User
+from src.users.repositories.user import UserRepositoryBase
+from src.users.schemas.system_admin import (
+    UpdateStudentAdmin,
+    UpdateTeacherAdmin,
+)
 from src.users.services.system_admin import UserServiceAdmin
 from src.users.utils.exceptions import (
     DuplicatePhoneNumberError,
@@ -17,11 +22,6 @@ from tests.factories import (
     make_system_admin,
     make_teacher,
 )
-from src.users.schemas.system_admin import (
-    UpdateStudentAdmin,
-    UpdateTeacherAdmin,
-)
-from src.users.repositories.user import UserRepositoryBase
 
 
 class TestUpdateTeacher:
