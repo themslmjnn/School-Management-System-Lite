@@ -4,6 +4,7 @@ from datetime import UTC, date, datetime, timedelta
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.security import generate_invite_token, hash_password
+from src.groups.models import Group
 from src.users.models.activation import UserActivation
 from src.users.models.login_lockout import UserLoginLockout
 from src.users.models.session import UserSession
@@ -18,7 +19,7 @@ def _next() -> int:
 
 
 async def make_user(
-    test_session: AsyncSession,
+    session: AsyncSession,
     *,
     role: UserRole = UserRole.STUDENT,
     status: UserStatus = UserStatus.ACTIVE,
@@ -35,6 +36,7 @@ async def make_user(
     created_by: int | None = None,
     failed_login_attempts: int = 0,
     locked_until: datetime | None = None,
+    group_id: int | None = None,
 ) -> User:
     n = _next()
 
@@ -54,10 +56,11 @@ async def make_user(
         status=status,
         is_active=is_active,
         created_by=created_by,
+        group_id=group_id,
     )
 
-    test_session.add(new_user)
-    await test_session.flush()
+    session.add(new_user)
+    await session.flush()
 
     is_pending = status == UserStatus.PENDING_ACTIVATION
     _, hashed_invite_token = generate_invite_token()
@@ -76,36 +79,58 @@ async def make_user(
         locked_until=locked_until,
     )
 
-    test_session.add(new_activation)
-    test_session.add(new_session)
-    test_session.add(new_login_lockout)
+    session.add(new_activation)
+    session.add(new_session)
+    session.add(new_login_lockout)
 
-    await test_session.commit()
-    await test_session.refresh(new_user)
+    await session.commit()
+    await session.refresh(new_user)
 
     return new_user
 
 
-async def make_system_admin(test_session: AsyncSession, **kwargs) -> User:
-    return await make_user(test_session, role=UserRole.SYSTEM_ADMIN, **kwargs)
+async def make_system_admin(session: AsyncSession, **kwargs) -> User:
+    return await make_user(session, role=UserRole.SYSTEM_ADMIN, **kwargs)
 
 
-async def make_director(test_session: AsyncSession, **kwargs) -> User:
-    return await make_user(test_session, role=UserRole.DIRECTOR, **kwargs)
+async def make_director(session: AsyncSession, **kwargs) -> User:
+    return await make_user(session, role=UserRole.DIRECTOR, **kwargs)
 
 
-async def make_teacher(test_session: AsyncSession, **kwargs) -> User:
-    return await make_user(test_session, role=UserRole.TEACHER, **kwargs)
+async def make_teacher(session: AsyncSession, **kwargs) -> User:
+    return await make_user(session, role=UserRole.TEACHER, **kwargs)
 
 
-async def make_student(test_session: AsyncSession, **kwargs) -> User:
+async def make_student(session: AsyncSession, **kwargs) -> User:
     kwargs.setdefault("date_of_birth", date(2008, 1, 1))
 
-    return await make_user(test_session, role=UserRole.STUDENT, **kwargs)
+    return await make_user(session, role=UserRole.STUDENT, **kwargs)
 
 
-async def make_deactivated_user(test_session: AsyncSession, **kwargs) -> User:
+async def make_deactivated_user(session: AsyncSession, **kwargs) -> User:
     kwargs.setdefault("status", UserStatus.DEACTIVATED)
     kwargs.setdefault("is_active", False)
 
-    return await make_user(test_session, **kwargs)
+    return await make_user(session, **kwargs)
+
+
+async def make_group(
+    session: AsyncSession,
+    *,
+    name: str = "Group A",
+    academic_year: int = 2025,
+    grade_level: int | None = 1,
+    capacity: int | None = 30,
+) -> Group:
+    group = Group(
+        name=name,
+        academic_year=academic_year,
+        grade_level=grade_level,
+        capacity=capacity,
+    )
+
+    session.add(group)
+    await session.commit()
+    await session.refresh(group)
+
+    return group
