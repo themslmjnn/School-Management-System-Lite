@@ -49,7 +49,7 @@ class UserAlreadyActiveError(AppException):
 
 
 class UserNotPendingActivationError(AppException):
-    status_code = 404
+    status_code = 409
 
 
 class NoPendingEmailChangeError(AppException):

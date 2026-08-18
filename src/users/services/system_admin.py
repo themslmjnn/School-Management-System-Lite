@@ -38,6 +38,7 @@ from src.users.utils.exceptions import (
     UserAlreadyActiveError,
     UserAlreadyInactiveError,
     UserNotFoundError,
+    UserNotPendingActivationError,
     UserTypeMismatchError,
     handle_non_student_unique_contact_error,
     handle_username_integrity_error,
@@ -570,7 +571,7 @@ class UserServiceAdmin:
                 denial_reason="user_not_pending_activation",
             )
 
-            raise UserAlreadyActiveError("User is already activated")
+            raise UserNotPendingActivationError("User is already activated")
 
         raw_invite_token, hashed_invite_token = generate_invite_token()
 
