@@ -17,7 +17,7 @@ from tests.factories import make_teacher
 
 
 class TestRegisterUser:
-    async def test_creates_staff_user_with_invite_token(
+    async def test_creates_teacher_user_with_invite_token(
         self,
         session: AsyncSession,
         client: AsyncClient,

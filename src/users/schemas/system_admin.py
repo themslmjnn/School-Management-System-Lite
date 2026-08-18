@@ -31,7 +31,9 @@ class UserResponseAdminCache(UserResponseAdmin, BaseSchema):
     date_of_birth: date | None
     address: str | None
 
+    role: UserRole
     status: UserStatus
+
     is_active: bool
     created_by: int | None
 

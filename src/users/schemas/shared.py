@@ -51,7 +51,7 @@ class StudentResponseSelfCache(UserResponseSelfCache):
 class StudentResponseSelf(StudentResponseSelfCache):
     phone_number: str = Field(exclude=True)
 
-    @field_serializer("created_at", "updated_at")
+    @field_serializer("created_at")
     def serialize_datetimes(self, value: datetime) -> str:
         return value.strftime("%d %b %Y, %H:%M")
 

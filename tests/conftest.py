@@ -187,6 +187,11 @@ def valid_create_student_request():
 
 
 @pytest.fixture
+def mock_delete_cache_users_system_admin(mocker):
+    return mocker.patch("src.users.services.system_admin.delete_cache")
+
+
+@pytest.fixture
 def mock_advisory_lock(mocker):
     return mocker.patch(
         "src.users.services.system_admin.acquire_student_contact_lock",
