@@ -12,13 +12,13 @@ class TestGetStudents:
         self,
         session: AsyncSession,
         client: AsyncClient,
-        system_admin: User,
+        director: User,
     ):
         student = await make_student(session, firstname="Studentone")
         teacher = await make_teacher(session, firstname="Teacherone")
-        headers = await make_auth_header(session, system_admin)
+        headers = await make_auth_header(session, director)
 
-        response = await client.get("/users/students", headers=headers)
+        response = await client.get("/director/users/students", headers=headers)
 
         body = response.json()
         returned_names = {item["firstname"] for item in body["items"]}
@@ -26,9 +26,10 @@ class TestGetStudents:
         assert response.status_code == 200
         assert student.firstname in returned_names
         assert teacher.firstname not in returned_names
+        assert "email" not in response.json()["items"][0]
 
     async def test_filter_by_status_via_query_param(
-        self, session: AsyncSession, client: AsyncClient, system_admin: User
+        self, session: AsyncSession, client: AsyncClient, director: User
     ):
         deactivated = await make_student(
             session,
@@ -37,10 +38,10 @@ class TestGetStudents:
             status=UserStatus.DEACTIVATED,
             is_active=False,
         )
-        headers = await make_auth_header(session, system_admin)
+        headers = await make_auth_header(session, director)
 
         response = await client.get(
-            "/users/students",
+            "/director/users/students",
             params={"status": UserStatus.DEACTIVATED.value},
             headers=headers,
         )
@@ -51,7 +52,7 @@ class TestGetStudents:
         assert deactivated.firstname in returned_names
 
     async def test_filter_by_group_id_via_query_param(
-        self, session: AsyncSession, client: AsyncClient, system_admin: User
+        self, session: AsyncSession, client: AsyncClient, director: User
     ):
         group = await make_group(session)
         in_group = await make_student(
@@ -61,10 +62,10 @@ class TestGetStudents:
             group_id=group.id,
         )
         await make_student(session, username="no_group_student")
-        headers = await make_auth_header(session, system_admin)
+        headers = await make_auth_header(session, director)
 
         response = await client.get(
-            "/users/students",
+            "/director/users/students",
             params={"group_id": group.id},
             headers=headers,
         )
@@ -76,12 +77,12 @@ class TestGetStudents:
         assert len(returned_names) == 1
 
     async def test_group_field_present_in_response(
-        self, session: AsyncSession, client: AsyncClient, system_admin: User
+        self, session: AsyncSession, client: AsyncClient, director: User
     ):
         await make_student(session, username="no_group_check")
-        headers = await make_auth_header(session, system_admin)
+        headers = await make_auth_header(session, director)
 
-        response = await client.get("/users/students", headers=headers)
+        response = await client.get("/director/users/students", headers=headers)
 
         body = response.json()
 
@@ -92,36 +93,36 @@ class TestGetStudents:
     ):
         headers = await make_auth_header(session, teacher)
 
-        response = await client.get("/users/students", headers=headers)
+        response = await client.get("/director/users/students", headers=headers)
 
         assert response.status_code == 403
 
     async def test_unauthenticated_returns_401(self, client: AsyncClient):
-        response = await client.get("/users/students")
+        response = await client.get("/director/users/students")
 
         assert response.status_code == 401
 
     async def test_limit_exceeding_max_returns_422(
-        self, session: AsyncSession, client: AsyncClient, system_admin: User
+        self, session: AsyncSession, client: AsyncClient, director: User
     ):
-        headers = await make_auth_header(session, system_admin)
+        headers = await make_auth_header(session, director)
 
         response = await client.get(
-            "/users/students", params={"limit": 101}, headers=headers
+            "/director/users/students", params={"limit": 101}, headers=headers
         )
 
         assert response.status_code == 422
 
     async def test_pagination_returns_correct_page(
-        self, session: AsyncSession, client: AsyncClient, system_admin: User
+        self, session: AsyncSession, client: AsyncClient, director: User
     ):
         for i in range(3):
             await make_student(session, username=f"paginated_student_{i}")
 
-        headers = await make_auth_header(session, system_admin)
+        headers = await make_auth_header(session, director)
 
         response = await client.get(
-            "/users/students", params={"skip": 0, "limit": 2}, headers=headers
+            "/director/users/students", params={"skip": 0, "limit": 2}, headers=headers
         )
 
         body = response.json()
