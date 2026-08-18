@@ -14,7 +14,7 @@ from tests.factories import (
 )
 
 
-class TestDirectorGetTeacherById:
+class TestGetTeacherById:
     async def test_returns_correct_data(self, session: AsyncSession, teacher: User):
         result = await UserServiceDirector.get_teacher_by_id(session, teacher.id)
 
