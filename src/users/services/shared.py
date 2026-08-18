@@ -36,7 +36,7 @@ from src.users.utils.exceptions import (
     handle_non_student_unique_contact_error,
     handle_username_integrity_error,
 )
-from src.users.utils.user_credentials_schema import UpdateUserCredentials
+from users.utils.shared_schemas import UpdateUserCredentials
 from src.utils import email as email_sender
 from src.utils.base_constant import HTTP400
 from src.utils.base_exception import (

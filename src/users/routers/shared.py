@@ -16,7 +16,7 @@ from src.users.schemas.shared import (
     UserResponseSelf,
 )
 from src.users.services.shared import UserServiceSelf
-from src.users.utils.user_credentials_schema import UpdateUserCredentials
+from users.utils.shared_schemas import UpdateUserCredentials
 
 router = APIRouter(
     prefix="/users",

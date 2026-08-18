@@ -26,9 +26,7 @@ async def check_postgres(session: AsyncSession) -> dict:
         async with asyncio.timeout(2.0):
             await session.execute(text("SELECT 1"))
 
-        return {
-            "status": "ok",
-        }
+        return {"status": "ok"}
 
     except TimeoutError:
         logger.warning("health_check_postgres_timeout")

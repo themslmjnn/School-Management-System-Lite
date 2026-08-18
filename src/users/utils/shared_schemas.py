@@ -6,6 +6,13 @@ from pydantic import (
 )
 
 from src.utils import validators as validators
+from src.utils.enums import UserStatus
+
+
+class UserResponseBase(BaseModel):
+    firstname: str
+    lastname: str
+    middlename: str | None
 
 
 class UpdateUserCredentials(BaseModel):
@@ -27,3 +34,10 @@ class UpdateUserCredentials(BaseModel):
             return None
 
         return v.strip().lower()
+
+
+class SearchUserBase(BaseModel):
+    firstname: str | None = Field(default=None, min_length=3, max_length=50)
+    lastname: str | None = Field(default=None, min_length=3, max_length=50)
+    middlename: str | None = Field(default=None, min_length=3, max_length=50)
+    status: UserStatus | None = None

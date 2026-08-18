@@ -180,7 +180,7 @@ class UserRepositoryAdmin:
     @staticmethod
     async def get_users_admin(
         session: AsyncSession,
-        skip: int,
+        *skip: int,
         limit: int,
         filters: SearchUserAdmin | None = None,
         sort_by: str = UserSortField.CREATED_AT,

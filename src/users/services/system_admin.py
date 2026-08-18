@@ -43,7 +43,7 @@ from src.users.utils.exceptions import (
     handle_non_student_unique_contact_error,
     handle_username_integrity_error,
 )
-from src.users.utils.user_credentials_schema import UpdateUserCredentials
+from src.users.utils.shared_schemas import UpdateUserCredentials
 from src.utils import email as email_sender
 from src.utils.base_exception import raise_unhandled_integrity_error
 from src.utils.cache_keys import SessionCacheKey, UserCacheKey
@@ -616,11 +616,11 @@ class UserServiceAdmin:
     ) -> PaginatedResponse:
         teachers, total = await UserRepositoryAdmin.get_users_admin(
             session,
-            skip,
-            limit,
-            filters,
-            sort_by,
-            order,
+            skip=skip,
+            limit=limit,
+            filters=filters,
+            sort_by=sort_by,
+            order=order,
             allowed_roles=frozenset({UserRole.TEACHER}),
         )
 
@@ -656,7 +656,7 @@ class UserServiceAdmin:
 
     @staticmethod
     async def get_students(
-        db: AsyncSession,
+        session: AsyncSession,
         skip: int,
         limit: int,
         group_id: int | None,
@@ -665,12 +665,12 @@ class UserServiceAdmin:
         order: str,
     ) -> PaginatedResponse:
         students, total = await UserRepositoryAdmin.get_users_admin(
-            db,
-            skip,
-            limit,
-            filters,
-            sort_by,
-            order,
+            session,
+            skip=skip,
+            limit=limit,
+            filters=filters,
+            sort_by=sort_by,
+            order=order,
             allowed_roles=frozenset({UserRole.STUDENT}),
             group_id=group_id,
             load_group=True,

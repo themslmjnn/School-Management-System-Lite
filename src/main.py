@@ -36,21 +36,22 @@ async def lifespan(app: FastAPI):
         await redis_client.ping()
 
         logger.info("redis_connected")
-    except Exception as e:
+
+    except Exception as err:
         if settings.ENVIRONMENT == "production":
             logger.error(
                 "redis_unavailable_startup_aborted",
-                error=str(e),
+                error=str(err),
             )
 
             raise RuntimeError(
                 "Redis is required in production and is currently unavailable. "
                 "Aborting startup."
-            ) from e
+            ) from err
 
         logger.warning(
             "redis_unavailable",
-            error=str(e),
+            error=str(err),
             impact="rate_limiting_will_fail_on_rate_limited_endpoints",
         )
 

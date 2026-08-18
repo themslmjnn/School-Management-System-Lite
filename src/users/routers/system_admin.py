@@ -16,12 +16,12 @@ from src.users.schemas.system_admin import (
     StudentResponseAdmin,
     StudentResponseAdminDetailed,
     UpdateUserRequest,
-    UserResponseAdmin,
     UserResponseAdminDetailed,
+    UserResponseBase,
 )
 from src.users.services.system_admin import UserServiceAdmin
-from src.users.utils.user_credentials_schema import UpdateUserCredentials
 from src.utils.enums import OrderBy, UserSortField
+from users.utils.shared_schemas import UpdateUserCredentials
 
 router = APIRouter(
     prefix="/users",
@@ -133,7 +133,7 @@ async def resend_activation_invite(
 
 @router.get(
     "/teachers",
-    response_model=PaginatedResponse[UserResponseAdmin],
+    response_model=PaginatedResponse[UserResponseBase],
     status_code=status.HTTP_200_OK,
 )
 @user_limiter.limit("15/minute")

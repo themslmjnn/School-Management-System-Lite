@@ -11,20 +11,16 @@ from pydantic import (
 )
 
 from src.groups.schemas import GroupResponseBase
+from src.users.utils.shared_schemas import SearchUserBase, UserResponseBase
 from src.utils import validators
 from src.utils.base_schema import BaseSchema
 from src.utils.enums import UserRole, UserStatus
 
 
-class UserResponseAdmin(BaseModel):
-    firstname: str
-    lastname: str
-    middlename: str | None
-
-
-class UserResponseAdminCache(UserResponseAdmin, BaseSchema):
+class UserResponseAdminCache(UserResponseBase, BaseSchema):
     id: int
 
+    username: str
     phone_number: str
     email: str
 
@@ -54,7 +50,7 @@ class UserResponseAdminDetailed(UserResponseAdminCache):
         return validators.format_phone_for_display(self.phone_number)
 
 
-class StudentResponseAdmin(UserResponseAdmin):
+class StudentResponseAdmin(UserResponseBase):
     group: GroupResponseBase | None = None
 
 
@@ -204,13 +200,6 @@ UpdateUserRequest = Annotated[
     UpdateTeacherAdmin | UpdateStudentAdmin,
     Field(discriminator="type"),
 ]
-
-
-class SearchUserBase(BaseModel):
-    firstname: str | None = Field(default=None, min_length=3, max_length=50)
-    lastname: str | None = Field(default=None, min_length=3, max_length=50)
-    middlename: str | None = Field(default=None, min_length=3, max_length=50)
-    status: UserStatus | None = None
 
 
 class SearchUserAdmin(SearchUserBase):

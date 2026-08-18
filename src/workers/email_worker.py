@@ -12,8 +12,10 @@ BATCH_SIZE = 10
 
 
 async def process_batch() -> None:
-    async with AsyncSessionLocal() as db:
-        pending = await PendingEmailRepository.get_pending_emails(db, limit=BATCH_SIZE)
+    async with AsyncSessionLocal() as session:
+        pending = await PendingEmailRepository.get_pending_emails(
+            session, limit=BATCH_SIZE
+        )
 
         if not pending:
             return
@@ -34,7 +36,7 @@ async def process_batch() -> None:
 
                 await PendingEmailRepository.mark_sent(record)
 
-                await db.commit()
+                await session.commit()
 
                 logger.info(
                     "pending_email_sent",
@@ -46,7 +48,7 @@ async def process_batch() -> None:
             except Exception as exc:
                 await PendingEmailRepository.mark_failed_attempt(record, str(exc))
 
-                await db.commit()
+                await session.commit()
 
                 logger.warning(
                     "pending_email_attempt_failed",
@@ -76,10 +78,12 @@ async def run_email_worker() -> None:
     while True:
         try:
             await process_batch()
+
         except asyncio.CancelledError:
             logger.info("email_worker_stopping")
 
             raise
+
         except Exception as exc:
             logger.error(
                 "email_worker_unexpected_error",
