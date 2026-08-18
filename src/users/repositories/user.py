@@ -115,6 +115,7 @@ class UserRepositoryBase:
     @staticmethod
     async def paginate(
         session: AsyncSession,
+        *,
         query: Select,
         skip: int,
         limit: int,
@@ -141,15 +142,22 @@ class UserRepositoryBase:
         order: str = OrderBy.DESC,
         skip: int = 0,
         limit: int = 10,
+        group_id: int | None = None,
+        load_group: bool = False,
     ) -> tuple[list[User], int]:
-        query = select(User)
+        base_query = select(User)
 
         if excluded_roles:
-            query = query.filter(User.role.not_in(excluded_roles))
+            base_query = base_query.filter(User.role.not_in(excluded_roles))
         if allowed_roles:
-            query = query.filter(User.role.in_(allowed_roles))
+            base_query = base_query.filter(User.role.in_(allowed_roles))
 
-        query = UserRepositoryBase.apply_base_filters(query, filters)
+        if group_id is not None:
+            base_query = base_query.filter(User.group_id == group_id)
+        if load_group:
+            base_query = base_query.options(joinedload(User.group))
+
+        query = UserRepositoryBase.apply_base_filters(base_query, filters)
         query = UserRepositoryBase.apply_sorting(query, sort_by, order)
 
         return await UserRepositoryBase.paginate(session, query, skip, limit)
@@ -180,8 +188,9 @@ class UserRepositoryAdmin:
     @staticmethod
     async def get_users_admin(
         session: AsyncSession,
-        *skip: int,
-        limit: int,
+        *,
+        skip: int = 0,
+        limit: int = 0,
         filters: SearchUserAdmin | None = None,
         sort_by: str = UserSortField.CREATED_AT,
         order: str = OrderBy.DESC,
@@ -204,5 +213,5 @@ class UserRepositoryAdmin:
         query = UserRepositoryBase.apply_sorting(query, sort_by, order)
 
         return await UserRepositoryBase.paginate(
-            session=session, query=query, skip=skip, limit=limit
+            session, query=query, skip=skip, limit=limit
         )

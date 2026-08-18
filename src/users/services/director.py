@@ -5,6 +5,8 @@ from src.core.logging import get_logger
 from src.core.pagination import PaginatedResponse
 from src.users.repositories.user import UserRepositoryBase
 from src.users.schemas.director import (
+    StudentResponseDirectorCache,
+    StudentResponseDirectorDetailed,
     UserResponseDirectorCache,
     UserResponseDirectorDetailed,
 )
@@ -67,3 +69,58 @@ class UserServiceDirector:
         await set_cache(cache_key, raw.model_dump(mode="json"), 900)
 
         return UserResponseDirectorDetailed.model_validate(teacher)
+
+    @staticmethod
+    async def get_students(
+        session: AsyncSession,
+        skip: int,
+        limit: int,
+        group_id: int | None,
+        filters: SearchUserBase,
+        sort_by: str,
+        order: str,
+    ) -> PaginatedResponse:
+        students, total = await UserRepositoryBase.get_users(
+            session,
+            skip=skip,
+            limit=limit,
+            filters=filters,
+            sort_by=sort_by,
+            order=order,
+            allowed_roles=frozenset({UserRole.STUDENT}),
+            group_id=group_id,
+            load_group=True,
+        )
+
+        return PaginatedResponse(
+            items=students,
+            total=total,
+            skip=skip,
+            limit=limit,
+            has_more=skip + limit < total,
+        )
+
+    @staticmethod
+    async def get_student_by_id(
+        session: AsyncSession, target_student_id: int
+    ) -> StudentResponseDirectorDetailed:
+        cache_key = UserCacheKey.user_detail_key_staff(target_student_id)
+        cached = await get_cache(cache_key)
+
+        if cached is not None:
+            raw = StudentResponseDirectorCache.model_validate(cached)
+
+            return StudentResponseDirectorDetailed.model_validate(raw.model_dump())
+
+        student = await UserRepositoryBase.get_user_by_id(
+            session,
+            target_student_id,
+            allowed_roles=frozenset({UserRole.STUDENT}),
+            load_group=True,
+        )
+        ensure_exists(student, UserNotFoundError(HTTP404.USER))
+
+        raw = StudentResponseDirectorCache.model_validate(student)
+        await set_cache(cache_key, raw.model_dump(mode="json"), 900)
+
+        return StudentResponseDirectorDetailed.model_validate(student)
