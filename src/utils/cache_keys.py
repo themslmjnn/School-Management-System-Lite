@@ -10,7 +10,7 @@ class UserCacheKey:
         return f"users:detail:{user_id}:admin"
 
     @staticmethod
-    def user_detail_key_staff(user_id: int) -> str:
+    def user_detail_key_staf(user_id: int) -> str:
         return f"users:detail:{user_id}:staff"
 
     @staticmethod

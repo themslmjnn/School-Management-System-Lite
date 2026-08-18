@@ -614,7 +614,7 @@ class UserServiceAdmin:
         sort_by: str,
         order: str,
     ) -> PaginatedResponse:
-        staff, total = await UserRepositoryAdmin.get_users_admin(
+        teachers, total = await UserRepositoryAdmin.get_users_admin(
             session,
             skip,
             limit,
@@ -625,7 +625,7 @@ class UserServiceAdmin:
         )
 
         return PaginatedResponse(
-            items=staff,
+            items=teachers,
             total=total,
             skip=skip,
             limit=limit,
@@ -644,15 +644,15 @@ class UserServiceAdmin:
 
             return UserResponseAdminDetailed.model_validate(raw.model_dump())
 
-        staff = await UserRepositoryBase.get_user_by_id(
+        teacher = await UserRepositoryBase.get_user_by_id(
             session, target_teacher_id, allowed_roles=UserRole.TEACHER
         )
-        ensure_exists(staff, UserNotFoundError(HTTP404.USER))
+        ensure_exists(teacher, UserNotFoundError(HTTP404.USER))
 
-        raw = UserResponseAdminCache.model_validate(staff)
+        raw = UserResponseAdminCache.model_validate(teacher)
         await set_cache(cache_key, raw.model_dump(mode="json"), 900)
 
-        return UserResponseAdminDetailed.model_validate(staff)
+        return UserResponseAdminDetailed.model_validate(teacher)
 
     @staticmethod
     async def get_students(
