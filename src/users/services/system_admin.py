@@ -645,7 +645,7 @@ class UserServiceAdmin:
             return UserResponseAdminDetailed.model_validate(raw.model_dump())
 
         teacher = await UserRepositoryBase.get_user_by_id(
-            session, target_teacher_id, allowed_roles=UserRole.TEACHER
+            session, target_teacher_id, allowed_roles=frozenset({UserRole.TEACHER})
         )
         ensure_exists(teacher, UserNotFoundError(HTTP404.USER))
 

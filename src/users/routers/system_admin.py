@@ -161,12 +161,12 @@ async def get_teachers(
     response_model=UserResponseAdminDetailed,
     status_code=status.HTTP_200_OK,
 )
-async def get_staff_by_id(
+async def get_teacher_by_id(
     session: async_session_dependency,
     _: Annotated[CurrentUser, Depends(require_system_admin)],
-    target_staff_id: Annotated[int, Path(ge=1)],
+    target_teacher_id: Annotated[int, Path(ge=1)],
 ):
-    return await UserServiceAdmin.get_teacher_by_id(session, target_staff_id)
+    return await UserServiceAdmin.get_teacher_by_id(session, target_teacher_id)
 
 
 @router.get(
