@@ -160,7 +160,9 @@ class UserRepositoryBase:
         query = UserRepositoryBase.apply_base_filters(base_query, filters)
         query = UserRepositoryBase.apply_sorting(query, sort_by, order)
 
-        return await UserRepositoryBase.paginate(session, query, skip, limit)
+        return await UserRepositoryBase.paginate(
+            session, query=query, skip=skip, limit=limit
+        )
 
 
 class UserRepositoryAdmin:
