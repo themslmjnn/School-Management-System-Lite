@@ -22,6 +22,7 @@ class User(Base):
     )
 
     username: Mapped[str] = mapped_column(String(20), unique=True, nullable=False)
+
     firstname: Mapped[str] = mapped_column(String(50), index=True, nullable=False)
     lastname: Mapped[str] = mapped_column(String(50), index=True, nullable=False)
     middlename: Mapped[str | None] = mapped_column(String(50), nullable=True)

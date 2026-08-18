@@ -10,11 +10,10 @@ from src.users.schemas.director import (
     UserResponseDirectorCache,
     UserResponseDirectorDetailed,
 )
-from src.users.utils.constants import HTTP404
+from src.users.utils.constants import HTTP404, STUDENT_ROLE, TEACHER_ROLE
 from src.users.utils.exceptions import UserNotFoundError
 from src.users.utils.shared_schemas import SearchUserBase
 from src.utils.cache_keys import UserCacheKey
-from src.utils.enums import UserRole
 from src.utils.helpers import ensure_exists
 
 logger = get_logger(__name__)
@@ -37,7 +36,7 @@ class UserServiceDirector:
             filters=filters,
             sort_by=sort_by,
             order=order,
-            allowed_roles=frozenset({UserRole.TEACHER}),
+            allowed_roles=TEACHER_ROLE,
         )
 
         return PaginatedResponse(
@@ -61,7 +60,7 @@ class UserServiceDirector:
             return UserResponseDirectorDetailed.model_validate(raw.model_dump())
 
         teacher = await UserRepositoryBase.get_user_by_id(
-            session, target_teacher_id, allowed_roles=frozenset({UserRole.TEACHER})
+            session, target_teacher_id, allowed_roles=TEACHER_ROLE
         )
         ensure_exists(teacher, UserNotFoundError(HTTP404.USER))
 
@@ -87,7 +86,7 @@ class UserServiceDirector:
             filters=filters,
             sort_by=sort_by,
             order=order,
-            allowed_roles=frozenset({UserRole.STUDENT}),
+            allowed_roles=STUDENT_ROLE,
             group_id=group_id,
             load_group=True,
         )
@@ -115,7 +114,7 @@ class UserServiceDirector:
         student = await UserRepositoryBase.get_user_by_id(
             session,
             target_student_id,
-            allowed_roles=frozenset({UserRole.STUDENT}),
+            allowed_roles=STUDENT_ROLE,
             load_group=True,
         )
         ensure_exists(student, UserNotFoundError(HTTP404.USER))

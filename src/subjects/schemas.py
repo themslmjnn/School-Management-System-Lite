@@ -6,6 +6,35 @@ from src.utils import validators as validators
 from src.utils.base_schema import BaseSchema
 
 
+class SubjectResponseAdmin(BaseModel):
+    name: str
+    code: str
+    description: str | None
+
+
+class SubjectResponseAdminCache(SubjectResponseAdmin, BaseSchema):
+    id: int
+
+    is_archived: bool
+    archived_at: datetime | None
+
+    created_at: datetime
+    updated_at: datetime
+
+
+class SubjectResponseAdminDetailed(SubjectResponseAdminCache):
+    @field_serializer("archived_at")
+    def serialize_archived_at(self, value: datetime | None) -> str | None:
+        if value is None:
+            return None
+
+        return value.strftime("%d %b %Y, %H:%M")
+
+    @field_serializer("created_at", "updated_at")
+    def serialize_datetime(self, value: datetime) -> str:
+        return value.strftime("%d %b %Y, %H:%M")
+
+
 class SubjectCreate(BaseModel):
     name: str = Field(min_length=5, max_length=100)
     code: str = Field(min_length=3, max_length=20)
@@ -29,23 +58,6 @@ class SubjectUpdate(BaseModel):
             return value
 
         return validators.normalize_subject_code(value)
-
-
-class SubjectCacheSchema(BaseSchema):
-    id: int
-    name: str
-    code: str
-    description: str | None
-    is_archived: bool
-    archived_at: datetime | None
-    created_at: datetime
-    updated_at: datetime
-
-
-class SubjectResponse(SubjectCacheSchema):
-    @field_serializer("created_at", "updated_at")
-    def serialize_updated_at(self, value: datetime) -> str:
-        return value.strftime("%d %b %Y, %H:%M")
 
 
 class SearchSubject(BaseModel):

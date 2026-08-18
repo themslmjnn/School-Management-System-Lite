@@ -60,6 +60,7 @@ class UserRepositoryBase:
             query = query.filter(User.role.in_(allowed_roles))
         if excluded_roles:
             query = query.filter(User.role.not_in(excluded_roles))
+
         if load_session:
             query = query.options(joinedload(User.session))
         if load_activation:

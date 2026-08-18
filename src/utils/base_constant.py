@@ -18,3 +18,7 @@ class HTTP401:
 class HTTP403:
     ACCESS_DENIED = "Access denied"
     ACCOUNT_DEACTIVATED = "Your account has been deactivated"
+
+
+class HTTP404:
+    PENDING_EMAIL = "Pending email not found"

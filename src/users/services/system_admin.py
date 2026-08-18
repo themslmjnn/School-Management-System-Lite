@@ -11,7 +11,7 @@ from src.core.config import settings
 from src.core.logging import get_logger
 from src.core.pagination import PaginatedResponse
 from src.core.security import generate_invite_token, generate_reset_password_token
-from src.emails.repository import PendingEmailRepository
+from src.emails.models import PendingEmail
 from src.users.models.activation import UserActivation
 from src.users.models.login_lockout import UserLoginLockout
 from src.users.models.session import UserSession
@@ -33,7 +33,14 @@ from src.users.schemas.system_admin import (
     UserResponseAdminDetailed,
 )
 from src.users.utils.check_contact_limit import check_contact_limit
-from src.users.utils.constants import HTTP404
+from src.users.utils.constants import (
+    HTTP404,
+    STUDENT_MAX_SHARED_CONTACT,
+    STUDENT_ROLE,
+    SYSTEM_ADMIN_INVISIBLE_ROLES,
+    TEACHER_MAX_SHARED_CONTACT,
+    TEACHER_ROLE,
+)
 from src.users.utils.exceptions import (
     UserAlreadyActiveError,
     UserAlreadyInactiveError,
@@ -47,14 +54,10 @@ from src.users.utils.shared_schemas import UpdateUserCredentials
 from src.utils import email as email_sender
 from src.utils.base_exception import raise_unhandled_integrity_error
 from src.utils.cache_keys import SessionCacheKey, UserCacheKey
-from src.utils.enums import EmailType, UserRole, UserStatus
+from src.utils.enums import EmailSendingStatus, EmailType, UserRole, UserStatus
 from src.utils.helpers import ensure_exists, update_object
 
 logger = get_logger(__name__)
-
-STUDENT_MAX_SHARED_CONTACT = 3
-TEACHER_MAX_SHARED_CONTACT = 1
-SYSTEM_ADMIN_INVISIBLE_ROLES = frozenset({UserRole.SYSTEM_ADMIN})
 
 
 class UserServiceAdmin:
@@ -131,24 +134,25 @@ class UserServiceAdmin:
             new_user_session = UserSession(user_id=new_user.id)
             new_user_login_lockout = UserLoginLockout(user_id=new_user.id)
 
-            session.add(new_user_activation)
-            session.add(new_user_session)
-            session.add(new_user_login_lockout)
-
             subject, html_body, text_body = email_sender.build_invite_email(
                 raw_invite_token, new_user.username
             )
 
-            PendingEmailRepository.add_pending_email(
-                session,
+            new_pending_email = PendingEmail(
                 recipient=new_user.email,
                 subject=subject,
                 html_body=html_body,
                 text_body=text_body,
                 email_type=EmailType.INVITE,
+                status=EmailSendingStatus.PENDING,
                 triggered_by=current_user_id,
                 recipient_user_id=new_user.id,
             )
+
+            session.add(new_user_activation)
+            session.add(new_user_session)
+            session.add(new_user_login_lockout)
+            session.add(new_pending_email)
 
             await session.commit()
             await session.refresh(new_user)
@@ -215,6 +219,7 @@ class UserServiceAdmin:
             await acquire_student_contact_lock(
                 session, phone_number=update_request.phone_number, email=None
             )
+
             await check_contact_limit(
                 session,
                 current_user_id,
@@ -297,6 +302,7 @@ class UserServiceAdmin:
             await acquire_student_contact_lock(
                 session, phone_number=None, email=update_request.email
             )
+
             await check_contact_limit(
                 session,
                 current_user_id,
@@ -336,16 +342,18 @@ class UserServiceAdmin:
                     raw_invite_token, target_user.username
                 )
 
-                PendingEmailRepository.add_pending_email(
-                    session,
+                new_pending_email = PendingEmail(
                     recipient=target_user.email,
                     subject=subject,
                     html_body=html_body,
                     text_body=text_body,
                     email_type=EmailType.INVITE,
+                    status=EmailSendingStatus.PENDING,
                     triggered_by=current_user_id,
                     recipient_user_id=target_user.id,
                 )
+
+                session.add(new_pending_email)
 
             username_changed = old_username != target_user.username
             email_changed = old_email != target_user.email
@@ -365,16 +373,18 @@ class UserServiceAdmin:
                     )
                 )
 
-                PendingEmailRepository.add_pending_email(
-                    session,
+                new_pending_email = PendingEmail(
                     recipient=old_email,
                     subject=subject,
                     html_body=html_body,
                     text_body=text_body,
                     email_type=EmailType.ADMIN_CREDENTIALS_OVERRIDE,
+                    status=EmailSendingStatus.PENDING,
                     triggered_by=current_user_id,
                     recipient_user_id=target_user.id,
                 )
+
+                session.add(new_pending_email)
 
             await session.commit()
 
@@ -530,17 +540,18 @@ class UserServiceAdmin:
             raw_reset_token
         )
 
-        PendingEmailRepository.add_pending_email(
-            session,
+        new_pending_email = PendingEmail(
             recipient=target_user.email,
             subject=subject,
             html_body=html_body,
             text_body=text_body,
             email_type=EmailType.PASSWORD_RESET_ADMIN,
+            status=EmailSendingStatus.PENDING,
             triggered_by=current_user_id,
             recipient_user_id=target_user_id,
         )
 
+        session.add(new_pending_email)
         await session.commit()
 
         logger.info(
@@ -586,17 +597,18 @@ class UserServiceAdmin:
             raw_invite_token, target_user.username
         )
 
-        PendingEmailRepository.add_pending_email(
-            session,
+        new_pending_email = PendingEmail(
             recipient=target_user.email,
             subject=subject,
             html_body=html_body,
             text_body=text_body,
             email_type=EmailType.INVITE,
+            status=EmailSendingStatus.PENDING,
             triggered_by=current_user_id,
             recipient_user_id=target_user.id,
         )
 
+        session.add(new_pending_email)
         await session.commit()
 
         logger.info(
@@ -621,7 +633,7 @@ class UserServiceAdmin:
             filters=filters,
             sort_by=sort_by,
             order=order,
-            allowed_roles=frozenset({UserRole.TEACHER}),
+            allowed_roles=TEACHER_ROLE,
         )
 
         return PaginatedResponse(
@@ -645,7 +657,7 @@ class UserServiceAdmin:
             return UserResponseAdminDetailed.model_validate(raw.model_dump())
 
         teacher = await UserRepositoryBase.get_user_by_id(
-            session, target_teacher_id, allowed_roles=frozenset({UserRole.TEACHER})
+            session, target_teacher_id, allowed_roles=TEACHER_ROLE
         )
         ensure_exists(teacher, UserNotFoundError(HTTP404.USER))
 
@@ -671,7 +683,7 @@ class UserServiceAdmin:
             filters=filters,
             sort_by=sort_by,
             order=order,
-            allowed_roles=frozenset({UserRole.STUDENT}),
+            allowed_roles=STUDENT_ROLE,
             group_id=group_id,
             load_group=True,
         )
@@ -699,7 +711,7 @@ class UserServiceAdmin:
         student = await UserRepositoryBase.get_user_by_id(
             session,
             target_student_id,
-            allowed_roles=frozenset({UserRole.STUDENT}),
+            allowed_roles=STUDENT_ROLE,
             load_group=True,
         )
         ensure_exists(student, UserNotFoundError(HTTP404.USER))

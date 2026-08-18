@@ -21,6 +21,7 @@ class UserResponseAdminCache(UserResponseBase, BaseSchema):
     id: int
 
     username: str
+
     phone_number: str
     email: str
 
@@ -204,5 +205,6 @@ UpdateUserRequest = Annotated[
 
 class SearchUserAdmin(SearchUserBase):
     username: str | None = Field(default=None, min_length=3, max_length=15)
+
     email: str | None = Field(default=None, min_length=5, max_length=20)
     phone_number: str | None = Field(default=None, min_length=5, max_length=16)

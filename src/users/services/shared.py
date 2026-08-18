@@ -36,7 +36,6 @@ from src.users.utils.exceptions import (
     handle_non_student_unique_contact_error,
     handle_username_integrity_error,
 )
-from users.utils.shared_schemas import UpdateUserCredentials
 from src.utils import email as email_sender
 from src.utils.base_constant import HTTP400
 from src.utils.base_exception import (
@@ -46,6 +45,7 @@ from src.utils.base_exception import (
 from src.utils.cache_keys import SessionCacheKey, UserCacheKey
 from src.utils.enums import EmailType, UserRole
 from src.utils.helpers import ensure_exists
+from users.utils.shared_schemas import UpdateUserCredentials
 
 logger = get_logger(__name__)
 

@@ -64,5 +64,9 @@ class InvalidResetPasswordTokenError(AppException):
     status_code = 400
 
 
+class PendingEmailNotFoundError(AppException):
+    status_code = 404
+
+
 def raise_unhandled_integrity_error(error: IntegrityError) -> None:
     raise error
