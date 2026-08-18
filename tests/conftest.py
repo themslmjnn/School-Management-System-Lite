@@ -213,3 +213,11 @@ def mock_send_account_info_updated_email(mocker):
         "src.users.services.system_admin.email_sender.send_account_info_updated_email",
         new_callable=AsyncMock,
     )
+
+
+@pytest.fixture
+def mock_send_account_deactivation_email(mocker):
+    return mocker.patch(
+        "src.users.services.system_admin.email_sender.send_account_deactivation_email",
+        new_callable=AsyncMock,
+    )

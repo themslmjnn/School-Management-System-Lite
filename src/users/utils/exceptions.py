@@ -40,11 +40,11 @@ class UserTypeMismatchError(AppException):
     status_code = 400
 
 
-class UserAlreadyActiveError(AppException):
+class UserAlreadyInactiveError(AppException):
     status_code = 409
 
 
-class UserAlreadyInactiveError(AppException):
+class UserAlreadyActiveError(AppException):
     status_code = 409
 
 
