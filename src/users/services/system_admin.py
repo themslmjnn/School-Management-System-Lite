@@ -441,9 +441,7 @@ class UserServiceAdmin:
 
         asyncio.create_task(
             email_sender.send_safe(
-                email_sender.send_account_deactivation_email(
-                    target_user.email, target_user.role
-                ),
+                email_sender.send_account_deactivation_email(target_user.email),
                 email_type=EmailType.ACCOUNT_DEACTIVATION,
             )
         )
