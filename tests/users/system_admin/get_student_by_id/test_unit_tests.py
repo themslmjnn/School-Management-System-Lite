@@ -61,11 +61,15 @@ class TestGetStudentById:
         assert result.group.name == group.name
 
     async def test_populates_cache_after_db_hit(
-        self, session: AsyncSession, student: User, mock_set_cache, mocker
+        self,
+        session: AsyncSession,
+        student: User,
+        mock_set_cache_user_system_admin,
+        mocker,
     ):
         await UserServiceAdmin.get_student_by_id(session, student.id)
 
-        mock_set_cache.assert_called_once_with(
+        mock_set_cache_user_system_admin.assert_called_once_with(
             UserCacheKey.user_detail_key_admin(student.id),
             mocker.ANY,
             900,

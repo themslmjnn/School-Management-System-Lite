@@ -192,8 +192,13 @@ def mock_delete_cache_users_system_admin(mocker):
 
 
 @pytest.fixture
-def mock_set_cache(mocker):
+def mock_set_cache_user_system_admin(mocker):
     return mocker.patch("src.users.services.system_admin.set_cache")
+
+
+@pytest.fixture
+def mock_set_cache_user_director(mocker):
+    return mocker.patch("src.users.services.director.set_cache")
 
 
 @pytest.fixture

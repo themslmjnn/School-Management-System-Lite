@@ -37,11 +37,15 @@ class TestGetTeacherById:
             await UserServiceAdmin.get_teacher_by_id(session, non_staff.id)
 
     async def test_populates_cache_after_db_hit(
-        self, session: AsyncSession, teacher: User, mock_set_cache, mocker
+        self,
+        session: AsyncSession,
+        teacher: User,
+        mock_set_cache_user_system_admin,
+        mocker,
     ):
         await UserServiceAdmin.get_teacher_by_id(session, teacher.id)
 
-        mock_set_cache.assert_called_once_with(
+        mock_set_cache_user_system_admin.assert_called_once_with(
             UserCacheKey.user_detail_key_admin(teacher.id),
             mocker.ANY,
             900,

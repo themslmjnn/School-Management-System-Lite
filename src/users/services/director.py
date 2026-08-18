@@ -52,7 +52,7 @@ class UserServiceDirector:
     async def get_teacher_by_id(
         session: AsyncSession, target_teacher_id: int
     ) -> UserResponseDirectorDetailed:
-        cache_key = UserCacheKey.user_detail_key_staf(target_teacher_id)
+        cache_key = UserCacheKey.user_detail_key_staff(target_teacher_id)
         cached = await get_cache(cache_key)
 
         if cached is not None:
