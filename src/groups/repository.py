@@ -1,33 +1,15 @@
 from sqlalchemy import Select, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-# from src.academics.models.teaching_assignment import TeachingAssignment
 from src.groups.models import Group
-from src.groups.schemas import SearchGroup
-from src.users.models.user import User
-from src.utils.enums import GroupSortField, OrderBy, UserRole
+from src.groups.schemas import SearchGroupAdmin
+from src.utils.enums import GroupSortField, OrderBy
 
 
 class GroupRepository:
     @staticmethod
-    def add_group(session: AsyncSession, new_group: Group) -> None:
-        session.add(new_group)
-
-    @staticmethod
     async def get_group_by_id(session: AsyncSession, group_id: int) -> Group | None:
         query = select(Group).filter(Group.id == group_id)
-
-        result = await session.execute(query)
-
-        return result.scalar_one_or_none()
-
-    @staticmethod
-    async def get_group_by_name_and_year(
-        session: AsyncSession, name: str, academic_year: int
-    ) -> Group | None:
-        query = select(Group).filter(
-            Group.name == name, Group.academic_year == academic_year
-        )
 
         result = await session.execute(query)
 
@@ -47,7 +29,7 @@ class GroupRepository:
         return result.scalars().all(), total
 
     @staticmethod
-    def apply_filters(base_query: Select, filters: SearchGroup | None) -> Select:
+    def apply_filters(base_query: Select, filters: SearchGroupAdmin | None) -> Select:
         if filters is None:
             return base_query
 
@@ -76,7 +58,7 @@ class GroupRepository:
     async def get_groups(
         session: AsyncSession,
         *,
-        filters: SearchGroup | None = None,
+        filters: SearchGroupAdmin | None = None,
         sort_by: str = GroupSortField.CREATED_AT,
         order: str = OrderBy.DESC,
         skip: int = 0,
@@ -87,39 +69,5 @@ class GroupRepository:
 
         query = GroupRepository.apply_filters(query, filters)
         query = GroupRepository.apply_sorting(query, sort_by, order)
-
-        return await GroupRepository.paginate(session, query, skip, limit)
-
-    @staticmethod
-    async def count_active_students(session: AsyncSession, group_id: int) -> int:
-        query = select(func.count(User.id)).filter(
-            User.group_id == group_id, User.role == UserRole.STUDENT
-        )
-
-        result = await session.execute(query)
-
-        return result.scalar()
-
-    @staticmethod
-    async def has_active_students(session: AsyncSession, group_id: int) -> bool:
-        return await GroupRepository.count_active_students(session, group_id) > 0
-
-    # @staticmethod
-    # async def has_active_teaching_assignments(session: AsyncSession, group_id: int) -> bool:
-    #     query = select(func.count(TeachingAssignment.id)).filter(
-    #         TeachingAssignment.group_id == group_id
-    #     )
-
-    #     result = await session.execute(query)
-
-    #     return result.scalar() > 0
-
-    @staticmethod
-    async def get_students(
-        session: AsyncSession, group_id: int, skip: int, limit: int
-    ) -> tuple[list[User], int]:
-        query = select(User).filter(
-            User.group_id == group_id, User.role == UserRole.STUDENT
-        )
 
         return await GroupRepository.paginate(session, query, skip, limit)

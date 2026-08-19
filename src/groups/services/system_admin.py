@@ -36,7 +36,7 @@ from src.utils.helpers import ensure_exists, update_object
 logger = get_logger(__name__)
 
 
-class GroupService:
+class GroupServiceAdmin:
     @staticmethod
     async def create_group(
         session: AsyncSession, current_user_id: int, create_request: CreateGroupAdmin
@@ -44,8 +44,7 @@ class GroupService:
         try:
             new_group = Group(**create_request.model_dump())
 
-            GroupRepository.add_group(session, new_group)
-
+            session.add(new_group)
             await session.commit()
             await session.refresh(new_group)
 
@@ -118,11 +117,6 @@ class GroupService:
         target_group = await GroupRepository.get_group_by_id(session, group_id)
         ensure_exists(target_group, GroupNotFoundError(HTTP404.GROUP))
 
-        has_students = await GroupRepository.has_active_students(session, group_id)
-        has_assignments = await GroupRepository.has_active_teaching_assignments(
-            session, group_id
-        )
-
         if target_group.is_archived and target_group.archived_at is not None:
             logger.warning(
                 "group_archive_denied",
@@ -132,19 +126,6 @@ class GroupService:
             )
 
             raise GroupAlreadyArchivedError("Group is already archived")
-
-        if has_students or has_assignments:
-            logger.warning(
-                "group_archive_denied",
-                group_id=group_id,
-                actor_user_id=current_user_id,
-                denial_reason="active_students_or_teaching_assignments_reference_group",
-            )
-
-            raise GroupArchiveBlockedError(
-                "Cannot archive a group with active students or teaching "
-                "assignments; reassign or remove them first"
-            )
 
         target_group.is_archived = True
         target_group.archived_at = datetime.now(UTC)

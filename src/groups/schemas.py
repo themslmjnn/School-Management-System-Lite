@@ -5,14 +5,14 @@ from pydantic import BaseModel, Field, field_serializer
 from src.utils.base_schema import BaseSchema
 
 
-class GroupResponseAdmin(BaseSchema):
+class GroupResponseBase(BaseSchema):
     name: str
     academic_year: int
     grade_level: int | None
     capacity: int | None
 
 
-class GroupResponseAdminCache(GroupResponseAdmin, BaseSchema):
+class GroupResponseAdminCache(GroupResponseBase, BaseSchema):
     id: int
 
     is_archived: bool
@@ -35,6 +35,20 @@ class GroupResponseAdminDetailed(GroupResponseAdminCache):
         return value.strftime("%d %b %Y, %H:%M")
 
 
+class GroupResponseDirectorCache(GroupResponseBase, BaseSchema):
+    id: int
+
+    is_archived: bool
+
+    created_at: datetime
+
+
+class GroupResponseDirectorDetailed(GroupResponseDirectorCache):
+    @field_serializer("created_at")
+    def serialize_datetime(self, value: datetime) -> str:
+        return value.strftime("%d %b %Y, %H:%M")
+
+
 class CreateGroupAdmin(BaseModel):
     name: str = Field(min_length=2, max_length=10)
     academic_year: int = Field(ge=2000, le=2100)
@@ -48,7 +62,11 @@ class UpdateGroupAdmin(BaseModel):
     capacity: int | None = Field(gt=0, default=None)
 
 
-class SearchGroupAdmin(BaseModel):
+class SearchGroupBase(BaseModel):
     name: str | None = None
     academic_year: int | None = None
+    include_archived: bool = False
+
+
+class SearchGroupAdmin(SearchGroupBase):
     include_archived: bool = False
