@@ -9,19 +9,18 @@ from src.core.pagination import PaginatedResponse
 from src.subjects.exceptions.constants import HTTP404
 from src.subjects.exceptions.exceptions import (
     SubjectAlreadyArchivedError,
-    SubjectArchiveBlockedError,
-    SubjectIsNotArchivedError,
+    SubjectNotArchivedError,
     SubjectNotFoundError,
     handle_subject_code_integrity_error,
 )
 from src.subjects.models import Subject
 from src.subjects.repository import SubjectRepository
 from src.subjects.schemas import (
-    SearchSubject,
-    SubjectCacheSchema,
-    SubjectCreate,
-    SubjectResponse,
-    SubjectUpdate,
+    CreateSubjectAdmin,
+    SearchSubjectAdmin,
+    SubjectResponseAdminCache,
+    SubjectResponseAdminDetailed,
+    UpdateSubjectAdmin,
 )
 from src.utils.base_exception import raise_unhandled_integrity_error
 from src.utils.cache_keys import SubjectCacheKey
@@ -30,16 +29,15 @@ from src.utils.helpers import ensure_exists, update_object
 logger = get_logger(__name__)
 
 
-class SubjectService:
+class SubjectServiceAdmin:
     @staticmethod
     async def create_subject(
-        session: AsyncSession, current_user_id: int, create_request: SubjectCreate
+        session: AsyncSession, current_user_id: int, create_request: CreateSubjectAdmin
     ) -> Subject:
         try:
             new_subject = Subject(**create_request.model_dump())
 
-            SubjectRepository.add_subject(session, new_subject)
-
+            session.add(new_subject)
             await session.commit()
             await session.refresh(new_subject)
 
@@ -69,7 +67,7 @@ class SubjectService:
         session: AsyncSession,
         current_user_id: int,
         subject_id: int,
-        request: SubjectUpdate,
+        request: UpdateSubjectAdmin,
     ) -> Subject:
         target_subject = await SubjectRepository.get_subject_by_id(session, subject_id)
         ensure_exists(target_subject, SubjectNotFoundError(HTTP404.SUBJECT))
@@ -80,18 +78,16 @@ class SubjectService:
             await session.commit()
             await session.refresh(target_subject)
 
-            logger.info(
-                "subject_updated",
-                subject_id=subject_id,
-                updated_by=current_user_id,
-            )
-
             await delete_cache(
                 SubjectCacheKey.subject_detail_key_admin(subject_id),
                 SubjectCacheKey.subject_detail_key_non_admin(subject_id),
             )
 
-            return target_subject
+            logger.info(
+                "subject_updated",
+                subject_id=subject_id,
+                updated_by=current_user_id,
+            )
 
         except IntegrityError as e:
             await session.rollback()
@@ -124,25 +120,12 @@ class SubjectService:
 
             raise SubjectAlreadyArchivedError("Subject is already archived")
 
-        if await SubjectRepository.has_active_teaching_assignments(session, subject_id):
-            logger.warning(
-                "subject_archive_denied",
-                subject_id=subject_id,
-                actor_user_id=current_user_id,
-                denial_reason="active_teaching_assignments_reference_subject",
-            )
-
-            raise SubjectArchiveBlockedError(
-                "Cannot archive a subject with active teaching assignments; "
-                "reassign or remove them first"
-            )
-
         target_subject.is_archived = True
         target_subject.archived_at = datetime.now(UTC)
 
-        await delete_cache(SubjectCacheKey.subject_detail_key_admin(subject_id))
-
         await session.commit()
+
+        await delete_cache(SubjectCacheKey.subject_detail_key_admin(subject_id))
 
         logger.info(
             "subject_archived",
@@ -165,16 +148,16 @@ class SubjectService:
                 denial_reason="subject_is_already_restored_or_has_not_been_archived",
             )
 
-            raise SubjectIsNotArchivedError(
+            raise SubjectNotArchivedError(
                 "Subject is already restored or has not been archived"
             )
 
         target_subject.is_archived = False
         target_subject.archived_at = None
 
-        await delete_cache(SubjectCacheKey.subject_detail_key_admin(subject_id))
-
         await session.commit()
+
+        await delete_cache(SubjectCacheKey.subject_detail_key_admin(subject_id))
 
         logger.info(
             "subject_restored",
@@ -187,7 +170,7 @@ class SubjectService:
         session: AsyncSession,
         skip: int,
         limit: int,
-        filters: SearchSubject,
+        filters: SearchSubjectAdmin,
         sort_by: str,
         order: str,
     ) -> PaginatedResponse:
@@ -211,19 +194,19 @@ class SubjectService:
     @staticmethod
     async def get_subject_by_id(
         session: AsyncSession, subject_id: int
-    ) -> SubjectResponse:
+    ) -> SubjectResponseAdminDetailed:
         cache_key = SubjectCacheKey.subject_detail_key_admin(subject_id)
         cached = await get_cache(cache_key)
 
         if cached is not None:
-            raw = SubjectCacheSchema.model_validate(cached)
+            raw = SubjectResponseAdminCache.model_validate(cached)
 
-            return SubjectResponse.model_validate(raw.model_dump())
+            return SubjectResponseAdminDetailed.model_validate(raw.model_dump())
 
         subject = await SubjectRepository.get_subject_by_id(session, subject_id)
         ensure_exists(subject, SubjectNotFoundError(HTTP404.SUBJECT))
 
-        raw = SubjectCacheSchema.model_validate(subject)
+        raw = SubjectResponseAdminCache.model_validate(subject)
         await set_cache(cache_key, raw.model_dump(mode="json"), 900)
 
-        return SubjectResponse.model_validate(subject)
+        return SubjectResponseAdminDetailed.model_validate(subject)

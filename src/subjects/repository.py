@@ -1,30 +1,17 @@
 from sqlalchemy import Select, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-# from src.academics.models.teaching_assignment import TeachingAssignment
 from src.subjects.models import Subject
-from src.subjects.schemas import SearchSubject
+from src.subjects.schemas import SearchSubjectAdmin
 from src.utils.enums import OrderBy, SubjectSortField
 
 
 class SubjectRepository:
     @staticmethod
-    def add_subject(session: AsyncSession, new_subject: Subject) -> None:
-        session.add(new_subject)
-
-    @staticmethod
     async def get_subject_by_id(
         session: AsyncSession, subject_id: int
     ) -> Subject | None:
         query = select(Subject).filter(Subject.id == subject_id)
-
-        result = await session.execute(query)
-
-        return result.scalar_one_or_none()
-
-    @staticmethod
-    async def get_subject_by_code(session: AsyncSession, code: str) -> Subject | None:
-        query = select(Subject).filter(Subject.code == code)
 
         result = await session.execute(query)
 
@@ -44,7 +31,7 @@ class SubjectRepository:
         return result.scalars().all(), total
 
     @staticmethod
-    def apply_filters(base_query: Select, filters: SearchSubject | None) -> Select:
+    def apply_filters(base_query: Select, filters: SearchSubjectAdmin | None) -> Select:
         if filters is None:
             return base_query
 
@@ -73,7 +60,7 @@ class SubjectRepository:
     async def get_subjects(
         session: AsyncSession,
         *,
-        filters: SearchSubject | None = None,
+        filters: SearchSubjectAdmin | None = None,
         sort_by: str = SubjectSortField.CREATED_AT,
         order: str = OrderBy.DESC,
         skip: int = 0,
@@ -86,15 +73,3 @@ class SubjectRepository:
         query = SubjectRepository.apply_sorting(query, sort_by, order)
 
         return await SubjectRepository.paginate(session, query, skip, limit)
-
-    # @staticmethod
-    # async def has_active_teaching_assignments(
-    #     session: AsyncSession, subject_id: int
-    # ) -> bool:
-    #     query = select(func.count(TeachingAssignment.id)).filter(
-    #         TeachingAssignment.subject_id == subject_id
-    #     )
-
-    #     result = await session.execute(query)
-
-    #     return result.scalar() > 0

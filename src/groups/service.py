@@ -19,18 +19,19 @@ from src.groups.exceptions.exceptions import (
 from src.groups.models import Group
 from src.groups.repository import GroupRepository
 from src.groups.schemas import (
-    GroupCacheSchema,
-    GroupCreate,
-    GroupResponseBase,
-    GroupUpdate,
-    SearchGroup,
+    CreateGroupAdmin,
+    GroupResponseAdmin,
+    GroupResponseAdminCache,
+    GroupResponseAdminDetailed,
+    SearchGroupAdmin,
+    UpdateGroupAdmin,
 )
 from src.users.repositories.user import UserRepositoryBase
+from src.users.utils.exceptions import UserNotFoundError
 from src.utils.base_exception import raise_unhandled_integrity_error
 from src.utils.cache_keys import GroupCacheKey
 from src.utils.enums import UserRole
 from src.utils.helpers import ensure_exists, update_object
-from users.utils.exceptions import UserNotFoundError
 
 logger = get_logger(__name__)
 
@@ -38,7 +39,7 @@ logger = get_logger(__name__)
 class GroupService:
     @staticmethod
     async def create_group(
-        session: AsyncSession, current_user_id: int, create_request: GroupCreate
+        session: AsyncSession, current_user_id: int, create_request: CreateGroupAdmin
     ) -> Group:
         try:
             new_group = Group(**create_request.model_dump())
@@ -74,7 +75,7 @@ class GroupService:
         session: AsyncSession,
         current_user_id: int,
         group_id: int,
-        update_request: GroupUpdate,
+        update_request: UpdateGroupAdmin,
     ) -> None:
         target_group = await GroupRepository.get_group_by_id(session, group_id)
         ensure_exists(target_group, GroupNotFoundError(HTTP404.GROUP))
@@ -85,15 +86,15 @@ class GroupService:
             await session.commit()
             await session.refresh(target_group)
 
+            await delete_cache(
+                GroupCacheKey.group_detail_key_admin(group_id),
+                GroupCacheKey.group_detail_key_non_admin(group_id),
+            )
+
             logger.info(
                 "group_updated",
                 group_id=group_id,
                 updated_by=current_user_id,
-            )
-
-            await delete_cache(
-                GroupCacheKey.group_detail_key_admin(group_id),
-                GroupCacheKey.group_detail_key_non_admin(group_id),
             )
 
         except IntegrityError as e:
@@ -148,9 +149,9 @@ class GroupService:
         target_group.is_archived = True
         target_group.archived_at = datetime.now(UTC)
 
-        await delete_cache(GroupCacheKey.group_detail_key_admin(group_id))
-
         await session.commit()
+
+        await delete_cache(GroupCacheKey.group_detail_key_admin(group_id))
 
         logger.info(
             "group_archived",
@@ -180,9 +181,9 @@ class GroupService:
         target_group.is_archived = False
         target_group.archived_at = None
 
-        await delete_cache(GroupCacheKey.group_detail_key_admin(group_id))
-
         await session.commit()
+
+        await delete_cache(GroupCacheKey.group_detail_key_admin(group_id))
 
         logger.info(
             "group_restored",
@@ -195,7 +196,7 @@ class GroupService:
         session: AsyncSession,
         skip: int,
         limit: int,
-        filters: SearchGroup,
+        filters: SearchGroupAdmin,
         sort_by: str,
         order: str,
     ) -> PaginatedResponse:
@@ -219,101 +220,19 @@ class GroupService:
     @staticmethod
     async def get_group_by_id(
         session: AsyncSession, group_id: int
-    ) -> GroupResponseBase:
+    ) -> GroupResponseAdminDetailed:
         cache_key = GroupCacheKey.group_detail_key_admin(group_id)
         cached = await get_cache(cache_key)
 
         if cached is not None:
-            raw = GroupCacheSchema.model_validate(cached)
+            raw = GroupResponseAdminCache.model_validate(cached)
 
-            return GroupResponseBase.model_validate(raw.model_dump())
+            return GroupResponseAdminDetailed.model_validate(raw.model_dump())
 
         group = await GroupRepository.get_group_by_id(session, group_id)
         ensure_exists(group, GroupNotFoundError(HTTP404.GROUP))
 
-        raw = GroupCacheSchema.model_validate(group)
+        raw = GroupResponseAdminCache.model_validate(group)
         await set_cache(cache_key, raw.model_dump(mode="json"), 900)
 
-        return GroupResponseBase.model_validate(group)
-
-    @staticmethod
-    async def get_students(
-        session: AsyncSession, group_id: int, skip: int, limit: int
-    ) -> PaginatedResponse:
-        await GroupService.get_group_by_id(session, group_id)
-
-        students, total = await GroupRepository.get_students(
-            session, group_id, skip, limit
-        )
-
-        return PaginatedResponse(
-            items=students,
-            total=total,
-            skip=skip,
-            limit=limit,
-            has_more=skip + limit < total,
-        )
-
-    @staticmethod
-    async def add_student_to_group(
-        session: AsyncSession, current_user_id: int, group_id: int, student_id: int
-    ) -> None:
-        group = await GroupRepository.get_group_by_id(session, group_id)
-        ensure_exists(group, GroupNotFoundError(HTTP404.GROUP))
-
-        student = await UserRepositoryBase.get_user_by_id(
-            session, student_id, allowed_roles=frozenset({UserRole.STUDENT})
-        )
-        ensure_exists(student, UserNotFoundError(HTTP404.USER))
-
-        previous_group_id = student.group_id
-
-        if group.capacity is not None:
-            await acquire_group_capacity_lock(session, group_id)
-            current_count = await GroupRepository.count_active_students(
-                session, group_id
-            )
-
-            if current_count >= group.capacity:
-                logger.warning(
-                    "group_capacity_exceeded",
-                    group_id=group_id,
-                    actor_user_id=current_user_id,
-                    denial_reason="group_at_capacity",
-                )
-
-                raise GroupCapacityExceededError(
-                    f"Group is at capacity ({group.capacity})"
-                )
-
-        student.group_id = group_id
-
-        await session.commit()
-
-        logger.info(
-            "student_added_to_group",
-            student_id=student_id,
-            group_id=group_id,
-            previous_group_id=previous_group_id,
-            actor_user_id=current_user_id,
-        )
-
-    @staticmethod
-    async def remove_student_from_group(
-        session: AsyncSession, current_user_id: int, group_id: int, student_id: int
-    ) -> None:
-        student = await UserRepositoryBase.get_user_by_id(
-            session, student_id, allowed_roles=frozenset({UserRole.STUDENT})
-        )
-        ensure_exists(student, UserNotFoundError(HTTP404.USER))
-
-        student.group_id = None
-
-        await session.commit()
-
-        logger.info(
-            "student_removed_from_group",
-            student_id=student_id,
-            group_id=group_id,
-            actor_user_id=current_user_id,
-        )
+        return GroupResponseAdminDetailed.model_validate(group)

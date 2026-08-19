@@ -20,18 +20,6 @@ class SubjectNotArchivedError(AppException):
     status_code = 409
 
 
-class SubjectArchiveBlockedError(AppException):
-    status_code = 409
-
-
-class SubjectIsArchivedError(AppException):
-    status_code = 409
-
-
-class SubjectIsNotArchivedError(AppException):
-    status_code = 409
-
-
 # INTEGRITY ERROR HANDLERS
 def handle_subject_code_integrity_error(error: IntegrityError) -> None:
     if "ix_subjects_code" in str(error.orig):

@@ -10,13 +10,14 @@ from src.core.dependencies import (
 )
 from src.core.pagination import PaginatedResponse
 from src.subjects.schemas import (
-    SearchSubject,
-    SubjectCreate,
-    SubjectResponse,
-    SubjectUpdate,
+    CreateSubjectAdmin,
+    SearchSubjectAdmin,
+    SubjectResponseAdminDetailed,
+    SubjectResponseBase,
+    UpdateSubjectAdmin,
 )
-from src.subjects.service import SubjectService
 from src.utils.enums import OrderBy, SubjectSortField
+from subjects.services.system_admin import SubjectServiceAdmin
 
 router = APIRouter(
     prefix="/subjects",
@@ -24,25 +25,27 @@ router = APIRouter(
 )
 
 
-@router.post("", response_model=SubjectResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "", response_model=SubjectResponseAdminDetailed, status_code=status.HTTP_201_CREATED
+)
 async def create_subject(
     session: async_session_dependency,
     current_user: Annotated[CurrentUser, Depends(require_system_admin)],
-    create_request: SubjectCreate,
+    create_request: CreateSubjectAdmin,
 ):
-    return await SubjectService.create_subject(session, current_user.id, create_request)
+    return await SubjectServiceAdmin.create_subject(
+        session, current_user.id, create_request
+    )
 
 
-@router.patch(
-    "/{subject_id}", response_model=SubjectResponse, status_code=status.HTTP_200_OK
-)
+@router.patch("/{subject_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def update_subject(
     session: async_session_dependency,
     current_user: Annotated[CurrentUser, Depends(require_system_admin)],
     subject_id: Annotated[int, Path(ge=1)],
-    update_request: SubjectUpdate,
+    update_request: UpdateSubjectAdmin,
 ):
-    return await SubjectService.update_subject(
+    await SubjectServiceAdmin.update_subject(
         session, current_user.id, subject_id, update_request
     )
 
@@ -53,7 +56,7 @@ async def archive_subject(
     current_user: Annotated[CurrentUser, Depends(require_system_admin)],
     subject_id: Annotated[int, Path(ge=1)],
 ):
-    await SubjectService.archive_subject(session, current_user.id, subject_id)
+    await SubjectServiceAdmin.archive_subject(session, current_user.id, subject_id)
 
 
 @router.patch("/{subject_id}/restoration", status_code=status.HTTP_204_NO_CONTENT)
@@ -62,27 +65,35 @@ async def restore_subject(
     current_user: Annotated[CurrentUser, Depends(require_system_admin)],
     subject_id: Annotated[int, Path(ge=1)],
 ):
-    await SubjectService.restore_subject(session, current_user.id, subject_id)
+    await SubjectServiceAdmin.restore_subject(session, current_user.id, subject_id)
 
 
-@router.get("", response_model=PaginatedResponse[SubjectResponse])
+@router.get(
+    "",
+    response_model=PaginatedResponse[SubjectResponseBase],
+    status_code=status.HTTP_200_OK,
+)
 async def get_subjects(
     session: async_session_dependency,
     _: Annotated[CurrentUser, Depends(require_system_admin)],
     pagination: pagination_dependency,
-    filters: Annotated[SearchSubject, Depends()],
+    filters: Annotated[SearchSubjectAdmin, Depends()],
     sort_by: str = SubjectSortField.NAME,
     order: str = OrderBy.ASC,
 ):
-    return await SubjectService.get_subjects(
+    return await SubjectServiceAdmin.get_subjects(
         session, pagination.skip, pagination.limit, filters, sort_by, order
     )
 
 
-@router.get("/{subject_id}", response_model=SubjectResponse)
+@router.get(
+    "/{subject_id}",
+    response_model=SubjectResponseAdminDetailed,
+    status_code=status.HTTP_200_OK,
+)
 async def get_subject_by_id(
     session: async_session_dependency,
     _: Annotated[CurrentUser, Depends(require_system_admin)],
     subject_id: Annotated[int, Path(ge=1)],
 ):
-    return await SubjectService.get_subject_by_id(session, subject_id)
+    return await SubjectServiceAdmin.get_subject_by_id(session, subject_id)

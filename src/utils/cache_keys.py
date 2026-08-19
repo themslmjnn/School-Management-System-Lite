@@ -24,8 +24,8 @@ class SubjectCacheKey:
         return f"subjects:{subject_id}:admin"
 
     @staticmethod
-    def subject_detail_key_non_admin(subject_id: int) -> str:
-        return f"subjects:{subject_id}:non_admin"
+    def subject_detail_key_staff(subject_id: int) -> str:
+        return f"subjects:{subject_id}:staff"
 
 
 class GroupCacheKey:
