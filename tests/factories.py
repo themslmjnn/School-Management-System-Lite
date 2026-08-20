@@ -4,12 +4,13 @@ from datetime import UTC, date, datetime, timedelta
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.security import generate_invite_token, hash_password
+from src.emails.models import PendingEmail
 from src.groups.models import Group
 from src.users.models.activation import UserActivation
 from src.users.models.login_lockout import UserLoginLockout
 from src.users.models.session import UserSession
 from src.users.models.user import User
-from src.utils.enums import UserRole, UserStatus
+from src.utils.enums import EmailSendingStatus, EmailType, UserRole, UserStatus
 
 _counter = itertools.count(1)
 
@@ -112,6 +113,42 @@ async def make_deactivated_user(session: AsyncSession, **kwargs) -> User:
     kwargs.setdefault("is_active", False)
 
     return await make_user(session, **kwargs)
+
+
+async def make_email(
+    session: AsyncSession,
+    *,
+    recipient: str = "test@example.com",
+    subject: str = "Test Subject",
+    html_body: str = "<p>Test</p>",
+    text_body: str = "Test",
+    email_type: EmailType = EmailType.INVITE,
+    status: EmailSendingStatus = EmailSendingStatus.PENDING,
+    retry_count: int = 0,
+    last_error: str | None = None,
+    sent_at=None,
+    triggered_by: int | None = None,
+    recipient_user_id: int | None = None,
+) -> PendingEmail:
+    email = PendingEmail(
+        recipient=recipient,
+        subject=subject,
+        html_body=html_body,
+        text_body=text_body,
+        email_type=email_type,
+        status=status,
+        retry_count=retry_count,
+        last_error=last_error,
+        sent_at=sent_at,
+        triggered_by=triggered_by,
+        recipient_user_id=recipient_user_id,
+    )
+
+    session.add(email)
+    await session.commit()
+    await session.refresh(email)
+
+    return email
 
 
 async def make_group(

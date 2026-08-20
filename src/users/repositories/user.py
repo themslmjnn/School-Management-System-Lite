@@ -121,7 +121,6 @@ class UserRepositoryBase:
         skip: int,
         limit: int,
     ) -> tuple[list[User], int]:
-
         count_result = await session.execute(
             select(func.count()).select_from(query.subquery())
         )

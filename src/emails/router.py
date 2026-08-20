@@ -34,9 +34,9 @@ async def get_emails(
 ):
     return await PendingEmailService.get_emails(
         session,
+        skip=pagination.skip,
+        limit=pagination.limit,
         filters=filters,
         sort_by=sort_by,
         order=order,
-        skip=pagination.skip,
-        limit=pagination.limit,
     )

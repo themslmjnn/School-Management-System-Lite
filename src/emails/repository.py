@@ -22,7 +22,7 @@ class PendingEmailRepository:
 
         result = await session.execute(query.offset(skip).limit(limit))
 
-        return list(result.scalars().all()), total
+        return result.scalars().all(), total
 
     @staticmethod
     def apply_filters(base_query: Select, filters: SearchEmailAdmin | None) -> Select:
@@ -74,5 +74,5 @@ class PendingEmailRepository:
         query = PendingEmailRepository.apply_sorting(query, sort_by, order)
 
         return await PendingEmailRepository.paginate(
-            session, query=query, skip=skip, limit=skip
+            session, query=query, skip=skip, limit=limit
         )

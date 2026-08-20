@@ -11,19 +11,19 @@ class PendingEmailService:
     async def get_emails(
         session: AsyncSession,
         *,
+        skip: int = 0,
+        limit: int = 10,
         filters: SearchEmailAdmin | None = None,
         sort_by: str = EmailSortField.CREATED_AT,
         order: str = OrderBy.DESC,
-        skip: int = 0,
-        limit: int = 10,
     ) -> PaginatedResponse:
         emails, total = await PendingEmailRepository.get_emails(
             session,
+            skip=skip,
+            limit=limit,
             filters=filters,
             sort_by=sort_by,
             order=order,
-            skip=skip,
-            limit=limit,
         )
 
         return PaginatedResponse(
