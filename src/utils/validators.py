@@ -93,28 +93,6 @@ def validate_date_of_birth(birth_date: date) -> date:
     return birth_date
 
 
-def validate_password(password: str) -> str:
-    if not any(c.isupper() for c in password):
-        raise PydanticCustomError(
-            "password_no_uppercase",
-            "Password must contain at least one uppercase letter",
-        )
-
-    if not any(c.isdigit() for c in password):
-        raise PydanticCustomError(
-            "password_no_digit",
-            "Password must contain at least one digit",
-        )
-
-    if not any(c in "!@#$%^&*()_+-=[]{}|;:,.<>?" for c in password):
-        raise PydanticCustomError(
-            "password_no_special_character",
-            "Password must contain at least one special character",
-        )
-
-    return password
-
-
 def parse_and_validate_mobile_number(phone_number: str) -> str:
     phone_number = phone_number.strip()
 
@@ -151,6 +129,40 @@ def format_phone_for_display(canonical_digits: str) -> str:
     return phonenumbers.format_number(
         parsed, phonenumbers.PhoneNumberFormat.INTERNATIONAL
     )
+
+
+EMAIL_PATTERN = re.compile(
+    r"^[A-Za-z0-9_]+(?:\.[A-Za-z0-9_]+)*@[A-Za-z]+(?:\.[A-Za-z]+)+$"
+)
+
+
+def validate_email(email: str) -> str:
+    if not EMAIL_PATTERN.fullmatch(email):
+        raise ValueError("Invalid email address")
+
+    return email
+
+
+def validate_password(password: str) -> str:
+    if not any(c.isupper() for c in password):
+        raise PydanticCustomError(
+            "password_no_uppercase",
+            "Password must contain at least one uppercase letter",
+        )
+
+    if not any(c.isdigit() for c in password):
+        raise PydanticCustomError(
+            "password_no_digit",
+            "Password must contain at least one digit",
+        )
+
+    if not any(c in "!@#$%^&*()_+-=[]{}|;:,.<>?" for c in password):
+        raise PydanticCustomError(
+            "password_no_special_character",
+            "Password must contain at least one special character",
+        )
+
+    return password
 
 
 def normalize_subject_code(value: str) -> str:

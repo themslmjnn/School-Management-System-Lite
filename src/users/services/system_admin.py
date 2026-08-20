@@ -157,6 +157,8 @@ class UserServiceAdmin:
             await session.commit()
             await session.refresh(new_user)
 
+            print(f"Invite token: {raw_invite_token}")
+
             logger.info(
                 "user_registered",
                 new_user_id=new_user.id,
@@ -553,6 +555,8 @@ class UserServiceAdmin:
 
         session.add(new_pending_email)
         await session.commit()
+
+        print(raw_reset_token)
 
         logger.info(
             "reset_password_request_created",

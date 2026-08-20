@@ -56,25 +56,25 @@ async def lifespan(app: FastAPI):
             impact="rate_limiting_will_fail_on_rate_limited_endpoints",
         )
 
-    email_task = asyncio.create_task(run_email_worker())
+    # email_task = asyncio.create_task(run_email_worker())
 
-    logger.info("email_task_started")
+    # logger.info("email_task_started")
 
     yield
 
-    email_task.cancel()
+    # email_task.cancel()
 
-    results = await asyncio.gather(email_task, return_exceptions=True)
+    # results = await asyncio.gather(email_task, return_exceptions=True)
 
-    for result in results:
-        if isinstance(result, BaseException) and not isinstance(
-            result, asyncio.CancelledError
-        ):
-            logger.error(
-                "worker_shutdown_error",
-                error=str(result),
-                error_type=type(result).__name__,
-            )
+    # for result in results:
+    #     if isinstance(result, BaseException) and not isinstance(
+    #         result, asyncio.CancelledError
+    #     ):
+    #         logger.error(
+    #             "worker_shutdown_error",
+    #             error=str(result),
+    #             error_type=type(result).__name__,
+    #         )
 
     await redis_client.aclose()
 

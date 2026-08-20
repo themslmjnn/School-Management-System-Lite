@@ -20,8 +20,8 @@ from src.users.schemas.system_admin import (
     UserResponseBase,
 )
 from src.users.services.system_admin import UserServiceAdmin
+from src.users.utils.shared_schemas import UpdateUserCredentials
 from src.utils.enums import OrderBy, UserSortField
-from users.utils.shared_schemas import UpdateUserCredentials
 
 router = APIRouter(
     prefix="/users",

@@ -8,7 +8,7 @@ from pydantic import (
     field_validator,
 )
 
-from src.groups.schemas import GroupResponseAdmin
+from src.groups.schemas import GroupResponseBase
 from src.utils import validators as validators
 from src.utils.base_schema import BaseSchema
 
@@ -45,7 +45,7 @@ class UserResponseSelf(UserResponseSelfCache):
 
 
 class StudentResponseSelfCache(UserResponseSelfCache):
-    group: GroupResponseAdmin | None = None
+    group: GroupResponseBase | None = None
 
 
 class StudentResponseSelf(StudentResponseSelfCache):

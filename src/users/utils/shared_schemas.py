@@ -17,7 +17,7 @@ class UserResponseBase(BaseModel):
 
 class UpdateUserCredentials(BaseModel):
     username: str | None = Field(min_length=6, max_length=20, default=None)
-    email: EmailStr | None = None
+    email: str | None = None
 
     @field_validator("username")
     @classmethod
@@ -33,7 +33,7 @@ class UpdateUserCredentials(BaseModel):
         if v is None:
             return None
 
-        return v.strip().lower()
+        return validators.validate_email(v)
 
 
 class SearchUserBase(BaseModel):

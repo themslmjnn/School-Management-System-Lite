@@ -3,7 +3,6 @@ from typing import Annotated, Literal
 
 from pydantic import (
     BaseModel,
-    EmailStr,
     Field,
     computed_field,
     field_serializer,
@@ -80,7 +79,7 @@ class CreateUserBase(BaseModel):
     middlename: str | None = Field(min_length=3, max_length=50, default=None)
 
     phone_number: str
-    email: EmailStr
+    email: str
 
     @field_validator("username")
     @classmethod
@@ -112,8 +111,8 @@ class CreateUserBase(BaseModel):
 
     @field_validator("email", mode="after")
     @classmethod
-    def normalize_email(cls, v: EmailStr) -> str:
-        return v.strip().lower()
+    def validate_email(cls, v: str) -> str:
+        return validators.validate_email(v)
 
 
 class CreateStudentAdmin(CreateUserBase):

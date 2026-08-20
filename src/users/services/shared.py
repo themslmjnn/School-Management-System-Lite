@@ -36,6 +36,7 @@ from src.users.utils.exceptions import (
     handle_non_student_unique_contact_error,
     handle_username_integrity_error,
 )
+from src.users.utils.shared_schemas import UpdateUserCredentials
 from src.utils import email as email_sender
 from src.utils.base_constant import HTTP400
 from src.utils.base_exception import (
@@ -45,7 +46,6 @@ from src.utils.base_exception import (
 from src.utils.cache_keys import SessionCacheKey, UserCacheKey
 from src.utils.enums import EmailType, UserRole
 from src.utils.helpers import ensure_exists
-from users.utils.shared_schemas import UpdateUserCredentials
 
 logger = get_logger(__name__)
 
@@ -85,7 +85,7 @@ class UserServiceSelf:
         )
         ensure_exists(target_user, UserNotFoundError(HTTP404.USER))
 
-        session = target_user.session
+        user_with_session = target_user.session
 
         username_changing = (
             update_request.username is not None
@@ -101,12 +101,12 @@ class UserServiceSelf:
 
         if email_requested:
             pending_still_active = (
-                session.email_change_code_expires_at is not None
-                and session.email_change_code_expires_at > datetime.now(UTC)
+                user_with_session.email_change_code_expires_at is not None
+                and user_with_session.email_change_code_expires_at > datetime.now(UTC)
             )
 
             if (
-                session.pending_new_email == update_request.email
+                user_with_session.pending_new_email == update_request.email
                 and pending_still_active
             ):
                 logger.warning(
@@ -130,9 +130,9 @@ class UserServiceSelf:
                     minutes=settings.EMAIL_CHANGE_CODE_EXPIRES_MINUTES
                 )
 
-                session.pending_new_email = update_request.email
-                session.email_change_code_hash = hashed_code
-                session.email_change_code_expires_at = code_expires_at
+                user_with_session.pending_new_email = update_request.email
+                user_with_session.email_change_code_hash = hashed_code
+                user_with_session.email_change_code_expires_at = code_expires_at
 
             await session.commit()
             await session.refresh(target_user)
@@ -197,15 +197,18 @@ class UserServiceSelf:
         )
         ensure_exists(target_user, UserNotFoundError(HTTP404.USER))
 
-        session = target_user.session
-        if session.pending_new_email is None or session.email_change_code_hash is None:
+        user_with_session = target_user.session
+        if (
+            user_with_session.pending_new_email is None
+            or user_with_session.email_change_code_hash is None
+        ):
             raise NoPendingEmailChangeError("No email change is currently pending")
 
-        if session.email_change_code_expires_at < datetime.now(UTC):
+        if user_with_session.email_change_code_expires_at < datetime.now(UTC):
             raise EmailChangeCodeExpiredError("Email change code has expired")
 
         if not verify_email_change_code(
-            confirm_request.code, session.email_change_code_hash
+            confirm_request.code, user_with_session.email_change_code_hash
         ):
             logger.warning(
                 "email_change_confirmation_denied",
@@ -215,13 +218,14 @@ class UserServiceSelf:
 
             raise InvalidEmailChangeCodeError("Invalid email change code")
 
-        new_email = session.pending_new_email
+        new_email = user_with_session.pending_new_email
         is_student = target_user.role == UserRole.STUDENT
 
         if is_student:
             await acquire_student_contact_lock(
                 session, phone_number=None, email=new_email
             )
+
             await check_contact_limit(
                 session,
                 current_user_id,
@@ -238,14 +242,14 @@ class UserServiceSelf:
             old_email = target_user.email
             target_user.email = new_email
 
-            session.pending_new_email = None
-            session.email_change_code_hash = None
-            session.email_change_code_expires_at = None
+            user_with_session.pending_new_email = None
+            user_with_session.email_change_code_hash = None
+            user_with_session.email_change_code_expires_at = None
 
-            session.access_token_version += 1
-            session.refresh_token_hash = None
-            session.refresh_token_family = None
-            session.refresh_token_expires_at = None
+            user_with_session.access_token_version += 1
+            user_with_session.refresh_token_hash = None
+            user_with_session.refresh_token_family = None
+            user_with_session.refresh_token_expires_at = None
 
             await session.commit()
             await session.refresh(target_user)
