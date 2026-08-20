@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Path, status
+from fastapi import APIRouter, Depends, Query, status
 
 from src.core.dependencies import (
     CurrentUser,
@@ -9,8 +9,9 @@ from src.core.dependencies import (
     require_system_admin,
 )
 from src.core.pagination import PaginatedResponse
-from src.emails.schemas import PendingEmailResponse
+from src.emails.schemas import PendingEmailResponseDetailed, SearchEmailAdmin
 from src.emails.service import PendingEmailService
+from src.utils.enums import EmailSortField, OrderBy
 
 router = APIRouter(
     prefix="/emails",
@@ -19,26 +20,23 @@ router = APIRouter(
 
 
 @router.get(
-    "/failed",
-    response_model=PaginatedResponse[PendingEmailResponse],
+    "",
+    response_model=PaginatedResponse[PendingEmailResponseDetailed],
     status_code=status.HTTP_200_OK,
 )
-async def get_failed_emails(
+async def get_emails(
     session: async_session_dependency,
     pagination: pagination_dependency,
     _: Annotated[CurrentUser, Depends(require_system_admin)],
+    filters: Annotated[SearchEmailAdmin, Depends()],
+    sort_by: Annotated[EmailSortField, Query()] = EmailSortField.CREATED_AT,
+    order: Annotated[OrderBy, Query()] = OrderBy.DESC,
 ):
-    return await PendingEmailService.get_failed_emails(
+    return await PendingEmailService.get_emails(
         session,
+        filters=filters,
+        sort_by=sort_by,
+        order=order,
         skip=pagination.skip,
         limit=pagination.limit,
     )
-
-
-@router.post("/{email_id}/retry", status_code=status.HTTP_204_NO_CONTENT)
-async def retry_failed_email(
-    session: async_session_dependency,
-    _: Annotated[CurrentUser, Depends(require_system_admin)],
-    email_id: Annotated[int, Path(ge=1)],
-):
-    await PendingEmailService.retry_failed_email(session, email_id)

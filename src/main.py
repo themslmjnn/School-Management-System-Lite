@@ -16,6 +16,7 @@ from src.core.config import settings
 from src.core.limiter import ip_limiter
 from src.core.logging import get_logger, setup_logging
 from src.core.middleware import RequestIDMiddleware
+from src.emails.router import router as email_router
 from src.users.routers import director as user_director_router
 from src.users.routers import shared as user_shared_router
 from src.users.routers import system_admin as user_system_admin_router
@@ -56,25 +57,25 @@ async def lifespan(app: FastAPI):
             impact="rate_limiting_will_fail_on_rate_limited_endpoints",
         )
 
-    # email_task = asyncio.create_task(run_email_worker())
+    email_task = asyncio.create_task(run_email_worker())
 
-    # logger.info("email_task_started")
+    logger.info("email_task_started")
 
     yield
 
-    # email_task.cancel()
+    email_task.cancel()
 
-    # results = await asyncio.gather(email_task, return_exceptions=True)
+    results = await asyncio.gather(email_task, return_exceptions=True)
 
-    # for result in results:
-    #     if isinstance(result, BaseException) and not isinstance(
-    #         result, asyncio.CancelledError
-    #     ):
-    #         logger.error(
-    #             "worker_shutdown_error",
-    #             error=str(result),
-    #             error_type=type(result).__name__,
-    #         )
+    for result in results:
+        if isinstance(result, BaseException) and not isinstance(
+            result, asyncio.CancelledError
+        ):
+            logger.error(
+                "worker_shutdown_error",
+                error=str(result),
+                error_type=type(result).__name__,
+            )
 
     await redis_client.aclose()
 
@@ -96,6 +97,7 @@ app.add_middleware(SlowAPIMiddleware)
 
 app.include_router(health_router)
 app.include_router(auth_router)
+app.include_router(email_router)
 app.include_router(user_shared_router.router)
 app.include_router(user_system_admin_router.router)
 app.include_router(user_director_router.router)

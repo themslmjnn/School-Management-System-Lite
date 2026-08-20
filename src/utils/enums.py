@@ -43,6 +43,13 @@ class UserSortField(StrEnum):
     LASTNAME = "lastname"
 
 
+class EmailSortField(StrEnum):
+    CREATED_AT = "created_at"
+    EMAIL_TYPE = "email_type"
+    STATUS = "status"
+    SENT_AT = "sent_at"
+
+
 class SubjectSortField(StrEnum):
     NAME = "name"
     CODE = "code"
