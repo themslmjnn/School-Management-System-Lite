@@ -3,6 +3,8 @@ class HTTP400:
     INVALID_INVITE_TOKEN = "Invalid invite token"
     EXPIRED_INVITE_TOKEN = "Expired invite token"
     NO_CHANGES_DETECTED = "No changes detected"
+    EXPIRED_RESET_PASSWORD_TOKEN = "Expired reset password token"
+    INVALID_RESET_PASSWORD_TOKEN = "Invalid reset password token"
 
 
 class HTTP401:
