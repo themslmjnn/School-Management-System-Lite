@@ -57,7 +57,7 @@ class CreateGroupAdmin(BaseModel):
 
 
 class UpdateGroupAdmin(BaseModel):
-    name: str = Field(min_length=2, max_length=10)
+    name: str | None = Field(min_length=2, max_length=10, default=None)
     grade_level: int | None = None
     capacity: int | None = Field(gt=0, default=None)
 
