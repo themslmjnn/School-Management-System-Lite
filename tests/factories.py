@@ -153,7 +153,7 @@ async def make_email(
 
 
 async def make_subject(
-    test_session: AsyncSession,
+    session: AsyncSession,
     *,
     name: str = "Mathematics",
     code: str = "MATH101",
@@ -165,11 +165,12 @@ async def make_subject(
         code=code,
         description=description,
         is_archived=is_archived,
+        archived_at=datetime.now(UTC) if is_archived else None,
     )
 
-    test_session.add(subject)
-    await test_session.commit()
-    await test_session.refresh(subject)
+    session.add(subject)
+    await session.commit()
+    await session.refresh(subject)
 
     return subject
 
