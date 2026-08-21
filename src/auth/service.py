@@ -7,7 +7,6 @@ from fastapi import Response
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.auth.repository import AuthRepository
 from src.auth.schemas import (
     ActivateAccountWithToken,
     CreateAccessToken,
@@ -130,7 +129,7 @@ class AuthService:
         if form_data.username is None or form_data.password is None:
             raise EmptyCredentialsError("Username and password is required")
 
-        user = await AuthRepository.get_user_by_username(
+        user = await UserRepositoryBase.get_user_by_username(
             session,
             form_data.username,
             load_session=True,
@@ -270,7 +269,7 @@ class AuthService:
     async def activate_account_with_token(
         session: AsyncSession, activation_request: ActivateAccountWithToken
     ) -> None:
-        user = await AuthRepository.get_user_by_username(
+        user = await UserRepositoryBase.get_user_by_username(
             session, activation_request.username, load_activation=True
         )
 
@@ -434,7 +433,7 @@ class AuthService:
 
     @staticmethod
     async def reset_password(session: AsyncSession, update_request: ResetPassword):
-        user = await AuthRepository.get_user_by_username(
+        user = await UserRepositoryBase.get_user_by_username(
             session,
             update_request.username,
             load_session=True,
@@ -499,7 +498,7 @@ class AuthService:
         session: AsyncSession,
         forgot_password_request: ForgotPasswordPublicRequest,
     ) -> MessageResponse:
-        user = await AuthRepository.get_user_by_username(
+        user = await UserRepositoryBase.get_user_by_username(
             session, forgot_password_request.username, load_session=True
         )
 
