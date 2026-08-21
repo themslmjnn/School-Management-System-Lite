@@ -80,7 +80,7 @@ class SubjectServiceAdmin:
 
             await delete_cache(
                 SubjectCacheKey.subject_detail_key_admin(subject_id),
-                SubjectCacheKey.subject_detail_key_non_admin(subject_id),
+                SubjectCacheKey.subject_detail_key_staff(subject_id),
             )
 
             logger.info(
