@@ -1,5 +1,4 @@
 from datetime import UTC, datetime, timedelta
-from unittest.mock import MagicMock
 
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,29 +12,22 @@ from src.utils.base_exception import (
     InvalidCredentialsError,
 )
 from src.utils.enums import UserStatus
+from tests.conftest import user_form
 from tests.factories import (
     make_deactivated_user,
     make_teacher,
 )
 
 
-def _form(username: str = "user", password: str = "pass") -> MagicMock:
-    form = MagicMock()
-    form.username = username
-    form.password = password
-
-    return form
-
-
 class TestLogin:
     async def test_raises_on_empty_username(self, session: AsyncSession, mock_response):
-        form = _form(username=None, password="pass")
+        form = user_form(username=None, password="pass")
 
         with pytest.raises(EmptyCredentialsError):
             await AuthService.login(session, mock_response, form)
 
     async def test_raises_on_empty_password(self, session: AsyncSession, mock_response):
-        form = _form(username="user", password=None)
+        form = user_form(username="user", password=None)
 
         with pytest.raises(EmptyCredentialsError):
             await AuthService.login(session, mock_response, form)
@@ -43,7 +35,7 @@ class TestLogin:
     async def test_raises_invalid_credentials_for_unknown_user(
         self, session: AsyncSession, mock_response
     ):
-        form = _form(username="nobody", password="pass")
+        form = user_form(username="nobody", password="pass")
 
         with pytest.raises(InvalidCredentialsError):
             await AuthService.login(session, mock_response, form)
@@ -52,7 +44,7 @@ class TestLogin:
         self, session: AsyncSession, mock_response
     ):
         user = await make_teacher(session, username="wrongpass_user")
-        form = _form(username=user.username, password="WrongPassword!")
+        form = user_form(username=user.username, password="WrongPassword!")
 
         with pytest.raises(InvalidCredentialsError):
             await AuthService.login(session, mock_response, form)
@@ -67,7 +59,7 @@ class TestLogin:
             status=UserStatus.PENDING_ACTIVATION,
             is_active=False,
         )
-        form = _form(username=user.username, password="AnyPassword1!")
+        form = user_form(username=user.username, password="AnyPassword1!")
 
         with pytest.raises(InvalidCredentialsError):
             await AuthService.login(session, mock_response, form)
@@ -81,7 +73,7 @@ class TestLogin:
             status=UserStatus.PENDING_ACTIVATION,
             is_active=False,
         )
-        form = _form(username=user.username, password="TestPassword123!")
+        form = user_form(username=user.username, password="TestPassword123!")
 
         with pytest.raises(InvalidCredentialsError):
             await AuthService.login(session, mock_response, form)
@@ -90,7 +82,7 @@ class TestLogin:
         self, session: AsyncSession, mock_response
     ):
         user = await make_deactivated_user(session, username="deactivated_login")
-        form = _form(username=user.username, password="TestPassword123!")
+        form = user_form(username=user.username, password="TestPassword123!")
 
         with pytest.raises(AccountInactiveError):
             await AuthService.login(session, mock_response, form)
@@ -104,7 +96,7 @@ class TestLogin:
             username="locked_user",
             locked_until=locked_until,
         )
-        form = _form(username=user.username, password="TestPassword123!")
+        form = user_form(username=user.username, password="TestPassword123!")
 
         with pytest.raises(AccountLockedError):
             await AuthService.login(session, mock_response, form)
@@ -113,7 +105,7 @@ class TestLogin:
         self, session: AsyncSession, mock_response
     ):
         user = await make_teacher(session, username="login_ok_user")
-        form = _form(username=user.username, password="TestPassword123!")
+        form = user_form(username=user.username, password="TestPassword123!")
         response = mock_response
 
         result = await AuthService.login(session, response, form)
@@ -125,7 +117,7 @@ class TestLogin:
         self, session: AsyncSession, mock_response
     ):
         user = await make_teacher(session, username="cookie_user")
-        form = _form(username=user.username, password="TestPassword123!")
+        form = user_form(username=user.username, password="TestPassword123!")
         response = mock_response
 
         await AuthService.login(session, response, form)
@@ -146,7 +138,7 @@ class TestLogin:
             username="reset_attempts_user",
             failed_login_attempts=3,
         )
-        form = _form(username=user.username, password="TestPassword123!")
+        form = user_form(username=user.username, password="TestPassword123!")
 
         await AuthService.login(session, mock_response, form)
 
@@ -161,7 +153,7 @@ class TestLogin:
         self, session: AsyncSession, mock_response
     ):
         user = await make_teacher(session, username="attempt_counter_user")
-        form = _form(username=user.username, password="WrongPassword!")
+        form = user_form(username=user.username, password="WrongPassword!")
 
         with pytest.raises(InvalidCredentialsError):
             await AuthService.login(session, mock_response, form)
@@ -180,7 +172,7 @@ class TestLogin:
             username="lockout_trigger_user",
             failed_login_attempts=4,
         )
-        form = _form(username=user.username, password="WrongPassword!")
+        form = user_form(username=user.username, password="WrongPassword!")
 
         with pytest.raises(InvalidCredentialsError):
             await AuthService.login(session, mock_response, form)
@@ -196,7 +188,7 @@ class TestLogin:
         self, session: AsyncSession, mock_response
     ):
         user = await make_teacher(session, username="token_persist_user")
-        form = _form(username=user.username, password="TestPassword123!")
+        form = user_form(username=user.username, password="TestPassword123!")
 
         await AuthService.login(session, mock_response, form)
 
