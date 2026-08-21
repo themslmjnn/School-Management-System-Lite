@@ -266,7 +266,7 @@ class AuthService:
         )
 
     @staticmethod
-    async def activate_account_with_token(
+    async def activate_account(
         session: AsyncSession, activation_request: ActivateAccountWithToken
     ) -> None:
         user = await UserRepositoryBase.get_user_by_username(

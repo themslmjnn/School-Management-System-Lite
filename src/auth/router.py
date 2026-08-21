@@ -41,18 +41,18 @@ async def logout(
     await AuthService.logout(response, session, current_user.id)
 
 
-@router.post("/activate_with_token", status_code=status.HTTP_204_NO_CONTENT)
+@router.post("/activation", status_code=status.HTTP_204_NO_CONTENT)
 @ip_limiter.limit("3/minute")
-async def activate_with_token(
+async def activate_account(
     request: Request,
     session: async_session_dependency,
     activation_request: ActivateAccountWithToken,
 ):
-    await AuthService.activate_account_with_token(session, activation_request)
+    await AuthService.activate_account(session, activation_request)
 
 
 @router.post(
-    "/refresh_token", response_model=LoginResponse, status_code=status.HTTP_200_OK
+    "/refresh-token", response_model=LoginResponse, status_code=status.HTTP_200_OK
 )
 @ip_limiter.limit("30/minute")
 async def refresh_token(
@@ -73,7 +73,7 @@ async def refresh_token(
     )
 
 
-@router.post("/reset_password", status_code=status.HTTP_204_NO_CONTENT)
+@router.post("/reset-password", status_code=status.HTTP_204_NO_CONTENT)
 @ip_limiter.limit("5/minute")
 async def reset_password(
     request: Request,
@@ -84,7 +84,7 @@ async def reset_password(
 
 
 @router.post(
-    "/forgot_password", response_model=MessageResponse, status_code=status.HTTP_200_OK
+    "/forgot-password", response_model=MessageResponse, status_code=status.HTTP_200_OK
 )
 @ip_limiter.limit("5/minute")
 async def create_forgot_password_request(
