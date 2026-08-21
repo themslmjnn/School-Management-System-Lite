@@ -220,6 +220,13 @@ def mock_set_cache_email(mocker):
 
 
 @pytest.fixture
+def mock_set_cache_subject_system_admin(mocker):
+    return mocker.patch(
+        "src.subjects.services.system_admin.set_cache", new_callable=AsyncMock
+    )
+
+
+@pytest.fixture
 def mock_advisory_lock(mocker):
     return mocker.patch(
         "src.users.services.system_admin.acquire_student_contact_lock",
