@@ -65,7 +65,6 @@ class UpdateGroupAdmin(BaseModel):
 class SearchGroupBase(BaseModel):
     name: str | None = None
     academic_year: int | None = None
-    include_archived: bool = False
 
 
 class SearchGroupAdmin(SearchGroupBase):

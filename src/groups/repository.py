@@ -37,7 +37,7 @@ class GroupRepository:
             base_query = base_query.filter(Group.name.ilike(f"%{filters.name}%"))
         if filters.academic_year:
             base_query = base_query.filter(Group.academic_year == filters.academic_year)
-        if not filters.include_archived:
+        if not getattr(filters, "include_archived", False):
             base_query = base_query.filter(Group.is_archived.is_(False))
 
         return base_query
