@@ -53,3 +53,12 @@ async def get_email_by_id(
     email_id: Annotated[int, Path(ge=1)],
 ):
     return await PendingEmailService.get_email_by_id(session, email_id)
+
+
+@router.post("/{email_id}/retry", status_code=status.HTTP_204_NO_CONTENT)
+async def retry_failed_email(
+    session: async_session_dependency,
+    _: Annotated[CurrentUser, Depends(require_system_admin)],
+    email_id: Annotated[int, Path(ge=1)],
+):
+    await PendingEmailService.retry_failed_email(session, email_id)

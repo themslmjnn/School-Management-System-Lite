@@ -62,3 +62,15 @@ class PendingEmailService:
         await set_cache(cache_key, raw.model_dump(mode="json"), 900)
 
         return PendingEmailResponseDetailed.model_validate(email)
+
+    @staticmethod
+    async def retry_failed_email(
+        session: AsyncSession,
+        email_id: int,
+    ) -> None:
+        failed_email = await PendingEmailRepository.get_email_by_id(session, email_id)
+        ensure_exists(failed_email, PendingEmailNotFoundError(HTTP404.PENDING_EMAIL))
+
+        await PendingEmailRepository.reset_for_retry(session, failed_email)
+
+        await session.commit()
