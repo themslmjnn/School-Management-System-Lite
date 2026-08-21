@@ -222,37 +222,53 @@ class TestGetEmails:
         assert len(emails.items) == 3
         assert emails.total == 5
 
-    # async def test_sort_by_created_at_descending(self, session: AsyncSession):
-    #     first = await make_email(session)
-    #     second = await make_email(session)
+    async def test_sort_by_sent_at_descending(self, session: AsyncSession):
+        from datetime import UTC, datetime, timedelta
 
-    #     emails = await PendingEmailService.get_emails(
-    #         session,
-    #         skip=0,
-    #         limit=10,
-    #         sort_by=EmailSortField.CREATED_AT,
-    #         order=OrderBy.DESC,
-    #     )
-
-    #     ids_in_order = [e.id for e in emails.items]
-
-    #     assert ids_in_order.index(second.id) < ids_in_order.index(first.id)
-
-    async def test_sort_by_created_at_ascending(self, session: AsyncSession):
-        first = await make_email(session)
-        second = await make_email(session)
+        earlier = await make_email(
+            session,
+            status=EmailSendingStatus.SENT,
+            sent_at=datetime(2024, 1, 1, tzinfo=UTC),
+        )
+        later = await make_email(
+            session,
+            status=EmailSendingStatus.SENT,
+            sent_at=datetime(2024, 6, 1, tzinfo=UTC),
+        )
 
         emails = await PendingEmailService.get_emails(
             session,
-            skip=0,
-            limit=10,
-            sort_by=EmailSortField.CREATED_AT,
+            sort_by=EmailSortField.SENT_AT,
+            order=OrderBy.DESC,
+        )
+
+        ids_in_order = [e.id for e in emails.items]
+
+        assert ids_in_order.index(later.id) < ids_in_order.index(earlier.id)
+
+    async def test_sort_by_sent_at_ascending(self, session: AsyncSession):
+        from datetime import UTC, datetime
+
+        earlier = await make_email(
+            session,
+            status=EmailSendingStatus.SENT,
+            sent_at=datetime(2024, 1, 1, tzinfo=UTC),
+        )
+        later = await make_email(
+            session,
+            status=EmailSendingStatus.SENT,
+            sent_at=datetime(2024, 6, 1, tzinfo=UTC),
+        )
+
+        emails = await PendingEmailService.get_emails(
+            session,
+            sort_by=EmailSortField.SENT_AT,
             order=OrderBy.ASC,
         )
 
         ids_in_order = [e.id for e in emails.items]
 
-        assert ids_in_order.index(first.id) < ids_in_order.index(second.id)
+        assert ids_in_order.index(earlier.id) < ids_in_order.index(later.id)
 
     async def test_invalid_sort_field_falls_back_to_created_at(
         self, session: AsyncSession
