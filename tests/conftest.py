@@ -202,6 +202,11 @@ def mock_set_cache_user_director(mocker):
 
 
 @pytest.fixture
+def mock_set_cache_user_shared(mocker):
+    return mocker.patch("src.users.services.shared.set_cache", new_callable=AsyncMock)
+
+
+@pytest.fixture
 def mock_advisory_lock(mocker):
     return mocker.patch(
         "src.users.services.system_admin.acquire_student_contact_lock",
