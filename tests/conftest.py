@@ -123,6 +123,7 @@ async def flush_cache():
 def mock_response():
     return MagicMock()
 
+
 def user_form(username: str = "user", password: str = "pass") -> MagicMock:
     form = MagicMock()
     form.username = username
