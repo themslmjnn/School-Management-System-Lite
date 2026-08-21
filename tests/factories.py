@@ -182,12 +182,15 @@ async def make_group(
     academic_year: int = 2025,
     grade_level: int | None = 1,
     capacity: int | None = 30,
+    is_archived: bool = False,
 ) -> Group:
     group = Group(
         name=name,
         academic_year=academic_year,
         grade_level=grade_level,
         capacity=capacity,
+        is_archived=is_archived,
+        archived_at=datetime.now(UTC) if is_archived else None,
     )
 
     session.add(group)

@@ -3,15 +3,12 @@ from datetime import UTC, datetime
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.core.advisory_locks import acquire_group_capacity_lock
 from src.core.caching import delete_cache, get_cache, set_cache
 from src.core.logging import get_logger
 from src.core.pagination import PaginatedResponse
 from src.groups.exceptions.constants import HTTP404
 from src.groups.exceptions.exceptions import (
     GroupAlreadyArchivedError,
-    GroupArchiveBlockedError,
-    GroupCapacityExceededError,
     GroupIsNotArchivedError,
     GroupNotFoundError,
     handle_group_name_year_integrity_error,
@@ -20,17 +17,13 @@ from src.groups.models import Group
 from src.groups.repository import GroupRepository
 from src.groups.schemas import (
     CreateGroupAdmin,
-    GroupResponseAdmin,
     GroupResponseAdminCache,
     GroupResponseAdminDetailed,
     SearchGroupAdmin,
     UpdateGroupAdmin,
 )
-from src.users.repositories.user import UserRepositoryBase
-from src.users.utils.exceptions import UserNotFoundError
 from src.utils.base_exception import raise_unhandled_integrity_error
 from src.utils.cache_keys import GroupCacheKey
-from src.utils.enums import UserRole
 from src.utils.helpers import ensure_exists, update_object
 
 logger = get_logger(__name__)
