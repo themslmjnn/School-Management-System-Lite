@@ -215,9 +215,25 @@ def mock_advisory_lock(mocker):
 
 
 @pytest.fixture
+def mock_advisory_lock_shared(mocker):
+    return mocker.patch(
+        "src.users.services.shared.acquire_student_contact_lock",
+        return_value=None,
+    )
+
+
+@pytest.fixture
 def mock_check_contact_limit(mocker):
     return mocker.patch(
         "src.users.services.system_admin.check_contact_limit",
+        return_value=None,
+    )
+
+
+@pytest.fixture
+def mock_check_contact_limit_shared(mocker):
+    return mocker.patch(
+        "src.users.services.shared.check_contact_limit",
         return_value=None,
     )
 
@@ -250,5 +266,13 @@ def mock_send_account_activation_email(mocker):
 def mock_send_email_change_verification(mocker):
     return mocker.patch(
         "src.users.services.system_admin.email_sender.send_email_change_verification",
+        new_callable=AsyncMock,
+    )
+
+
+@pytest.fixture
+def mock_send_email_changed_notification(mocker):
+    return mocker.patch(
+        "src.users.services.system_admin.email_sender.send_email_changed_notification",
         new_callable=AsyncMock,
     )
