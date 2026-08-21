@@ -66,9 +66,7 @@ class TestUpdateGroup:
 
         assert updated.grade_level == 5
 
-    async def test_not_found_raises(
-        self, session: AsyncSession, system_admin: User
-    ):
+    async def test_not_found_raises(self, session: AsyncSession, system_admin: User):
         with pytest.raises(GroupNotFoundError):
             await GroupServiceAdmin.update_group(
                 session,
@@ -77,9 +75,7 @@ class TestUpdateGroup:
                 UpdateGroupAdmin(name="JUSTNAME"),
             )
 
-    async def test_no_changes_raises(
-        self, session: AsyncSession, system_admin: User
-    ):
+    async def test_no_changes_raises(self, session: AsyncSession, system_admin: User):
         group = await make_group(session, name="NOCH GRP", academic_year=2025)
 
         with pytest.raises(NoChangesDetectedError):
@@ -94,9 +90,7 @@ class TestUpdateGroup:
         self, session: AsyncSession, system_admin: User
     ):
         await make_group(session, name="TAKEN GRP", academic_year=2025)
-        target = await make_group(
-            session, name="TARGET GRP", academic_year=2025
-        )
+        target = await make_group(session, name="TARGET GRP", academic_year=2025)
 
         with pytest.raises(GroupNameYearAlreadyExistsError):
             await GroupServiceAdmin.update_group(
@@ -109,15 +103,15 @@ class TestUpdateGroup:
     async def test_cache_invalidated_after_update(
         self, session: AsyncSession, system_admin: User, mocker
     ):
-        group = await make_group(
-            session, name="CACHE GRP", academic_year=2025
-        )
+        group = await make_group(session, name="CACHE GRP", academic_year=2025)
         calls = []
 
         async def capture(*args):
             calls.extend(args)
 
-        mocker.patch("src.groups.services.system_admin.delete_cache", side_effect=capture)
+        mocker.patch(
+            "src.groups.services.system_admin.delete_cache", side_effect=capture
+        )
 
         await GroupServiceAdmin.update_group(
             session,

@@ -13,9 +13,7 @@ class TestUpdateGroupEndpoint:
         client: AsyncClient,
         system_admin: User,
     ):
-        group = await make_group(
-            session, name="PATCH", academic_year=2025
-        )
+        group = await make_group(session, name="PATCH", academic_year=2025)
         headers = await make_auth_header(session, system_admin)
 
         response = await client.patch(
@@ -48,9 +46,7 @@ class TestUpdateGroupEndpoint:
         client: AsyncClient,
         system_admin: User,
     ):
-        group = await make_group(
-            session, name="name", academic_year=2025
-        )
+        group = await make_group(session, name="name", academic_year=2025)
         headers = await make_auth_header(session, system_admin)
 
         response = await client.patch(
@@ -68,9 +64,7 @@ class TestUpdateGroupEndpoint:
         system_admin: User,
     ):
         await make_group(session, name="TAKEN RT", academic_year=2025)
-        target = await make_group(
-            session, name="TARGET RT", academic_year=2025
-        )
+        target = await make_group(session, name="TARGET RT", academic_year=2025)
         headers = await make_auth_header(session, system_admin)
 
         response = await client.patch(
@@ -87,9 +81,7 @@ class TestUpdateGroupEndpoint:
         client: AsyncClient,
         system_admin: User,
     ):
-        group = await make_group(
-            session, name="VALID GRP", academic_year=2025
-        )
+        group = await make_group(session, name="VALID GRP", academic_year=2025)
         headers = await make_auth_header(session, system_admin)
 
         response = await client.patch(
@@ -106,9 +98,7 @@ class TestUpdateGroupEndpoint:
         client: AsyncClient,
         system_admin: User,
     ):
-        group = await make_group(
-            session, name="CAP RT GRP", academic_year=2025
-        )
+        group = await make_group(session, name="CAP RT GRP", academic_year=2025)
         headers = await make_auth_header(session, system_admin)
 
         response = await client.patch(
@@ -125,9 +115,7 @@ class TestUpdateGroupEndpoint:
         client: AsyncClient,
         director: User,
     ):
-        group = await make_group(
-            session, name="DIR RT GRP", academic_year=2025
-        )
+        group = await make_group(session, name="DIR RT GRP", academic_year=2025)
         headers = await make_auth_header(session, director)
 
         response = await client.patch(
