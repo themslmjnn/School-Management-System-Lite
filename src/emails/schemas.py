@@ -27,7 +27,10 @@ class PendingEmailResponseDetailed(PendingEmailResponse, BaseSchema):
     created_at: datetime
 
     @field_serializer("created_at", "sent_at")
-    def serialize_datetime(self, value: datetime) -> str:
+    def serialize_datetime(self, value: datetime | None) -> str | None:
+        if value is None:
+            return None
+
         return value.strftime("%d %b %Y, %H:%M")
 
 
