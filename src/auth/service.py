@@ -66,14 +66,14 @@ class AuthService:
             secure=settings.cookie_secure,
             samesite="strict",
             max_age=COOKIE_MAX_AGE,
-            path="/auth/refresh_token",
+            path="/auth/refresh-token",
         )
 
     @staticmethod
     def _clear_refresh_token_cookie(response: Response) -> None:
         response.delete_cookie(
             key="refresh_token",
-            path="/auth/refresh_token",
+            path="/auth/refresh-token",
         )
 
     @staticmethod
@@ -87,14 +87,14 @@ class AuthService:
             secure=settings.cookie_secure,
             samesite="strict",
             max_age=COOKIE_MAX_AGE,
-            path="/auth/refresh_token",
+            path="/auth/refresh-token",
         )
 
     @staticmethod
     def _clear_refresh_family_cookie(response: Response) -> None:
         response.delete_cookie(
             key="refresh_token_family",
-            path="/auth/refresh_token",
+            path="/auth/refresh-token",
         )
 
     @staticmethod
