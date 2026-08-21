@@ -39,7 +39,7 @@ class SubjectRepository:
             base_query = base_query.filter(Subject.name.ilike(f"%{filters.name}%"))
         if filters.code:
             base_query = base_query.filter(Subject.code.ilike(f"%{filters.code}%"))
-        if not filters.include_archived:
+        if not getattr(filters, "include_archived", False):
             base_query = base_query.filter(Subject.is_archived.is_(False))
 
         return base_query

@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.core.security import generate_invite_token, hash_password
 from src.emails.models import PendingEmail
 from src.groups.models import Group
+from src.subjects.models import Subject
 from src.users.models.activation import UserActivation
 from src.users.models.login_lockout import UserLoginLockout
 from src.users.models.session import UserSession
@@ -149,6 +150,28 @@ async def make_email(
     await session.refresh(email)
 
     return email
+
+
+async def make_subject(
+    test_session: AsyncSession,
+    *,
+    name: str = "Mathematics",
+    code: str = "MATH101",
+    description: str | None = None,
+    is_archived: bool = False,
+) -> Subject:
+    subject = Subject(
+        name=name,
+        code=code,
+        description=description,
+        is_archived=is_archived,
+    )
+
+    test_session.add(subject)
+    await test_session.commit()
+    await test_session.refresh(subject)
+
+    return subject
 
 
 async def make_group(

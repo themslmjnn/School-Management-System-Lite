@@ -17,6 +17,8 @@ from src.core.limiter import ip_limiter
 from src.core.logging import get_logger, setup_logging
 from src.core.middleware import RequestIDMiddleware
 from src.emails.router import router as email_router
+from src.subjects.routers import director as subjects_director_router
+from src.subjects.routers import system_admin as subjects_system_admin_router
 from src.users.routers import director as user_director_router
 from src.users.routers import shared as user_shared_router
 from src.users.routers import system_admin as user_system_admin_router
@@ -101,6 +103,8 @@ app.include_router(email_router)
 app.include_router(user_shared_router.router)
 app.include_router(user_system_admin_router.router)
 app.include_router(user_director_router.router)
+app.include_router(subjects_system_admin_router.router)
+app.include_router(subjects_director_router.router)
 
 
 @app.exception_handler(base_exc.AppException)

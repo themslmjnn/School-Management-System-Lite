@@ -16,8 +16,8 @@ from src.subjects.schemas import (
     SubjectResponseBase,
     UpdateSubjectAdmin,
 )
+from src.subjects.services.system_admin import SubjectServiceAdmin
 from src.utils.enums import OrderBy, SubjectSortField
-from subjects.services.system_admin import SubjectServiceAdmin
 
 router = APIRouter(
     prefix="/subjects",
