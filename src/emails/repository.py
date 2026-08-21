@@ -76,3 +76,13 @@ class PendingEmailRepository:
         return await PendingEmailRepository.paginate(
             session, query=query, skip=skip, limit=limit
         )
+
+    @staticmethod
+    async def get_email_by_id(
+        session: AsyncSession, email_id: int
+    ) -> PendingEmail | None:
+        query = select(PendingEmail).filter(PendingEmail.id == email_id)
+
+        result = await session.execute(query)
+
+        return result.scalar_one_or_none()

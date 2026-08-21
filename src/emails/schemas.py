@@ -17,15 +17,18 @@ class PendingEmailResponse(BaseModel):
     recipient_user_id: int | None
 
 
-class PendingEmailResponseDetailed(PendingEmailResponse, BaseSchema):
+class PendingEmailResponseCache(PendingEmailResponse, BaseSchema):
     id: int
 
     retry_count: int
     last_error: str | None
+
     sent_at: datetime | None
 
     created_at: datetime
 
+
+class PendingEmailResponseDetailed(PendingEmailResponseCache):
     @field_serializer("created_at", "sent_at")
     def serialize_datetime(self, value: datetime | None) -> str | None:
         if value is None:

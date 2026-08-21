@@ -18,6 +18,12 @@ class UserCacheKey:
         return f"users:detail:{user_id}:self"
 
 
+class EmailCacheKey:
+    @staticmethod
+    def email_detail_key(email_id: int) -> str:
+        return f"emails:{email_id}:admin"
+
+
 class SubjectCacheKey:
     @staticmethod
     def subject_detail_key_admin(subject_id: int) -> str:
