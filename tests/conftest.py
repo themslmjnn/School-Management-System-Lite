@@ -244,3 +244,11 @@ def mock_send_account_activation_email(mocker):
         "src.users.services.system_admin.email_sender.send_account_activation_email",
         new_callable=AsyncMock,
     )
+
+
+@pytest.fixture
+def mock_send_email_change_verification(mocker):
+    return mocker.patch(
+        "src.users.services.system_admin.email_sender.send_email_change_verification",
+        new_callable=AsyncMock,
+    )
