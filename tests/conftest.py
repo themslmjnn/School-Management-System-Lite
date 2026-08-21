@@ -265,7 +265,7 @@ def mock_send_account_activation_email(mocker):
 @pytest.fixture
 def mock_send_email_change_verification(mocker):
     return mocker.patch(
-        "src.users.services.system_admin.email_sender.send_email_change_verification",
+        "src.users.services.shared.email_sender.send_email_change_verification",
         new_callable=AsyncMock,
     )
 
@@ -273,6 +273,14 @@ def mock_send_email_change_verification(mocker):
 @pytest.fixture
 def mock_send_email_changed_notification(mocker):
     return mocker.patch(
-        "src.users.services.system_admin.email_sender.send_email_changed_notification",
+        "src.users.services.shared.email_sender.send_email_changed_notification",
+        new_callable=AsyncMock,
+    )
+
+
+@pytest.fixture
+def mock_send_password_changed_notification(mocker):
+    return mocker.patch(
+        "src.users.services.shared.email_sender.send_password_changed_notification",
         new_callable=AsyncMock,
     )
