@@ -1,208 +1,479 @@
 # School Management System — Lite
 
-A production-grade REST API for managing a school's staff, students, groups, and subjects. Built
-as a focused, complete backend project demonstrating real-world engineering patterns: advisory
-locking, outbox-based email delivery, rotating refresh tokens with family tracking, and structured
-observability.
+A production-oriented REST API for managing school staff, students, groups, and subjects.
 
-This is the Lite edition — intentionally scoped to the user management and school structure
-layer, without academics, grades, or guardian functionality. Those are the domain of
-Meridian AMS, its full-scale successor.
+This project is a focused backend implementation built with **FastAPI**, **PostgreSQL**, **Redis**, and **Docker**, with an emphasis on real-world backend engineering practices such as secure authentication, concurrency control, transactional email delivery, caching, rate limiting, structured logging, and maintainable application architecture.
+
+> **Lite Edition:** This version intentionally focuses on the user-management and school-structure domains. Academics, grades, guardians, and frontend functionality are outside the scope of this release.
+
+---
+
+## Highlights
+
+The project focuses on backend engineering patterns that go beyond basic CRUD operations:
+
+- **Secure authentication** with JWT access tokens and rotating refresh tokens.
+- **Refresh-token family tracking** for detecting token reuse and potential token theft.
+- **Per-user access-token versioning** for immediate server-side token invalidation.
+- **PostgreSQL advisory locks** for preventing race conditions during concurrent student registrations.
+- **Transactional email outbox** to prevent email loss when an application failure occurs.
+- **Background email processing** with retry tracking and failure handling.
+- **Structured JSON logging** with request correlation IDs.
+- **Liveness and readiness health checks** for application and infrastructure monitoring.
+- **Redis caching and rate limiting** for frequently accessed resources and request protection.
+- **Docker Compose** for running the application, PostgreSQL, and Redis together.
+- **Automated migrations** with Alembic.
+- **Unit and integration testing** with pytest.
+
+---
+
+## Architecture
+
+The application follows a layered backend architecture. FastAPI handles HTTP requests, services contain business logic, repositories manage data access, and a background worker handles asynchronous email delivery.
+
+![School Management System architecture](docs/architecture.png)
+
+### Main Components
+
+| Component | Responsibility |
+|---|---|
+| **FastAPI** | HTTP API, routing, middleware, dependencies, authentication |
+| **Services** | Business and application logic |
+| **Repositories** | Database access and query composition |
+| **PostgreSQL** | Primary relational database and transactional state |
+| **Redis** | Caching, rate limiting, token versioning, and temporary data |
+| **Email Worker** | Background processing of pending emails |
+| **SMTP / Resend** | External email delivery |
+
+### Example Request Flow
+
+```text
+Client
+  │
+  │ HTTP request
+  ▼
+FastAPI
+  │
+  ├── Middleware / Dependencies
+  │
+  ▼
+Service
+  │
+  ▼
+Repository
+  │
+  ▼
+PostgreSQL
+  │
+  └── Optional cache interaction with Redis
+  │
+  ▼
+HTTP response
+```
+
+### Email Outbox Flow
+
+```text
+Business Operation
+       │
+       ├── Write business data
+       └── Write pending email
+                │
+                ▼
+          Commit transaction
+                │
+                ▼
+          Email Worker
+                │
+                ▼
+          SMTP / Resend
+                │
+                ▼
+       Update delivery status
+```
+
+This ensures that an application failure after the business transaction commits does not silently lose the email.
+
+---
 
 ## Features
 
-**Authentication & Security**
-- JWT access tokens with per-user versioning for instant server-side invalidation
-- Rotating refresh tokens stored as bcrypt hashes with family tracking — reuse of a revoked token
-  invalidates the entire family, detecting token theft
-- HttpOnly, Secure, SameSite=Strict cookie handling for refresh tokens
-- Account lockout after repeated failed login attempts
-- Forgot password and admin-initiated password reset flows
-- Email change confirmation via a short-lived verification code
+### Authentication & Security
 
-**User Management**
-- Four roles: System Admin, Director, Teacher, Student
-- System Admin controls all user registration — no self-registration
-- Full account lifecycle: invite → activation → active → deactivated / graduated / expelled /
-  withdrawn
-- Contact uniqueness enforced across roles: staff and directors hold unique phone and email;
-  up to three students may share the same contact (family use case)
-- PostgreSQL advisory locks prevent race conditions on concurrent student registrations sharing
-  contact information — a gap that partial unique indexes alone cannot close
-- Invite token and reset token flows use hashed tokens; raw values are never stored
+- JWT access tokens with per-user versioning for immediate server-side invalidation.
+- Rotating refresh tokens stored as bcrypt hashes with family tracking.
+- Refresh-token reuse detection. Reuse of a revoked token invalidates the entire token family.
+- Secure refresh-token cookies using `HttpOnly`, `Secure`, and `SameSite=Strict`.
+- Account lockout after repeated failed login attempts.
+- Forgot-password and admin-initiated password-reset flows.
+- Email-change confirmation using short-lived verification codes.
+- Invite and reset tokens are stored as hashes rather than raw values.
 
-**School Structure**
-- Groups with academic year, grade level, and capacity; students are assigned to a group
-- Subjects with code uniqueness and archive/restore lifecycle
-- Directors have read access to teachers, students, groups, and subjects
+### User Management
 
-**Email Infrastructure**
-- Outbox pattern: emails are written to a `pending_emails` table within the same transaction as
-  the triggering operation, preventing silent loss on application crash
-- Background worker polls the outbox, sends via configured provider, and tracks retry count and
-  last error per email
-- System Admin can view email history and manually retry failed deliveries
+- Four user roles:
+  - System Admin
+  - Director
+  - Teacher
+  - Student
+- System Admin-controlled registration with no public self-registration.
+- Complete account lifecycle:
 
-**Observability**
-- Structured JSON logging via structlog — all log events are snake_case keys with consistent shape
-- Per-request correlation IDs injected by middleware and included in every log event
-- Separate liveness (`/health/live`) and readiness (`/health/ready`) endpoints; readiness checks
-  both PostgreSQL and Redis with timeouts and returns 503 if either is unhealthy
-- Startup validation of all config values via Pydantic Settings — the app refuses to start with
-  missing or invalid configuration
+  `invite → activation → active → deactivated / graduated / expelled / withdrawn`
 
-**Infrastructure**
-- Docker Compose with three services: application, PostgreSQL 18, Redis 8
-- Health-checked service dependencies — the app waits for the database to be ready before starting
-- Alembic migration history from initial schema through all cleanup migrations
-- IP-based rate limiting via slowapi
-- Redis caching on frequently read user and entity detail endpoints with explicit cache
-  invalidation on mutation
+- Contact uniqueness rules across different user roles.
+- Up to three students may share the same phone number or email address to support family use cases.
+- PostgreSQL advisory locks protect concurrent student registrations that share contact information.
+
+### School Structure
+
+- Groups with:
+  - Academic year
+  - Grade level
+  - Capacity
+- Student-to-group assignment.
+- Subject management with unique subject codes.
+- Archive and restore functionality for groups and subjects.
+- Role-based access for System Admins and Directors.
+
+### Email Infrastructure
+
+- Transactional **outbox pattern** for reliable email delivery.
+- Emails are written to the `pending_emails` table in the same transaction as the operation that triggered them.
+- Background worker polls the outbox and sends pending emails.
+- Retry tracking and last-error information for failed deliveries.
+- System Admin interface for viewing email history and manually retrying failed deliveries.
+- Configurable email providers using SMTP or Resend.
+
+### Observability
+
+- Structured JSON logging using `structlog`.
+- Consistent `snake_case` event names and structured log fields.
+- Request correlation IDs injected through middleware.
+- Liveness endpoint: `/health/live`
+- Readiness endpoint: `/health/ready`
+- Readiness checks PostgreSQL and Redis with timeouts and returns `503` when dependencies are unavailable.
+- Application configuration is validated at startup using Pydantic Settings.
+
+### Infrastructure
+
+- Docker Compose environment with:
+  - Application
+  - PostgreSQL 18
+  - Redis 8
+- Health-checked service dependencies.
+- Alembic migration history from the initial schema through subsequent migrations.
+- IP-based rate limiting using SlowAPI.
+- Redis caching for frequently accessed user and entity details.
+- Explicit cache invalidation after mutations.
+
+---
 
 ## Tech Stack
 
 | Layer | Technology |
 |---|---|
-| Framework | FastAPI 0.135 |
-| ORM | SQLAlchemy 2.0 async |
+| Framework | FastAPI |
+| ORM | SQLAlchemy 2.0 Async |
 | Database | PostgreSQL 18 |
-| Cache / Rate limiting | Redis 8 |
+| Cache / Rate Limiting | Redis 8 |
 | Migrations | Alembic |
-| Auth | python-jose (JWT) · passlib / bcrypt |
-| Validation | Pydantic v2 · phonenumbers |
-| Email | aiosmtplib / Resend |
+| Authentication | python-jose (JWT), bcrypt |
+| Validation | Pydantic v2, phonenumbers |
+| Email | aiosmtplib, Resend |
 | Logging | structlog |
-| Testing | pytest-asyncio · httpx · pytest-mock |
-| Linting / Typing | Ruff · mypy |
-| Container | Docker · Docker Compose |
+| Testing | pytest, pytest-asyncio, httpx, pytest-mock |
+| Linting / Typing | Ruff, mypy |
+| Containers | Docker, Docker Compose |
+
+---
 
 ## Project Structure
 
+```text
 src/
-├── api/health.py               # Liveness + readiness endpoints
-├── auth/                       # Login, logout, refresh, activation, password flows
-├── core/                       # Config, DB, Redis, security, middleware, pagination,
-│                               # advisory locks, rate limiting, caching
-├── emails/                     # PendingEmail model, outbox service, admin email endpoints
-├── groups/                     # Group CRUD with archive/restore; system admin + director access
-├── subjects/                   # Subject CRUD with archive/restore; system admin + director access
+├── api/
+│   └── health.py
+├── auth/
+├── core/
+├── emails/
+├── groups/
+├── subjects/
 ├── users/
-│   ├── models/                 # User, UserSession, UserActivation, UserLoginLockout
-│   ├── repositories/           # Base queries, admin queries, sorting, pagination
-│   ├── routers/                # system_admin, director, shared (self-service)
-│   ├── services/               # system_admin, director, shared
-│   └── utils/                  # Contact limit checks, constants, exception hierarchy
+│   ├── models/
+│   ├── repositories/
+│   ├── routers/
+│   ├── services/
+│   └── utils/
 ├── workers/
-│   └── email_worker.py         # Background outbox polling worker
-└── utils/                      # Enums, validators, base exceptions, helpers, cache keys
+│   └── email_worker.py
+└── utils/
+```
+
+### Main Responsibilities
+
+| Directory | Responsibility |
+|---|---|
+| `api/` | Application-level endpoints such as liveness and readiness checks |
+| `auth/` | Login, logout, refresh, activation, and password-related flows |
+| `core/` | Configuration, database, Redis, security, middleware, pagination, locking, rate limiting, and caching |
+| `emails/` | Pending email model, outbox functionality, and administrative email endpoints |
+| `groups/` | Group CRUD, archive/restore, and access control |
+| `subjects/` | Subject CRUD, archive/restore, and access control |
+| `users/models/` | User, session, activation, and login-lockout models |
+| `users/repositories/` | Database queries, sorting, and pagination |
+| `users/routers/` | System Admin, Director, and shared user endpoints |
+| `users/services/` | Application and business logic for user operations |
+| `users/utils/` | Contact-limit checks, constants, and user-specific exceptions |
+| `workers/` | Background email processing |
+| `utils/` | Shared enums, validators, exceptions, helpers, and cache keys |
+
+---
 
 ## API Overview
 
-| Module | Endpoints | Access |
+| Module | Main Operations | Access |
 |---|---|---|
-| Auth | Login, logout, refresh token, activate account, forgot password, reset password | Public / authenticated |
-| Users — Admin | Register, update profile, update credentials, activate, deactivate, password reset request, resend invite, list/get teachers, list/get students | System Admin |
-| Users — Director | List/get teachers, list/get students | Director |
-| Users — Shared | Get my profile, update my profile, update my credentials, update my password, confirm email change, get my student profile | Any authenticated user |
-| Subjects | Create, update, archive, restore, list, get by ID | System Admin (write) · Director (read) |
-| Groups | Create, update, archive, restore, list, get by ID | System Admin (write) · Director (read) |
-| Emails | List emails, get by ID, retry failed | System Admin |
-| Health | Liveness, readiness | Public |
+| **Auth** | Login, logout, refresh token, activate account, forgot password, reset password | Public / Authenticated |
+| **Users — Admin** | Register, update profile, update credentials, activate, deactivate, password reset, resend invite, list/get teachers and students | System Admin |
+| **Users — Director** | List/get teachers and students | Director |
+| **Users — Shared** | Get/update profile, update credentials/password, confirm email change, get student profile | Authenticated Users |
+| **Subjects** | Create, update, archive, restore, list, get by ID | System Admin / Director |
+| **Groups** | Create, update, archive, restore, list, get by ID | System Admin / Director |
+| **Emails** | List emails, get by ID, retry failed emails | System Admin |
+| **Health** | Liveness and readiness checks | Public |
+
+### API Documentation
+
+When running locally, interactive API documentation is available at:
+
+```text
+http://localhost:8000/docs
+```
+
+> The interactive documentation is intended for development use.
+
+---
 
 ## Engineering Decisions
 
-**Advisory locking for student contact uniqueness**
+### Advisory Locking for Student Contact Limits
 
-Students in a school may share phone numbers and email addresses — up to three students per
-contact value, to accommodate siblings sharing a parent's contact details. A partial unique index
-handles the single-contact case for staff, but the concurrent insert case for students (check
-count → insert, with another request doing the same simultaneously) cannot be solved with indexes
-alone. PostgreSQL advisory locks (`pg_advisory_xact_lock`) are acquired at the top of the
-transaction, before any count check, in a consistent order (phone first, email second) to prevent
-deadlocks.
+Students may share phone numbers and email addresses, with a limit of three students per contact value to support common family use cases.
 
-**Refresh token family tracking**
+A simple count-then-insert operation is vulnerable to race conditions when multiple registrations occur concurrently. Partial unique indexes alone cannot enforce this limit.
 
-Each refresh token rotation issues a new token and records a `refresh_token_family` identifier.
-If a token from a previous rotation is presented — indicating the token was stolen and the thief
-rotated it before the legitimate user could — the entire family is invalidated. This forces both
-parties to re-authenticate and surfaces the security event in the logs.
+To address this, PostgreSQL's `pg_advisory_xact_lock` is acquired at the beginning of the transaction before checking the existing contact count.
 
-**Access token versioning**
+Phone and email locks are acquired in a consistent order to avoid deadlocks.
 
-A per-user `access_token_version` is stored in PostgreSQL and cached in Redis. The version is
-embedded in the JWT at issuance and validated on every protected request. Incrementing the version
-— on deactivation, credential change, or logout — immediately invalidates all outstanding access
-tokens without waiting for JWT expiry.
+---
 
-**Outbox pattern for email delivery**
+### Refresh Token Family Tracking
 
-Emails are written to a `pending_emails` table in the same database transaction as the operation
-that triggers them. A background worker polls the table, sends via the configured provider, and
-updates status. This means an application crash between "user registered" and "email sent" cannot
-produce a user who never receives their invite — the email row survives the crash and is picked up
-on the next poll cycle.
+Each refresh-token rotation creates a new token while preserving a shared `refresh_token_family` identifier.
 
-**Structured logging**
+If a previously rotated token is presented again, the application treats it as possible token reuse. The entire token family is then invalidated, requiring the affected user to authenticate again.
 
-Every log event is a snake_case key (`"user_registered"`, `"login_failed"`) with typed key-value
-context, not a freeform string. A request-ID middleware injects a correlation ID into every
-request, and structlog binds it to all log events emitted within that request's lifecycle. This
-makes tracing a specific request through the logs mechanical rather than manual.
+This provides a mechanism for detecting and containing refresh-token theft.
 
-## Running Locally
+---
 
-**Prerequisites:** Docker and Docker Compose.
+### Access Token Versioning
 
-- git clone https://github.com/themslmjnn/School-Management-System-Lite.git
-- cd School-Management-System-Lite
+Each user has an `access_token_version` stored in PostgreSQL and cached in Redis.
 
-- cp .env.example .env
-# Fill in .env with your values
+The current version is included in issued JWTs and validated during protected requests.
 
-- make up        # Start app, PostgreSQL, and Redis
-- make migrate   # Run Alembic migrations
-- make logs      # Tail application logs
+When a security-sensitive event occurs, such as:
 
-The API will be available at `http://localhost:8000`.  
-Interactive docs at `http://localhost:8000/docs` (development only).
+- account deactivation
+- credential changes
+- logout
 
-**Makefile targets**
+the user's token version is incremented.
 
-| Command | Action |
+Existing access tokens then become invalid immediately instead of remaining usable until their normal expiration time.
+
+---
+
+### Transactional Outbox for Email Delivery
+
+Emails are stored in a `pending_emails` table within the same database transaction as the operation that triggered the email.
+
+A background worker later polls the outbox and sends the messages through the configured provider.
+
+This prevents a failure between the business operation and email delivery from silently losing the email.
+
+```text
+Create User
+    │
+    ├── Create database record
+    ├── Create pending email record
+    │
+    └── Commit transaction
+             │
+             ▼
+       Email Worker
+             │
+             ▼
+       SMTP / Resend
+```
+
+If the application crashes after the transaction commits, the email remains in the outbox and can be processed when the worker resumes.
+
+---
+
+### Structured Logging
+
+Application logs use structured JSON events instead of free-form messages.
+
+Examples include:
+
+```text
+user_registered
+login_failed
+```
+
+A request-ID middleware generates a correlation ID for each request and makes it available to log events throughout the request lifecycle.
+
+This makes it easier to trace a specific request through application logs and diagnose failures.
+
+---
+
+## Getting Started
+
+### Prerequisites
+
+- Git
+- Docker
+- Docker Compose
+
+### Clone the Repository
+
+```bash
+git clone https://github.com/themslmjnn/School-Management-System-Lite.git
+cd School-Management-System-Lite
+```
+
+### Configure Environment Variables
+
+```bash
+cp .env.example .env
+```
+
+Configure the required values in `.env`.
+
+### Start the Application
+
+```bash
+make up
+```
+
+This starts the application together with PostgreSQL and Redis.
+
+### Run Database Migrations
+
+```bash
+make migrate
+```
+
+### View Application Logs
+
+```bash
+make logs
+```
+
+The API will be available at:
+
+```text
+http://localhost:8000
+```
+
+Interactive API documentation:
+
+```text
+http://localhost:8000/docs
+```
+
+---
+
+## Makefile Commands
+
+| Command | Description |
 |---|---|
-| `make up` | Build and start the full stack |
+| `make up` | Build and start the complete application stack |
 | `make down` | Stop and remove containers |
-| `make migrate` | Run `alembic upgrade head` inside the running container |
-| `make logs` | Tail application logs |
-| `make format` | Run Ruff formatter |
-| `make lint` | Run Ruff linter |
-| `make typecheck` | Run mypy |
+| `make migrate` | Run `alembic upgrade head` inside the running application container |
+| `make logs` | Follow application logs |
+| `make format` | Format the code using Ruff |
+| `make lint` | Run Ruff linting |
+| `make typecheck` | Run mypy type checking |
 
 ---
 
-## Running Tests
+## Testing
 
-Tests require a running PostgreSQL and Redis instance. The test suite targets a dedicated test
-database and will refuse to run if `ENVIRONMENT` is not set to `"test"` — this prevents
-accidentally running destructive schema operations against a real database.
+The test suite uses a dedicated test environment with PostgreSQL and Redis.
 
+Tests refuse to run unless:
+
+```text
+ENVIRONMENT=test
+```
+
+This protects against accidentally running destructive test operations against a development or production database.
+
+Run the test suite with:
+
+```bash
 pytest
+```
 
-The suite covers tests across auth, users, subjects, groups, and emails modules, split
-into unit tests (service logic with mocked dependencies) and integration tests (full HTTP request
-through the stack with a real test database and transaction rollback between tests).
+### Test Coverage
+
+The test suite contains **92 test files** covering:
+
+- Authentication
+- Users
+- Subjects
+- Groups
+- Emails
+
+Tests are divided into:
+
+- **Unit tests** for service and business logic with mocked dependencies.
+- **Integration tests** covering full HTTP requests through the application with a real test database and transaction rollback between tests.
 
 ---
 
-## What's Not Here
+## Scope & Limitations
 
-This is a Lite release. The following are explicitly out of scope:
+This is intentionally a **Lite** release. The following functionality is outside the scope of this project:
 
-- **Academics module** — teaching assignments, student subject enrollments, head-of-class
-- **Grades module** — grade records and history
-- **Guardian module** — parent accounts, guardian-student links
-- **Frontend** — this is a pure backend API
+- **Academics** — teaching assignments, student subject enrollments, and head-of-class functionality.
+- **Grades** — grade records and grade history.
+- **Guardians** — parent accounts and guardian-student relationships.
+- **Frontend** — this repository contains the backend API only.
 
-These are implemented in Meridian AMS, built as a ground-up redesign with a more
-sophisticated user architecture, full academics coverage, CI/CD, and deployment.
+These areas are implemented in **Meridian AMS**, the full-scale successor and ground-up redesign of this project, which expands the user architecture, academics functionality, CI/CD, and deployment capabilities.
+
+---
+
+## Project Goals
+
+The primary goal of this project is to demonstrate practical backend engineering rather than simply implementing a collection of CRUD endpoints.
+
+The project focuses on:
+
+- Designing maintainable application architecture.
+- Building secure authentication and authorization flows.
+- Handling concurrency correctly.
+- Making transactional workflows reliable.
+- Introducing asynchronous background processing.
+- Applying caching and rate limiting appropriately.
+- Building observable services with structured logging.
+- Writing unit and integration tests.
+- Running the application in a containerized environment.
+
+---
