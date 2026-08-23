@@ -2,7 +2,6 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Path, status
 
-from groups.services.system_admin import GroupServiceAdmin
 from src.core.dependencies import (
     CurrentUser,
     async_session_dependency,
@@ -17,6 +16,7 @@ from src.groups.schemas import (
     SearchGroupAdmin,
     UpdateGroupAdmin,
 )
+from src.groups.services.system_admin import GroupServiceAdmin
 from src.utils.enums import GroupSortField, OrderBy
 
 router = APIRouter(

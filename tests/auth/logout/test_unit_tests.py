@@ -1,9 +1,9 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from auth.service import AuthService
+from src.auth.service import AuthService
+from src.users.repositories.user import UserRepositoryBase
 from tests.conftest import user_form
 from tests.factories import make_teacher
-from users.repositories.user import UserRepositoryBase
 
 
 class TestLogout:

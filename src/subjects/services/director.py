@@ -7,8 +7,8 @@ from src.subjects.exceptions.exceptions import SubjectNotFoundError
 from src.subjects.repository import SubjectRepository
 from src.subjects.schemas import (
     SearchSubjectBase,
-    SubjectResponseDirectorDetailed,
     SubjectResponseDirectorCache,
+    SubjectResponseDirectorDetailed,
 )
 from src.utils.cache_keys import SubjectCacheKey
 from src.utils.helpers import ensure_exists

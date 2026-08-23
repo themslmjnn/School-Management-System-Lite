@@ -110,3 +110,21 @@ class PendingEmailRepository:
         record.status = EmailSendingStatus.PENDING
         record.retry_count = 0
         record.last_error = None
+
+    @staticmethod
+    async def get_pending_emails(
+        session: AsyncSession, limit: int = 10
+    ) -> list[PendingEmail]:
+        query = (
+            select(PendingEmail)
+            .where(
+                PendingEmail.status == EmailSendingStatus.PENDING,
+                PendingEmail.retry_count < 3,
+            )
+            .order_by(PendingEmail.created_at.asc())
+            .limit(limit)
+        )
+
+        result = await session.execute(query)
+
+        return list(result.scalars().all())

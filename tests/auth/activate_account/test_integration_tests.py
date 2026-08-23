@@ -3,10 +3,10 @@ from datetime import UTC, datetime, timedelta
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from core.security import generate_invite_token
+from src.core.security import generate_invite_token
+from src.users.repositories.user import UserRepositoryBase
+from src.utils.enums import UserStatus
 from tests.factories import make_teacher
-from users.repositories.user import UserRepositoryBase
-from utils.enums import UserStatus
 
 
 class TestActivateAccount:
