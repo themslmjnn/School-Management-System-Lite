@@ -9,22 +9,22 @@ from slowapi.middleware import SlowAPIMiddleware
 from sqlalchemy.orm import configure_mappers
 
 import src.models  # noqa: F401
-from src.api.health import router as health_router
-from src.auth.router import router as auth_router
+from src.api.health import router as health_routers
+from src.auth.router import router as auth_routers
 from src.core.caching import redis_client
 from src.core.config import settings
 from src.core.limiter import ip_limiter
 from src.core.logging import get_logger, setup_logging
 from src.core.middleware import RequestIDMiddleware
-from src.emails.router import router as email_router
-from src.groups.routers import director as groupsd_director_router
-from src.groups.routers import system_admin as groups_system_admin_router
-from src.subjects.routers import director as subjects_director_router
-from src.subjects.routers import system_admin as subjects_system_admin_router
-from src.users.routers import director as user_director_router
-from src.users.routers import shared as user_shared_router
-from src.users.routers import system_admin as user_system_admin_router
-from src.utils import base_exception as base_exc
+from src.emails.router import router as email_routers
+from src.groups.routers import director as groups_director_routers
+from src.groups.routers import system_admin as groups_system_admin_routers
+from src.subjects.routers import director as subjects_director_routers
+from src.subjects.routers import system_admin as subjects_system_admin_routers
+from src.users.routers import director as users_director_routers
+from src.users.routers import shared as users_shared_routers
+from src.users.routers import system_admin as users_system_admin_routers
+from src.utils import exceptions as base_exc
 from src.workers.email_worker import run_email_worker
 
 configure_mappers()
@@ -43,21 +43,21 @@ async def lifespan(app: FastAPI):
 
         logger.info("redis_connected")
 
-    except Exception as err:
+    except Exception as exc:
         if settings.ENVIRONMENT == "production":
             logger.error(
                 "redis_unavailable_startup_aborted",
-                error=str(err),
+                error=str(exc),
             )
 
             raise RuntimeError(
                 "Redis is required in production and is currently unavailable. "
                 "Aborting startup."
-            ) from err
+            ) from exc
 
         logger.warning(
             "redis_unavailable",
-            error=str(err),
+            error=str(exc),
             impact="rate_limiting_will_fail_on_rate_limited_endpoints",
         )
 
@@ -99,16 +99,16 @@ app.state.limiter = ip_limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(SlowAPIMiddleware)
 
-app.include_router(health_router)
-app.include_router(auth_router)
-app.include_router(email_router)
-app.include_router(user_shared_router.router)
-app.include_router(user_system_admin_router.router)
-app.include_router(user_director_router.router)
-app.include_router(subjects_system_admin_router.router)
-app.include_router(subjects_director_router.router)
-app.include_router(groups_system_admin_router.router)
-app.include_router(groupsd_director_router.router)
+app.include_router(health_routers)
+app.include_router(auth_routers)
+app.include_router(email_routers)
+app.include_router(users_shared_routers.router)
+app.include_router(users_system_admin_routers.router)
+app.include_router(users_director_routers.router)
+app.include_router(subjects_system_admin_routers.router)
+app.include_router(subjects_director_routers.router)
+app.include_router(groups_system_admin_routers.router)
+app.include_router(groups_director_routers.router)
 
 
 @app.exception_handler(base_exc.AppException)

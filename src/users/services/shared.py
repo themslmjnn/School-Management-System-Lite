@@ -38,8 +38,8 @@ from src.users.utils.exceptions import (
 )
 from src.users.utils.shared_schemas import UpdateUserCredentials
 from src.utils import email as email_sender
-from src.utils.base_constant import HTTP400
-from src.utils.base_exception import (
+from utils.constants import HTTP400
+from utils.exceptions import (
     NoChangesDetectedError,
     raise_unhandled_integrity_error,
 )
@@ -173,18 +173,18 @@ class UserServiceSelf:
                     method="self_service",
                 )
 
-        except IntegrityError as e:
+        except IntegrityError as exc:
             await session.rollback()
 
             logger.error(
                 "user_credentials_update_failed",
                 target_user_id=current_user_id,
-                reason=str(e.orig),
+                reason=str(exc.orig),
                 method="self_service",
             )
 
-            handle_username_integrity_error(e)
-            raise_unhandled_integrity_error(e)
+            handle_username_integrity_error(exc)
+            raise_unhandled_integrity_error(exc)
 
     @staticmethod
     async def confirm_email_change(
@@ -276,19 +276,19 @@ class UserServiceSelf:
                 method="self_service",
             )
 
-        except IntegrityError as e:
+        except IntegrityError as exc:
             await session.rollback()
 
             logger.error(
                 "email_change_confirmation_failed",
                 target_user_id=current_user_id,
-                reason=str(e.orig),
+                reason=str(exc.orig),
                 method="self_service",
             )
 
             if not is_student:
-                handle_non_student_unique_contact_error(e)
-            raise_unhandled_integrity_error(e)
+                handle_non_student_unique_contact_error(exc)
+            raise_unhandled_integrity_error(exc)
 
     @staticmethod
     async def update_me_password(

@@ -13,58 +13,6 @@ from src.utils.enums import (
 
 class UserRepositoryBase:
     @staticmethod
-    async def get_user_by_username(
-        session: AsyncSession,
-        username: str,
-        *,
-        load_session: bool = False,
-        load_activation: bool = False,
-        load_login_lockout: bool = False,
-    ) -> User | None:
-        query = select(User).filter(User.username == username)
-
-        if load_session:
-            query = query.options(joinedload(User.session))
-        if load_activation:
-            query = query.options(joinedload(User.activation))
-        if load_login_lockout:
-            query = query.options(joinedload(User.login_lockout))
-
-        result = await session.execute(query)
-
-        return result.scalar_one_or_none()
-
-    @staticmethod
-    async def count_users_with_contact(
-        session: AsyncSession,
-        role: UserRole | None,
-        *,
-        phone_number: str | None,
-        email: str | None,
-        exclude_user_id: int | None = None,
-    ) -> int:
-        role_filter = (
-            User.role != UserRole.STUDENT if role is None else User.role == role
-        )
-
-        contact_condition = (
-            User.phone_number == phone_number
-            if phone_number is not None
-            else User.email == email
-        )
-
-        conditions = [role_filter, contact_condition]
-
-        if exclude_user_id is not None:
-            conditions.append(User.id != exclude_user_id)
-
-        query = select(func.count(User.id)).where(*conditions)
-
-        result = await session.execute(query)
-
-        return result.scalar()
-
-    @staticmethod
     async def get_user_by_id(
         session: AsyncSession,
         user_id: int,
@@ -91,6 +39,28 @@ class UserRepositoryBase:
             query = query.options(joinedload(User.login_lockout))
         if load_group:
             query = query.options(joinedload(User.group))
+
+        result = await session.execute(query)
+
+        return result.scalar_one_or_none()
+
+    @staticmethod
+    async def get_user_by_username(
+        session: AsyncSession,
+        username: str,
+        *,
+        load_session: bool = False,
+        load_activation: bool = False,
+        load_login_lockout: bool = False,
+    ) -> User | None:
+        query = select(User).filter(User.username == username)
+
+        if load_session:
+            query = query.options(joinedload(User.session))
+        if load_activation:
+            query = query.options(joinedload(User.activation))
+        if load_login_lockout:
+            query = query.options(joinedload(User.login_lockout))
 
         result = await session.execute(query)
 
@@ -185,6 +155,36 @@ class UserRepositoryBase:
         return await UserRepositoryBase.paginate(
             session, query=query, skip=skip, limit=limit
         )
+
+    @staticmethod
+    async def count_users_with_contact(
+        session: AsyncSession,
+        role: UserRole | None,
+        *,
+        phone_number: str | None,
+        email: str | None,
+        exclude_user_id: int | None = None,
+    ) -> int:
+        role_filter = (
+            User.role != UserRole.STUDENT if role is None else User.role == role
+        )
+
+        contact_condition = (
+            User.phone_number == phone_number
+            if phone_number is not None
+            else User.email == email
+        )
+
+        conditions = [role_filter, contact_condition]
+
+        if exclude_user_id is not None:
+            conditions.append(User.id != exclude_user_id)
+
+        query = select(func.count(User.id)).where(*conditions)
+
+        result = await session.execute(query)
+
+        return result.scalar()
 
 
 class UserRepositoryAdmin:

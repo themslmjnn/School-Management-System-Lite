@@ -90,6 +90,7 @@ async def send(
 async def send_safe(coro, **log_context) -> None:
     try:
         await coro
+
     except Exception as exc:
         logger.error(
             "background_email_task_failed",
@@ -100,9 +101,7 @@ async def send_safe(coro, **log_context) -> None:
 
 
 def build_invite_email(invite_token: str, username: str) -> tuple[str, str, str]:
-    activation_link = (
-        f"{settings.APP_URL}/auth/activate_with_token?token={invite_token}"
-    )
+    activation_link = f"{settings.APP_URL}/auth/activation?token={invite_token}"
 
     subject = "Activate your LFGS account"
 
@@ -610,7 +609,7 @@ async def send_password_changed_notification(email: str) -> None:
 
 
 async def send_forgot_password_email(email: str, raw_reset_token: str) -> None:
-    reset_link = f"{settings.APP_URL}/auth/reset_password?token={raw_reset_token}"
+    reset_link = f"{settings.APP_URL}/auth/reset-password?token={raw_reset_token}"
 
     html = f"""
         <!DOCTYPE html>

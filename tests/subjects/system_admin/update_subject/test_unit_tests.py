@@ -8,7 +8,7 @@ from src.subjects.exceptions.exceptions import (
 from src.subjects.repository import SubjectRepository
 from src.subjects.schemas import UpdateSubjectAdmin
 from src.subjects.services.system_admin import SubjectServiceAdmin
-from src.utils.base_exception import NoChangesDetectedError
+from utils.exceptions import NoChangesDetectedError
 from tests.factories import make_subject
 
 

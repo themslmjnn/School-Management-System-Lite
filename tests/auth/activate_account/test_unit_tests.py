@@ -7,7 +7,7 @@ from src.auth.schemas import ActivateAccountWithToken
 from src.auth.service import AuthService
 from src.core.security import generate_invite_token
 from src.users.repositories.user import UserRepositoryBase
-from src.utils.base_exception import ExpiredInviteTokenError, InvalidInviteTokenError
+from utils.exceptions import ExpiredInviteTokenError, InvalidInviteTokenError
 from src.utils.enums import UserStatus
 from tests.factories import make_teacher
 

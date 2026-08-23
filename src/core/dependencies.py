@@ -11,8 +11,8 @@ from src.core.caching import get_cache, set_cache
 from src.core.security import decode_access_token
 from src.database.connection import AsyncSessionLocal
 from src.users.repositories.user import UserRepositoryBase
-from src.utils.base_constant import HTTP401, HTTP403
-from src.utils.base_exception import (
+from utils.constants import HTTP401, HTTP403
+from utils.exceptions import (
     AccessDeniedError,
     AccountInactiveError,
     InvalidAccessTokenError,
@@ -54,16 +54,13 @@ async def get_current_user(
         user_id = int(payload.get("sub"))
         token_version = int(payload.get("version"))
 
-    except (ValueError, TypeError) as err:
-        raise InvalidAccessTokenError(HTTP401.INVALID_ACCESS_TOKEN) from err
+    except (ValueError, TypeError) as exc:
+        raise InvalidAccessTokenError(HTTP401.INVALID_ACCESS_TOKEN) from exc
 
     user_access_token_version_key = SessionCacheKey.access_token_version_key(user_id)
 
     cached_version = await get_cache(user_access_token_version_key)
-    current_user = CurrentUser(
-        id=user_id,
-        role=UserRole(payload.get("role")),
-    )
+    current_user = CurrentUser(id=user_id, role=UserRole(payload.get("role")))
 
     if cached_version is not None:
         if int(cached_version) != token_version:
@@ -71,10 +68,7 @@ async def get_current_user(
 
         request.state.user = current_user
 
-        return CurrentUser(
-            id=user_id,
-            role=UserRole(payload.get("role")),
-        )
+        return CurrentUser(id=user_id, role=UserRole(payload.get("role")))
 
     user = await UserRepositoryBase.get_user_by_id(session, user_id, load_session=True)
 

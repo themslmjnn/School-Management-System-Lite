@@ -2,8 +2,8 @@ from typing import Any
 
 from pydantic import BaseModel
 
-from src.utils.base_constant import HTTP400
-from src.utils.base_exception import AppException, NoChangesDetectedError
+from src.utils.constants import HTTP400
+from src.utils.exceptions import AppException, NoChangesDetectedError
 
 
 def ensure_exists(obj: Any, exception: AppException) -> None:

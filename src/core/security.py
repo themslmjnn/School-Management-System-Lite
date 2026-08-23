@@ -9,8 +9,8 @@ from passlib.context import CryptContext
 
 from src.auth.schemas import CreateAccessToken, CreateRefreshToken
 from src.core.config import ALGORITHM, settings
-from src.utils.base_constant import HTTP401
-from src.utils.base_exception import ExpiredRefreshTokenError, InvalidRefreshTokenError
+from utils.constants import HTTP401
+from utils.exceptions import ExpiredRefreshTokenError, InvalidRefreshTokenError
 
 bcrypt_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -44,8 +44,10 @@ def decode_access_token(access_token: str) -> dict:
             raise ValueError(HTTP401.INVALID_TOKEN_TYPE)
 
         return payload
+
     except ExpiredSignatureError as exc:
         raise ValueError(HTTP401.EXPIRED_ACCESS_TOKEN) from exc
+
     except JWTError as exc:
         raise ValueError(HTTP401.INVALID_ACCESS_TOKEN) from exc
 
@@ -80,8 +82,10 @@ def decode_refresh_token(refresh_token: str) -> dict:
             raise ValueError(HTTP401.INVALID_TOKEN_TYPE)
 
         return payload
+
     except ExpiredSignatureError as exc:
         raise ExpiredRefreshTokenError(HTTP401.EXPIRED_REFRESH_TOKEN) from exc
+
     except JWTError as exc:
         raise InvalidRefreshTokenError(HTTP401.INVALID_REFRESH_TOKEN) from exc
 
@@ -138,10 +142,7 @@ def generate_email_change_code() -> tuple[str, str]:
     return raw_code, hashed_code
 
 
-def verify_email_change_code(
-    raw_code: str,
-    hashed_code: str,
-) -> bool:
+def verify_email_change_code(raw_code: str, hashed_code: str) -> bool:
     return hmac.compare_digest(
         hashlib.sha256(raw_code.encode()).hexdigest(),
         hashed_code,

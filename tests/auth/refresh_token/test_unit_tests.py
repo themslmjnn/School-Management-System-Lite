@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.auth.service import AuthService
 from src.users.models.user import User
 from src.users.repositories.user import UserRepositoryBase
-from src.utils.base_exception import InvalidRefreshTokenError
+from utils.exceptions import InvalidRefreshTokenError
 from tests.conftest import mock_response, user_form
 from tests.factories import make_teacher
 

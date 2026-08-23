@@ -6,13 +6,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.core.caching import delete_cache, get_cache, set_cache
 from src.core.logging import get_logger
 from src.core.pagination import PaginatedResponse
-from src.subjects.exceptions.constants import HTTP404
-from src.subjects.exceptions.exceptions import (
-    SubjectAlreadyArchivedError,
-    SubjectNotArchivedError,
-    SubjectNotFoundError,
-    handle_subject_code_integrity_error,
-)
 from src.subjects.models import Subject
 from src.subjects.repository import SubjectRepository
 from src.subjects.schemas import (
@@ -22,8 +15,15 @@ from src.subjects.schemas import (
     SubjectResponseAdminDetailed,
     UpdateSubjectAdmin,
 )
-from src.utils.base_exception import raise_unhandled_integrity_error
 from src.utils.cache_keys import SubjectCacheKey
+from src.utils.constants import HTTP404
+from src.utils.exceptions import (
+    SubjectAlreadyArchivedError,
+    SubjectNotArchivedError,
+    SubjectNotFoundError,
+    handle_subject_code_integrity_error,
+    raise_unhandled_integrity_error,
+)
 from src.utils.helpers import ensure_exists, update_object
 
 logger = get_logger(__name__)
@@ -49,18 +49,18 @@ class SubjectServiceAdmin:
 
             return new_subject
 
-        except IntegrityError as e:
+        except IntegrityError as exc:
             await session.rollback()
 
             logger.warning(
                 "subject_creation_failed",
                 reason="integrity_error",
-                error=str(e.orig),
+                error=str(exc.orig),
                 requested_by=current_user_id,
             )
 
-            handle_subject_code_integrity_error(e)
-            raise_unhandled_integrity_error(e)
+            handle_subject_code_integrity_error(exc)
+            raise_unhandled_integrity_error(exc)
 
     @staticmethod
     async def update_subject(
@@ -89,19 +89,19 @@ class SubjectServiceAdmin:
                 updated_by=current_user_id,
             )
 
-        except IntegrityError as e:
+        except IntegrityError as exc:
             await session.rollback()
 
             logger.warning(
                 "subject_update_failed",
                 reason="integrity_error",
-                error=str(e.orig),
+                error=str(exc.orig),
                 subject_id=subject_id,
                 requested_by=current_user_id,
             )
 
-            handle_subject_code_integrity_error(e)
-            raise_unhandled_integrity_error(e)
+            handle_subject_code_integrity_error(exc)
+            raise_unhandled_integrity_error(exc)
 
     @staticmethod
     async def archive_subject(

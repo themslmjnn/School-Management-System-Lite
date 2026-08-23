@@ -7,7 +7,7 @@ from src.auth.schemas import ResetPassword
 from src.auth.service import AuthService
 from src.core.security import generate_reset_password_token
 from src.users.repositories.user import UserRepositoryBase
-from src.utils.base_exception import (
+from utils.exceptions import (
     ExpiredResetPasswordTokenError,
     InvalidCredentialsError,
     InvalidResetPasswordTokenError,

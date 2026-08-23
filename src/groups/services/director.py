@@ -3,8 +3,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.core.caching import get_cache, set_cache
 from src.core.logging import get_logger
 from src.core.pagination import PaginatedResponse
-from src.groups.exceptions.constants import HTTP404
-from src.groups.exceptions.exceptions import GroupNotFoundError
 from src.groups.repository import GroupRepository
 from src.groups.schemas import (
     GroupResponseDirectorCache,
@@ -12,6 +10,8 @@ from src.groups.schemas import (
     SearchGroupBase,
 )
 from src.utils.cache_keys import GroupCacheKey
+from src.utils.constants import HTTP404
+from src.utils.exceptions import GroupNotFoundError
 from src.utils.helpers import ensure_exists
 
 logger = get_logger(__name__)

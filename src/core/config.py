@@ -1,14 +1,11 @@
 import os
 
-from pydantic import field_validator, model_validator
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 ALGORITHM = "HS256"
 
-_env_file = {
-    "production": ".env.prod",
-    "test": ".env.test",
-}.get(os.getenv("ENVIRONMENT", "development"), ".env")
+_env_file = {"test": ".env.test"}.get(os.getenv("ENVIRONMENT", "development"), ".env")
 
 
 class Settings(BaseSettings):
@@ -46,7 +43,7 @@ class Settings(BaseSettings):
     @field_validator("ENVIRONMENT")
     @classmethod
     def validate_environment(cls, v: str) -> str:
-        allowed = {"development", "production", "test"}
+        allowed = {"development", "test"}
 
         if v not in allowed:
             raise ValueError(f"ENVIRONMENT must be one of {allowed}, got '{v}'")
@@ -76,30 +73,6 @@ class Settings(BaseSettings):
             raise ValueError("Database name and user cannot be empty")
 
         return v
-
-    @model_validator(mode="after")
-    def validate_db_password_in_production(self) -> "Settings":
-        if self.ENVIRONMENT == "production" and not self.DB_PSSW:
-            raise ValueError("DB_PASSWORD cannot be empty in production")
-        if self.ENVIRONMENT == "production" and self.DB_HOST in (
-            "localhost",
-            "127.0.0.1",
-        ):
-            raise ValueError("DB_HOST is set to localhost in production")
-
-        return self
-
-    @model_validator(mode="after")
-    def validate_redis_in_production(self) -> "Settings":
-        if self.ENVIRONMENT == "production" and not self.REDIS_PASSWORD:
-            raise ValueError("REDIS_PASSWORD cannot be empty in production")
-        if self.ENVIRONMENT == "production" and self.REDIS_HOST in (
-            "localhost",
-            "127.0.0.1",
-        ):
-            raise ValueError("REDIS_HOST is set to localhost in production")
-
-        return self
 
     @field_validator("REDIS_PORT")
     @classmethod
@@ -140,10 +113,6 @@ class Settings(BaseSettings):
     @property
     def DB_URL(self):
         return f"postgresql+asyncpg://{self.DB_USER}:{self.DB_PSSW}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
-
-    @property
-    def cookie_secure(self) -> bool:
-        return self.ENVIRONMENT == "production"
 
     @property
     def APP_URL(self) -> str:

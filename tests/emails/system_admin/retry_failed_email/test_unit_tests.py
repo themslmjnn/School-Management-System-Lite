@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.emails.repository import PendingEmailRepository
 from src.emails.service import PendingEmailService
-from src.utils.base_exception import PendingEmailNotFoundError
+from utils.exceptions import PendingEmailNotFoundError
 from src.utils.enums import EmailSendingStatus
 from tests.factories import make_email
 

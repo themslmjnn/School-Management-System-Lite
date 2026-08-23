@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.auth.service import AuthService
 from src.users.repositories.user import UserRepositoryBase
-from src.utils.base_exception import (
+from utils.exceptions import (
     AccountInactiveError,
     AccountLockedError,
     EmptyCredentialsError,

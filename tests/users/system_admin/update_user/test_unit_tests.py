@@ -16,7 +16,7 @@ from src.users.utils.exceptions import (
     UserNotFoundError,
     UserTypeMismatchError,
 )
-from src.utils.base_exception import NoChangesDetectedError
+from utils.exceptions import NoChangesDetectedError
 from tests.factories import (
     make_student,
     make_system_admin,

@@ -9,7 +9,7 @@ from src.groups.repository import GroupRepository
 from src.groups.schemas import UpdateGroupAdmin
 from src.groups.services.system_admin import GroupServiceAdmin
 from src.users.models.user import User
-from src.utils.base_exception import NoChangesDetectedError
+from utils.exceptions import NoChangesDetectedError
 from tests.factories import make_group
 
 

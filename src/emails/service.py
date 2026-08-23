@@ -8,10 +8,10 @@ from src.emails.schemas import (
     PendingEmailResponseDetailed,
     SearchEmailAdmin,
 )
-from src.utils.base_constant import HTTP404
-from src.utils.base_exception import PendingEmailNotFoundError
 from src.utils.cache_keys import EmailCacheKey
+from src.utils.constants import HTTP404
 from src.utils.enums import EmailSortField, OrderBy
+from src.utils.exceptions import PendingEmailNotFoundError
 from src.utils.helpers import ensure_exists
 
 
@@ -19,7 +19,6 @@ class PendingEmailService:
     @staticmethod
     async def get_emails(
         session: AsyncSession,
-        *,
         skip: int = 0,
         limit: int = 10,
         filters: SearchEmailAdmin | None = None,

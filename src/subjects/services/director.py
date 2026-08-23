@@ -2,8 +2,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.caching import get_cache, set_cache
 from src.core.pagination import PaginatedResponse
-from src.subjects.exceptions.constants import HTTP404
-from src.subjects.exceptions.exceptions import SubjectNotFoundError
 from src.subjects.repository import SubjectRepository
 from src.subjects.schemas import (
     SearchSubjectBase,
@@ -11,6 +9,8 @@ from src.subjects.schemas import (
     SubjectResponseDirectorDetailed,
 )
 from src.utils.cache_keys import SubjectCacheKey
+from src.utils.constants import HTTP404
+from src.utils.exceptions import SubjectNotFoundError
 from src.utils.helpers import ensure_exists
 
 

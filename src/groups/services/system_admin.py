@@ -6,13 +6,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.core.caching import delete_cache, get_cache, set_cache
 from src.core.logging import get_logger
 from src.core.pagination import PaginatedResponse
-from src.groups.exceptions.constants import HTTP404
-from src.groups.exceptions.exceptions import (
-    GroupAlreadyArchivedError,
-    GroupIsNotArchivedError,
-    GroupNotFoundError,
-    handle_group_name_year_integrity_error,
-)
 from src.groups.models import Group
 from src.groups.repository import GroupRepository
 from src.groups.schemas import (
@@ -22,8 +15,15 @@ from src.groups.schemas import (
     SearchGroupAdmin,
     UpdateGroupAdmin,
 )
-from src.utils.base_exception import raise_unhandled_integrity_error
 from src.utils.cache_keys import GroupCacheKey
+from src.utils.constants import HTTP404
+from src.utils.exceptions import (
+    GroupAlreadyArchivedError,
+    GroupIsNotArchivedError,
+    GroupNotFoundError,
+    handle_group_name_year_integrity_error,
+    raise_unhandled_integrity_error,
+)
 from src.utils.helpers import ensure_exists, update_object
 
 logger = get_logger(__name__)

@@ -10,23 +10,6 @@ from src.utils.enums import EmailSendingStatus, EmailSortField, OrderBy
 
 class PendingEmailRepository:
     @staticmethod
-    async def paginate(
-        session: AsyncSession,
-        *,
-        query: Select,
-        skip: int,
-        limit: int,
-    ) -> tuple[list[PendingEmail], int]:
-        count_result = await session.execute(
-            select(func.count()).select_from(query.subquery())
-        )
-        total = count_result.scalar_one()
-
-        result = await session.execute(query.offset(skip).limit(limit))
-
-        return result.scalars().all(), total
-
-    @staticmethod
     def apply_filters(base_query: Select, filters: SearchEmailAdmin | None) -> Select:
         if filters is None:
             return base_query
@@ -61,6 +44,23 @@ class PendingEmailRepository:
         return base_query.order_by(sort_column.asc())
 
     @staticmethod
+    async def paginate(
+        session: AsyncSession,
+        *,
+        query: Select,
+        skip: int,
+        limit: int,
+    ) -> tuple[list[PendingEmail], int]:
+        count_result = await session.execute(
+            select(func.count()).select_from(query.subquery())
+        )
+        total = count_result.scalar_one()
+
+        result = await session.execute(query.offset(skip).limit(limit))
+
+        return result.scalars().all(), total
+
+    @staticmethod
     async def get_emails(
         session: AsyncSession,
         *,
@@ -90,28 +90,6 @@ class PendingEmailRepository:
         return result.scalar_one_or_none()
 
     @staticmethod
-    async def mark_sent(record: PendingEmail) -> None:
-        record.status = EmailSendingStatus.SENT
-        record.sent_at = datetime.now(UTC)
-
-    @staticmethod
-    async def mark_failed_attempt(record: PendingEmail, error: str) -> None:
-        record.retry_count += 1
-        record.last_error = error
-
-        if record.retry_count >= 3:
-            record.status = EmailSendingStatus.FAILED
-
-    @staticmethod
-    async def reset_for_retry(
-        session: AsyncSession,
-        record: PendingEmail,
-    ) -> None:
-        record.status = EmailSendingStatus.PENDING
-        record.retry_count = 0
-        record.last_error = None
-
-    @staticmethod
     async def get_pending_emails(
         session: AsyncSession, limit: int = 10
     ) -> list[PendingEmail]:
@@ -128,3 +106,22 @@ class PendingEmailRepository:
         result = await session.execute(query)
 
         return list(result.scalars().all())
+
+    @staticmethod
+    async def mark_sent(record: PendingEmail) -> None:
+        record.status = EmailSendingStatus.SENT
+        record.sent_at = datetime.now(UTC)
+
+    @staticmethod
+    async def mark_failed_attempt(record: PendingEmail, error: str) -> None:
+        record.retry_count += 1
+        record.last_error = error
+
+        if record.retry_count >= 3:
+            record.status = EmailSendingStatus.FAILED
+
+    @staticmethod
+    async def reset_for_retry(record: PendingEmail) -> None:
+        record.status = EmailSendingStatus.PENDING
+        record.retry_count = 0
+        record.last_error = None

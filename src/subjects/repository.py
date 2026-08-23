@@ -8,29 +8,6 @@ from src.utils.enums import OrderBy, SubjectSortField
 
 class SubjectRepository:
     @staticmethod
-    async def get_subject_by_id(
-        session: AsyncSession, subject_id: int
-    ) -> Subject | None:
-        query = select(Subject).filter(Subject.id == subject_id)
-
-        result = await session.execute(query)
-
-        return result.scalar_one_or_none()
-
-    @staticmethod
-    async def paginate(
-        session: AsyncSession, query: Select, skip: int, limit: int
-    ) -> tuple[list, int]:
-        count_result = await session.execute(
-            select(func.count()).select_from(query.subquery())
-        )
-        total = count_result.scalar_one()
-
-        result = await session.execute(query.offset(skip).limit(limit))
-
-        return result.scalars().all(), total
-
-    @staticmethod
     def apply_filters(base_query: Select, filters: SearchSubjectAdmin | None) -> Select:
         if filters is None:
             return base_query
@@ -57,6 +34,19 @@ class SubjectRepository:
         return base_query.order_by(sort_column.asc())
 
     @staticmethod
+    async def paginate(
+        session: AsyncSession, query: Select, skip: int, limit: int
+    ) -> tuple[list, int]:
+        count_result = await session.execute(
+            select(func.count()).select_from(query.subquery())
+        )
+        total = count_result.scalar_one()
+
+        result = await session.execute(query.offset(skip).limit(limit))
+
+        return result.scalars().all(), total
+
+    @staticmethod
     async def get_subjects(
         session: AsyncSession,
         *,
@@ -73,3 +63,13 @@ class SubjectRepository:
         query = SubjectRepository.apply_sorting(query, sort_by, order)
 
         return await SubjectRepository.paginate(session, query, skip, limit)
+
+    @staticmethod
+    async def get_subject_by_id(
+        session: AsyncSession, subject_id: int
+    ) -> Subject | None:
+        query = select(Subject).filter(Subject.id == subject_id)
+
+        result = await session.execute(query)
+
+        return result.scalar_one_or_none()

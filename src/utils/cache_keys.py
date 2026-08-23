@@ -40,5 +40,5 @@ class GroupCacheKey:
         return f"groups:{group_id}:admin"
 
     @staticmethod
-    def group_detail_key_non_admin(group_id: int) -> str:
-        return f"groups:{group_id}:non_admin"
+    def group_detail_key_staff(group_id: int) -> str:
+        return f"groups:{group_id}:staff"

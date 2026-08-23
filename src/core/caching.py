@@ -24,6 +24,7 @@ async def get_cache(key: str) -> Any | None:
             return None
 
         return json.loads(value)
+
     except Exception as e:
         logger.warning(
             "cache_get_failed",
@@ -39,11 +40,12 @@ async def set_cache(key: str, value: Any, ttl_seconds: int = 60) -> None:
             json.dumps(value),
             ex=ttl_seconds,
         )
-    except Exception as e:
+
+    except Exception as exc:
         logger.warning(
             "cache_set_failed",
             key=key,
-            error=str(e),
+            error=str(exc),
         )
 
 
@@ -51,9 +53,10 @@ async def delete_cache(*keys: str) -> None:
     try:
         if keys:
             await redis_client.delete(*keys)
-    except Exception as e:
+
+    except Exception as exc:
         logger.warning(
             "cache_delete_failed",
             keys=keys,
-            error=str(e),
+            error=str(exc),
         )

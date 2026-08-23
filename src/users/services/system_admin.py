@@ -52,9 +52,9 @@ from src.users.utils.exceptions import (
 )
 from src.users.utils.shared_schemas import UpdateUserCredentials
 from src.utils import email as email_sender
-from src.utils.base_exception import raise_unhandled_integrity_error
 from src.utils.cache_keys import SessionCacheKey, UserCacheKey
 from src.utils.enums import EmailSendingStatus, EmailType, UserRole, UserStatus
+from src.utils.exceptions import raise_unhandled_integrity_error
 from src.utils.helpers import ensure_exists, update_object
 
 logger = get_logger(__name__)
@@ -157,8 +157,6 @@ class UserServiceAdmin:
             await session.commit()
             await session.refresh(new_user)
 
-            print(f"Invite token: {raw_invite_token}")
-
             logger.info(
                 "user_registered",
                 new_user_id=new_user.id,
@@ -169,20 +167,20 @@ class UserServiceAdmin:
 
             return new_user
 
-        except IntegrityError as e:
+        except IntegrityError as exc:
             await session.rollback()
 
             logger.warning(
                 "user_registration_failed",
                 reason="integrity_error",
-                error=str(e.orig),
+                error=str(exc),
                 requested_by=current_user_id,
             )
 
-            handle_username_integrity_error(e)
+            handle_username_integrity_error(exc)
             if not is_student:
-                handle_non_student_unique_contact_error(e)
-            raise_unhandled_integrity_error(e)
+                handle_non_student_unique_contact_error(exc)
+            raise_unhandled_integrity_error(exc)
 
     @staticmethod
     async def update_user(
@@ -260,20 +258,20 @@ class UserServiceAdmin:
                 method="admin_update",
             )
 
-        except IntegrityError as e:
+        except IntegrityError as exc:
             await session.rollback()
 
             logger.error(
                 "update_user_failed",
                 target_user_id=target_user_id,
                 requested_by=current_user_id,
-                reason=str(e.orig),
+                reason=str(exc.orig),
                 method="admin_update",
             )
 
             if not is_student:
-                handle_non_student_unique_contact_error(e)
-            raise_unhandled_integrity_error(e)
+                handle_non_student_unique_contact_error(exc)
+            raise_unhandled_integrity_error(exc)
 
     @staticmethod
     async def update_user_credentials(
@@ -404,21 +402,21 @@ class UserServiceAdmin:
                 method="admin_credentials_override",
             )
 
-        except IntegrityError as e:
+        except IntegrityError as exc:
             await session.rollback()
 
             logger.error(
                 "user_credentials_update_failed",
                 target_user_id=target_user_id,
                 requested_by=current_user_id,
-                reason=str(e.orig),
+                reason=str(exc.orig),
                 method="admin_credentials_override",
             )
 
-            handle_username_integrity_error(e)
+            handle_username_integrity_error(exc)
             if not is_student:
-                handle_non_student_unique_contact_error(e)
-            raise_unhandled_integrity_error(e)
+                handle_non_student_unique_contact_error(exc)
+            raise_unhandled_integrity_error(exc)
 
     @staticmethod
     async def deactivate_user(

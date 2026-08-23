@@ -36,11 +36,11 @@ async def check_postgres(session: AsyncSession) -> dict:
             "detail": "timed out",
         }
 
-    except Exception as e:
+    except Exception as exc:
         logger.warning(
             "health_check_postgres_failed",
-            error=str(e),
-            error_type=type(e).__name__,
+            error=str(exc),
+            error_type=type(exc).__name__,
         )
 
         return {
@@ -64,11 +64,11 @@ async def check_redis(redis_client: redis.Redis) -> dict:
             "detail": "timed out",
         }
 
-    except Exception as e:
+    except Exception as exc:
         logger.warning(
             "health_check_redis_failed",
-            error=str(e),
-            error_type=type(e).__name__,
+            error=str(exc),
+            error_type=type(exc).__name__,
         )
 
         return {
@@ -81,23 +81,25 @@ async def check_redis(redis_client: redis.Redis) -> dict:
 async def readiness(
     request: Request,
     response: Response,
-    db: async_session_dependency,
+    session: async_session_dependency,
 ):
     redis_client = request.app.state.redis_client
 
     pg_result, redis_result = await asyncio.gather(
-        check_postgres(db),
+        check_postgres(session),
         check_redis(redis_client),
         return_exceptions=True,
     )
 
-    checks = {
+    postgres_check = {
         "postgres": pg_result
         if not isinstance(pg_result, Exception)
-        else {"status": "error", "detail": "unavailable"},
+        else {"status": "error", "detail": "unavailable"}
+    }
+    redis_check = {
         "redis": redis_result
         if not isinstance(redis_result, Exception)
-        else {"status": "error", "detail": "unavailable"},
+        else {"status": "error", "detail": "unavailable"}
     }
 
     if isinstance(pg_result, Exception):
@@ -114,9 +116,7 @@ async def readiness(
             error_type=type(redis_result).__name__,
         )
 
-    critical_ok = (
-        checks["postgres"]["status"] == "ok" and checks["redis"]["status"] == "ok"
-    )
+    critical_ok = postgres_check["status"] == "ok" and redis_check["status"] == "ok"
 
     if not critical_ok:
         response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
@@ -125,5 +125,6 @@ async def readiness(
 
     return {
         "status": health_status,
-        "checks": checks,
+        "postgres_check": postgres_check,
+        "redis_check": redis_check,
     }

@@ -98,11 +98,12 @@ def parse_and_validate_mobile_number(phone_number: str) -> str:
 
     try:
         parsed = phonenumbers.parse(phone_number, None)
-    except NumberParseException as err:
+
+    except NumberParseException as exc:
         raise PydanticCustomError(
             "phone_number_invalid_format",
             "Phone number must be in international format, e.g. +14155552671",
-        ) from err
+        ) from exc
 
     if not phonenumbers.is_valid_number(parsed):
         raise PydanticCustomError(

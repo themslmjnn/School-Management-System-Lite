@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Path, Request, status
+from fastapi import APIRouter, Depends, Path, Query, Request, status
 
 from src.core.dependencies import (
     CurrentUser,
@@ -36,8 +36,8 @@ async def get_subjects(
     _: Annotated[CurrentUser, Depends(require_director)],
     pagination: pagination_dependency,
     filters: Annotated[SearchSubjectBase, Depends()],
-    sort_by: str = SubjectSortField.NAME,
-    order: str = OrderBy.ASC,
+    sort_by: Annotated[SubjectSortField, Query()] = SubjectSortField.NAME,
+    order: Annotated[OrderBy, Query()] = OrderBy.ASC,
 ):
     return await SubjectServiceDirector.get_subjects(
         session, pagination.skip, pagination.limit, filters, sort_by, order

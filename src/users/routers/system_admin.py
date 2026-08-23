@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Path, Request, status
+from fastapi import APIRouter, Depends, Path, Query, Request, status
 
 from src.core.dependencies import (
     CurrentUser,
@@ -143,16 +143,11 @@ async def get_teachers(
     _: Annotated[CurrentUser, Depends(require_system_admin)],
     pagination: pagination_dependency,
     filters: Annotated[SearchUserAdmin, Depends()],
-    sort_by: str = UserSortField.CREATED_AT,
-    order: str = OrderBy.DESC,
+    sort_by: Annotated[UserSortField, Query()] = UserSortField.CREATED_AT,
+    order: Annotated[OrderBy, Query()] = OrderBy.DESC,
 ):
     return await UserServiceAdmin.get_teachers(
-        session,
-        pagination.skip,
-        pagination.limit,
-        filters,
-        sort_by,
-        order,
+        session, pagination.skip, pagination.limit, filters, sort_by, order
     )
 
 
@@ -182,8 +177,8 @@ async def get_students(
     pagination: pagination_dependency,
     filters: Annotated[SearchUserAdmin, Depends()],
     group_id: int | None = None,
-    sort_by: str = UserSortField.CREATED_AT,
-    order: str = OrderBy.DESC,
+    sort_by: Annotated[UserSortField, Query()] = UserSortField.CREATED_AT,
+    order: Annotated[OrderBy, Query()] = OrderBy.DESC,
 ):
     return await UserServiceAdmin.get_students(
         session, pagination.skip, pagination.limit, group_id, filters, sort_by, order

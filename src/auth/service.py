@@ -31,8 +31,10 @@ from src.core.security import (
 )
 from src.users.repositories.user import UserRepositoryBase
 from src.utils import email as email_sender
-from src.utils.base_constant import HTTP400, HTTP401, HTTP403
-from src.utils.base_exception import (
+from src.utils.cache_keys import SessionCacheKey
+from src.utils.constants import HTTP400, HTTP401, HTTP403
+from src.utils.enums import EmailType, UserStatus
+from src.utils.exceptions import (
     AccountInactiveError,
     AccountLockedError,
     EmptyCredentialsError,
@@ -44,10 +46,6 @@ from src.utils.base_exception import (
     InvalidRefreshTokenError,
     InvalidResetPasswordTokenError,
 )
-from src.utils.cache_keys import SessionCacheKey
-from src.utils.enums import EmailType, UserStatus
-from src.utils.response_messages import PublicMessages
-from src.utils.response_schema import MessageResponse
 
 logger = get_logger(__name__)
 
@@ -488,16 +486,13 @@ class AuthService:
 
         await delete_cache(SessionCacheKey.access_token_version_key(user.id))
 
-        logger.info(
-            "password_changed",
-            user_id=user.id,
-        )
+        logger.info("password_changed", user_id=user.id)
 
     @staticmethod
     async def create_forgot_password_request(
         session: AsyncSession,
         forgot_password_request: ForgotPasswordPublicRequest,
-    ) -> MessageResponse:
+    ) -> dict:
         user = await UserRepositoryBase.get_user_by_username(
             session, forgot_password_request.username, load_session=True
         )
@@ -523,9 +518,9 @@ class AuthService:
                 )
             )
 
-            logger.info(
-                "forgot_password_request_processed",
-                user_id=user.id,
-            )
+            logger.info("forgot_password_request_processed", user_id=user.id)
 
-        return MessageResponse(detail=PublicMessages.FORGOT_PASSWORD)
+        return {
+            "detail": "If your username matches a registered account, "
+            "you will receive a password reset link."
+        }

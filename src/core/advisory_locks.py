@@ -73,28 +73,3 @@ async def acquire_student_contact_lock(
             namespace=NAMESPACE_STUDENT_EMAIL,
             key=key,
         )
-
-
-async def acquire_group_capacity_lock(session: AsyncSession, group_id: int) -> None:
-    key = _compute_lock_key(f"group:{group_id}")
-
-    logger.debug(
-        "acquiring_advisory_lock",
-        lock_type="group_capacity",
-        namespace=NAMESPACE_GROUP_CAPACITY,
-        group_id=group_id,
-        key=key,
-    )
-
-    await session.execute(
-        text(ADVISORY_LOCK_SQL),
-        {"ns": NAMESPACE_GROUP_CAPACITY, "key": key},
-    )
-
-    logger.debug(
-        "advisory_lock_acquired",
-        lock_type="group_capacity",
-        namespace=NAMESPACE_GROUP_CAPACITY,
-        group_id=group_id,
-        key=key,
-    )

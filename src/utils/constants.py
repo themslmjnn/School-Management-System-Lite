@@ -24,3 +24,10 @@ class HTTP403:
 
 class HTTP404:
     PENDING_EMAIL = "Pending email not found"
+    SUBJECT = "Subject not found"
+    GROUP = "Group not found"
+
+
+class HTTP409:
+    SUBJECT_CODE = "Subject with this code already exists"
+    GROUP_NAME = "Group with this name and academic year already exists"

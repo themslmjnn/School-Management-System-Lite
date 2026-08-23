@@ -12,8 +12,7 @@ from src.auth.schemas import (
 from src.auth.service import AuthService
 from src.core.dependencies import async_session_dependency, current_user_dependency
 from src.core.limiter import ip_limiter
-from src.utils.base_constant import HTTP401
-from src.utils.response_schema import MessageResponse
+from src.utils.constants import HTTP401
 
 router = APIRouter(
     prefix="/auth",
@@ -83,9 +82,7 @@ async def reset_password(
     return await AuthService.reset_password(session, update_request)
 
 
-@router.post(
-    "/forgot-password", response_model=MessageResponse, status_code=status.HTTP_200_OK
-)
+@router.post("/forgot-password", response_model=dict, status_code=status.HTTP_200_OK)
 @ip_limiter.limit("5/minute")
 async def create_forgot_password_request(
     request: Request,

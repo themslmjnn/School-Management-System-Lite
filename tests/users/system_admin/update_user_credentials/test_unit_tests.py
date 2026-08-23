@@ -16,7 +16,7 @@ from src.users.utils.exceptions import (
     UserNotFoundError,
 )
 from src.users.utils.shared_schemas import UpdateUserCredentials
-from src.utils.base_exception import NoChangesDetectedError
+from utils.exceptions import NoChangesDetectedError
 from src.utils.cache_keys import SessionCacheKey, UserCacheKey
 from src.utils.enums import UserStatus
 from tests.factories import (
