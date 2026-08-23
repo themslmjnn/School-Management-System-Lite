@@ -5,13 +5,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.auth.service import AuthService
 from src.users.repositories.user import UserRepositoryBase
-from utils.exceptions import (
+from src.utils.enums import UserStatus
+from src.utils.exceptions import (
     AccountInactiveError,
     AccountLockedError,
     EmptyCredentialsError,
     InvalidCredentialsError,
 )
-from src.utils.enums import UserStatus
 from tests.conftest import user_form
 from tests.factories import (
     make_deactivated_user,

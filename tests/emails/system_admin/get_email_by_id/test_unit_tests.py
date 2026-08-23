@@ -4,7 +4,7 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.emails.service import PendingEmailService
-from utils.exceptions import PendingEmailNotFoundError
+from src.utils.exceptions import PendingEmailNotFoundError
 from tests.factories import make_email
 
 

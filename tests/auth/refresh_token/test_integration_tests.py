@@ -61,7 +61,6 @@ class TestRefreshToken:
         user = await make_teacher(session, username="missing_family")
         await _do_login(client, user.username)
 
-        # Remove the family cookie manually
         client.cookies.delete("refresh_token_family")
 
         response = await client.post("/auth/refresh-token")
@@ -79,10 +78,8 @@ class TestRefreshToken:
         old_token = client.cookies.get("refresh_token")
         old_family = client.cookies.get("refresh_token_family")
 
-        # First rotation — valid
         await client.post("/auth/refresh-token")
 
-        # Restore old (now stale) cookies to simulate token reuse
         client.cookies.set("refresh_token", old_token)
         client.cookies.set("refresh_token_family", old_family)
 

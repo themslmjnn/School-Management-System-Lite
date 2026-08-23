@@ -11,14 +11,14 @@ from src.core.caching import get_cache, set_cache
 from src.core.security import decode_access_token
 from src.database.connection import AsyncSessionLocal
 from src.users.repositories.user import UserRepositoryBase
-from utils.constants import HTTP401, HTTP403
-from utils.exceptions import (
+from src.utils.cache_keys import SessionCacheKey
+from src.utils.constants import HTTP401, HTTP403
+from src.utils.enums import UserRole
+from src.utils.exceptions import (
     AccessDeniedError,
     AccountInactiveError,
     InvalidAccessTokenError,
 )
-from src.utils.cache_keys import SessionCacheKey
-from src.utils.enums import UserRole
 
 
 async def get_session() -> AsyncGenerator[AsyncSession, None]:

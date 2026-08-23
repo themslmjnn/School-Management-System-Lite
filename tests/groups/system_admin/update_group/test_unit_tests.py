@@ -1,15 +1,15 @@
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.groups.exceptions.exceptions import (
-    GroupNameYearAlreadyExistsError,
-    GroupNotFoundError,
-)
 from src.groups.repository import GroupRepository
 from src.groups.schemas import UpdateGroupAdmin
 from src.groups.services.system_admin import GroupServiceAdmin
 from src.users.models.user import User
-from utils.exceptions import NoChangesDetectedError
+from src.utils.exceptions import (
+    GroupNameYearAlreadyExistsError,
+    GroupNotFoundError,
+    NoChangesDetectedError,
+)
 from tests.factories import make_group
 
 
@@ -123,4 +123,4 @@ class TestUpdateGroup:
         from src.utils.cache_keys import GroupCacheKey
 
         assert GroupCacheKey.group_detail_key_admin(group.id) in calls
-        assert GroupCacheKey.group_detail_key_non_admin(group.id) in calls
+        assert GroupCacheKey.group_detail_key_staff(group.id) in calls

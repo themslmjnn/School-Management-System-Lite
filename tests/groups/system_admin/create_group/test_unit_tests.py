@@ -1,10 +1,10 @@
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.groups.exceptions.exceptions import GroupNameYearAlreadyExistsError
 from src.groups.schemas import CreateGroupAdmin
 from src.groups.services.system_admin import GroupServiceAdmin
 from src.users.models.user import User
+from src.utils.exceptions import GroupNameYearAlreadyExistsError
 from tests.factories import make_group
 
 

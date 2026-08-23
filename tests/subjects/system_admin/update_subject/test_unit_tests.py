@@ -1,14 +1,14 @@
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.subjects.exceptions.exceptions import (
-    SubjectCodeAlreadyExistsError,
-    SubjectNotFoundError,
-)
 from src.subjects.repository import SubjectRepository
 from src.subjects.schemas import UpdateSubjectAdmin
 from src.subjects.services.system_admin import SubjectServiceAdmin
-from utils.exceptions import NoChangesDetectedError
+from src.utils.exceptions import (
+    NoChangesDetectedError,
+    SubjectCodeAlreadyExistsError,
+    SubjectNotFoundError,
+)
 from tests.factories import make_subject
 
 

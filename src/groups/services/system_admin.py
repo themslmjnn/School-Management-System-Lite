@@ -80,7 +80,7 @@ class GroupServiceAdmin:
 
             await delete_cache(
                 GroupCacheKey.group_detail_key_admin(group_id),
-                GroupCacheKey.group_detail_key_non_admin(group_id),
+                GroupCacheKey.group_detail_key_staff(group_id),
             )
 
             logger.info(

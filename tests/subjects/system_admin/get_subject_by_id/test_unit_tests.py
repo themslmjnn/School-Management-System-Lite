@@ -1,10 +1,10 @@
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.subjects.exceptions.exceptions import SubjectNotFoundError
 from src.subjects.repository import SubjectRepository
 from src.subjects.services.system_admin import SubjectServiceAdmin
 from src.utils.cache_keys import SubjectCacheKey
+from src.utils.exceptions import SubjectNotFoundError
 from tests.factories import make_subject
 
 

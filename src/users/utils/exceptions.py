@@ -1,7 +1,7 @@
 from sqlalchemy.exc import IntegrityError
 
 from src.users.utils.constants import HTTP409
-from utils.exceptions import AppException
+from src.utils.exceptions import AppException
 
 
 class UsernameAlreadyTakenError(AppException):

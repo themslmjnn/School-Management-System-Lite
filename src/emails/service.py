@@ -70,6 +70,6 @@ class PendingEmailService:
         failed_email = await PendingEmailRepository.get_email_by_id(session, email_id)
         ensure_exists(failed_email, PendingEmailNotFoundError(HTTP404.PENDING_EMAIL))
 
-        await PendingEmailRepository.reset_for_retry(session, failed_email)
+        await PendingEmailRepository.reset_for_retry(failed_email)
 
         await session.commit()

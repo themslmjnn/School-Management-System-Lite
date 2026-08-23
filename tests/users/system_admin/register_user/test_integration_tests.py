@@ -104,8 +104,8 @@ class TestRegisterUser:
         client: AsyncClient,
         system_admin: User,
         valid_create_teacher_request: CreateTeacherAdmin,
-        existing_user_data: dict,
-        request_override: dict,
+        existing_user_data,
+        request_override,
     ):
         await make_teacher(session, **existing_user_data)
 

@@ -1,10 +1,10 @@
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.groups.exceptions.exceptions import GroupNotFoundError
 from src.groups.repository import GroupRepository
 from src.groups.services.director import GroupServiceDirector
 from src.utils.cache_keys import GroupCacheKey
+from src.utils.exceptions import GroupNotFoundError
 from tests.factories import make_group
 
 
@@ -50,7 +50,7 @@ class TestDirectorGetGroupById:
         await GroupServiceDirector.get_group_by_id(session, group.id)
 
         mock_set_cache_group_director.assert_called_once_with(
-            GroupCacheKey.group_detail_key_non_admin(group.id),
+            GroupCacheKey.group_detail_key_staff(group.id),
             mocker.ANY,
             900,
         )

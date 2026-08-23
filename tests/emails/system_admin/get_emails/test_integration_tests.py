@@ -99,7 +99,7 @@ class TestGetEmails:
         system_admin: User,
     ):
         await make_email(session, triggered_by=system_admin.id)
-        await make_email(session)  # triggered_by=None
+        await make_email(session)
 
         headers = await make_auth_header(session, system_admin)
         response = await client.get(

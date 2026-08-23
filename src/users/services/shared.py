@@ -38,13 +38,13 @@ from src.users.utils.exceptions import (
 )
 from src.users.utils.shared_schemas import UpdateUserCredentials
 from src.utils import email as email_sender
-from utils.constants import HTTP400
-from utils.exceptions import (
+from src.utils.cache_keys import SessionCacheKey, UserCacheKey
+from src.utils.constants import HTTP400
+from src.utils.enums import EmailType, UserRole
+from src.utils.exceptions import (
     NoChangesDetectedError,
     raise_unhandled_integrity_error,
 )
-from src.utils.cache_keys import SessionCacheKey, UserCacheKey
-from src.utils.enums import EmailType, UserRole
 from src.utils.helpers import ensure_exists
 
 logger = get_logger(__name__)

@@ -61,7 +61,6 @@ class TestResetPassword:
             },
         )
 
-        # The old access token should now be rejected
         response = await client.post("/auth/logout", headers=headers_before)
 
         assert response.status_code == 401

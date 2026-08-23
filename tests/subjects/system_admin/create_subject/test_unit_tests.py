@@ -1,10 +1,10 @@
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.subjects.exceptions.exceptions import SubjectCodeAlreadyExistsError
 from src.subjects.schemas import CreateSubjectAdmin
 from src.subjects.services.system_admin import SubjectServiceAdmin
 from src.users.models.user import User
+from src.utils.exceptions import SubjectCodeAlreadyExistsError
 from tests.factories import make_subject
 
 

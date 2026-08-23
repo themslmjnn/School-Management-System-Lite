@@ -48,7 +48,7 @@ class GroupServiceDirector:
     async def get_group_by_id(
         session: AsyncSession, group_id: int
     ) -> GroupResponseDirectorDetailed:
-        cache_key = GroupCacheKey.group_detail_key_non_admin(group_id)
+        cache_key = GroupCacheKey.group_detail_key_staff(group_id)
         cached = await get_cache(cache_key)
 
         if cached is not None:

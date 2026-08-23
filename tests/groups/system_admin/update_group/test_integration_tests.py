@@ -6,7 +6,7 @@ from tests.conftest import make_auth_header
 from tests.factories import make_group
 
 
-class TestUpdateGroupEndpoint:
+class TestUpdateGroup:
     async def test_returns_204_on_success(
         self,
         session: AsyncSession,

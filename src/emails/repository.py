@@ -108,6 +108,16 @@ class PendingEmailRepository:
         return list(result.scalars().all())
 
     @staticmethod
+    async def get_pending_email_by_triggered_by(
+        session: AsyncSession, triggered_by: int | None
+    ) -> list[PendingEmail]:
+        query = select(PendingEmail).filter(PendingEmail.triggered_by == triggered_by)
+
+        result = await session.execute(query)
+
+        return result.scalars().all()
+
+    @staticmethod
     async def mark_sent(record: PendingEmail) -> None:
         record.status = EmailSendingStatus.SENT
         record.sent_at = datetime.now(UTC)

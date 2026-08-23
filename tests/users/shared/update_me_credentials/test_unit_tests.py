@@ -8,7 +8,7 @@ from src.users.utils.exceptions import (
     UsernameAlreadyTakenError,
 )
 from src.users.utils.shared_schemas import UpdateUserCredentials
-from utils.exceptions import NoChangesDetectedError
+from src.utils.exceptions import NoChangesDetectedError
 from tests.factories import make_teacher
 
 

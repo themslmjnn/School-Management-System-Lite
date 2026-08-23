@@ -1,10 +1,10 @@
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.groups.exceptions.exceptions import GroupNotFoundError
 from src.groups.repository import GroupRepository
 from src.groups.services.system_admin import GroupServiceAdmin
 from src.utils.cache_keys import GroupCacheKey
+from src.utils.exceptions import GroupNotFoundError
 from tests.factories import make_group
 
 
