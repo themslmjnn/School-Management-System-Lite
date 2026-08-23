@@ -154,16 +154,15 @@ makes tracing a specific request through the logs mechanical rather than manual.
 
 **Prerequisites:** Docker and Docker Compose.
 
-git clone https://github.com/themslmjnn/School-Management-System-Lite.git
-cd School-Management-System-Lite
+- git clone https://github.com/themslmjnn/School-Management-System-Lite.git
+- cd School-Management-System-Lite
 
-cp .env.example .env
+- cp .env.example .env
 # Fill in .env with your values
 
-make up        # Start app, PostgreSQL, and Redis
-make migrate   # Run Alembic migrations
-make logs      # Tail application logs
-```
+- make up        # Start app, PostgreSQL, and Redis
+- make migrate   # Run Alembic migrations
+- make logs      # Tail application logs
 
 The API will be available at `http://localhost:8000`.  
 Interactive docs at `http://localhost:8000/docs` (development only).
@@ -188,9 +187,7 @@ Tests require a running PostgreSQL and Redis instance. The test suite targets a 
 database and will refuse to run if `ENVIRONMENT` is not set to `"test"` — this prevents
 accidentally running destructive schema operations against a real database.
 
-```bash
 pytest
-```
 
 The suite covers tests across auth, users, subjects, groups, and emails modules, split
 into unit tests (service logic with mocked dependencies) and integration tests (full HTTP request
